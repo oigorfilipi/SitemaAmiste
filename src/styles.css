@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  --font-display: Exo, Montserrat, ui-sans-serif, system-ui, sans-serif;
+  --color-amiste-red: #a82020;
+  --color-amiste-black: #0f0f0f;
+  --color-amiste-gray: #2e2e2e;
+  --color-amiste-white: #fafafa;
+  --color-amiste-blue: #1c2e4a;
+  --color-amiste-orange: #e36f00;
+  --color-amiste-purple: #a20fa0;
+  --color-amiste-green: #4b921f;
+  --color-amiste-yellow: #faee18;
+}
+
+@layer base {
+  html {
+    background: #f4f5f7;
+  }
+
+  body {
+    min-width: 1120px;
+    color: #0f0f0f;
+    background:
+      linear-gradient(180deg, rgba(168, 32, 32, 0.05), transparent 260px),
+      #f4f5f7;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .shadow-amiste {
+    box-shadow: 0 18px 45px rgba(15, 15, 15, 0.08);
+  }
+}
