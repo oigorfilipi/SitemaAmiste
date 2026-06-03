@@ -1,32 +1,33 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
-import EntityFormModal from "../../components/organisms/EntityFormModal.jsx";
-import LabelPreviewModal from "../../components/organisms/LabelPreviewModal.jsx";
+import LabelFilePreviewPanel from "../../components/organisms/LabelFilePreviewPanel.jsx";
 import LabelRepositoryGrid from "../../components/organisms/LabelRepositoryGrid.jsx";
+import LabelUploadModal from "../../components/organisms/LabelUploadModal.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import { useErpSnapshot } from "../../hooks/useErpSnapshot.js";
 import {
   buildLabelMetrics,
   buildLabelRows,
-  downloadLabelLayout,
+  buildUploadedLabelPayload,
+  downloadLabelFile,
   exportLabels,
+  printLabelFile,
 } from "../../services/labelService.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
 
 export default function EtiquetasPage({ accessLevel }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState(null);
-  const [previewLabel, setPreviewLabel] = useState(null);
-  const { records, createRecord, updateRecord, deleteRecord } = useCollection("labels");
+  const [selectedId, setSelectedId] = useState("");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const { records, createRecord, deleteRecord } = useCollection("labels");
   const { snapshot } = useErpSnapshot();
   const config = moduleConfigs.labels;
   const canMutate = accessLevel === "AC";
 
-  const labels = useMemo(() => buildLabelRows(records, snapshot), [records, snapshot]);
+  const labels = useMemo(() => buildLabelRows(records), [records]);
   const filteredLabels = useMemo(() => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
 
@@ -35,41 +36,39 @@ export default function EtiquetasPage({ accessLevel }) {
     }
 
     return labels.filter((label) =>
-      [label.name, label.category, label.linkedTo, label.format, label.description]
+      [label.name, label.category, label.format, label.originalFileName, label.description]
         .join(" ")
         .toLowerCase()
         .includes(normalizedTerm)
     );
   }, [labels, searchTerm]);
+  const selectedLabel = useMemo(
+    () => filteredLabels.find((label) => label.id === selectedId) || filteredLabels[0] || null,
+    [filteredLabels, selectedId]
+  );
   const metrics = useMemo(() => buildLabelMetrics(labels), [labels]);
 
-  function openCreateModal() {
+  useEffect(() => {
+    if (!filteredLabels.length) {
+      setSelectedId("");
+      return;
+    }
+
+    if (!filteredLabels.some((label) => label.id === selectedId)) {
+      setSelectedId(filteredLabels[0].id);
+    }
+  }, [filteredLabels, selectedId]);
+
+  async function handleUpload(uploadData) {
     if (!canMutate) {
       return;
     }
 
-    setEditingRecord(null);
-    setModalOpen(true);
-  }
+    const payload = await buildUploadedLabelPayload(uploadData);
+    const createdLabel = await createRecord(payload);
 
-  function openEditModal(label) {
-    if (!canMutate) {
-      return;
-    }
-
-    setEditingRecord(records.find((record) => record.id === label.id) || label);
-    setModalOpen(true);
-  }
-
-  async function handleSubmit(payload) {
-    if (editingRecord) {
-      await updateRecord(editingRecord.id, payload);
-    } else {
-      await createRecord(payload);
-    }
-
-    setModalOpen(false);
-    setEditingRecord(null);
+    setSelectedId(createdLabel.id);
+    setUploadOpen(false);
   }
 
   async function handleDelete(label) {
@@ -88,14 +87,18 @@ export default function EtiquetasPage({ accessLevel }) {
     exportLabels(filteredLabels, snapshot);
   }
 
+  function handlePreview(label) {
+    setSelectedId(label.id);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
-        actionIcon="plus"
+        actionIcon="upload"
         actionLabel={canMutate ? config.actionLabel : ""}
         description={config.description}
         title={config.title}
-        onAction={openCreateModal}
+        onAction={() => setUploadOpen(true)}
       />
 
       {/* --- SECAO: FILTROS E EXPORTACAO --- */}
@@ -103,7 +106,7 @@ export default function EtiquetasPage({ accessLevel }) {
         <TextInput
           className="w-96"
           icon="search"
-          placeholder="Buscar por layout, categoria ou vinculo"
+          placeholder="Buscar por nome, categoria ou formato"
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
@@ -112,35 +115,32 @@ export default function EtiquetasPage({ accessLevel }) {
         </Button>
       </div>
 
-      {/* --- SECAO: INDICADORES DE IDENTIDADE --- */}
+      {/* --- SECAO: INDICADORES DO REPOSITORIO --- */}
       <MetricsGrid metrics={metrics} />
 
-      {/* --- SECAO: REPOSITORIO VISUAL --- */}
-      <LabelRepositoryGrid
-        canMutate={canMutate}
-        labels={filteredLabels}
-        onDelete={handleDelete}
-        onDownload={downloadLabelLayout}
-        onEdit={openEditModal}
-        onPreview={setPreviewLabel}
-      />
+      {/* --- SECAO: ARQUIVOS E PREVIEW --- */}
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_560px]">
+        <LabelRepositoryGrid
+          canMutate={canMutate}
+          labels={filteredLabels}
+          selectedId={selectedLabel?.id || ""}
+          onDelete={handleDelete}
+          onDownload={downloadLabelFile}
+          onPreview={handlePreview}
+          onPrint={printLabelFile}
+        />
+        <LabelFilePreviewPanel
+          label={selectedLabel}
+          onDownload={downloadLabelFile}
+          onPrint={printLabelFile}
+        />
+      </div>
 
-      <EntityFormModal
-        description={config.formDescription}
-        editingRecord={editingRecord}
-        fields={config.fields}
-        open={modalOpen}
+      <LabelUploadModal
+        open={uploadOpen}
         snapshot={snapshot}
-        title={config.formTitle}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleSubmit}
-      />
-
-      <LabelPreviewModal
-        label={previewLabel}
-        open={Boolean(previewLabel)}
-        onClose={() => setPreviewLabel(null)}
-        onDownload={downloadLabelLayout}
+        onClose={() => setUploadOpen(false)}
+        onUpload={handleUpload}
       />
     </div>
   );

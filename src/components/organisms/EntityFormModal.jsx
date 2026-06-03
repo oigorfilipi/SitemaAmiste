@@ -4,6 +4,7 @@ import SelectInput from "../atoms/SelectInput.jsx";
 import TextArea from "../atoms/TextArea.jsx";
 import TextInput from "../atoms/TextInput.jsx";
 import Modal from "../molecules/Modal.jsx";
+import DocumentLivePreviewPanel from "./DocumentLivePreviewPanel.jsx";
 import { buildSelectOptionsFromGroup } from "../../services/optionService.js";
 
 function getDefaultValue(field) {
@@ -76,6 +77,7 @@ export default function EntityFormModal({
   description,
   open,
   editingRecord,
+  livePreviewDocumentType,
   snapshot,
   validate,
   onClose,
@@ -85,6 +87,7 @@ export default function EntityFormModal({
   const [errorMessage, setErrorMessage] = useState("");
 
   const modalTitle = editingRecord ? `Editar ${title}` : title;
+  const hasLivePreview = Boolean(livePreviewDocumentType);
 
   const initialData = useMemo(() => {
     return fields.reduce((data, field) => {
@@ -126,86 +129,106 @@ export default function EntityFormModal({
     await onSubmit(payload);
   }
 
-  return (
-    <Modal description={description} open={open} title={modalTitle} onClose={onClose}>
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        {/* --- SECAO: CAMPOS DO FORMULARIO --- */}
-        <div className="grid grid-cols-2 gap-4">
-          {fields.map((field) => {
-            const options = buildOptions(field, snapshot);
-            const isTextarea = field.type === "textarea";
-            const isCheckbox = field.type === "checkbox";
-            const isSelect =
-              field.type === "select" || field.source || field.optionGroup || field.type === "inventoryItem";
+  const previewRecord = useMemo(() => {
+    return {
+      ...(editingRecord || {}),
+      ...normalizePayload(fields, formData),
+    };
+  }, [editingRecord, fields, formData]);
 
-            return (
-              <label className={field.full ? "col-span-2" : ""} key={field.name}>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
-                  {field.label}
-                  {field.required ? <span className="text-amiste-red"> *</span> : null}
-                </span>
-                {isCheckbox ? (
-                  <button
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray transition hover:border-amiste-red"
-                    type="button"
-                    onClick={() => updateField(field.name, !formData[field.name])}
-                  >
-                    <span>{formData[field.name] ? "Sim" : "Nao"}</span>
-                    <span className={formData[field.name] ? "text-amiste-green" : "text-amiste-red"}>
-                      {formData[field.name] ? "Ativo" : "Inativo"}
-                    </span>
-                  </button>
-                ) : isTextarea ? (
-                  <TextArea
-                    maxLength={field.maxLength}
-                    placeholder={field.placeholder}
-                    value={formData[field.name] || ""}
-                    onChange={(event) => updateField(field.name, event.target.value)}
-                  />
-                ) : isSelect ? (
-                  <SelectInput
-                    required={field.required}
-                    value={formData[field.name] || ""}
-                    onChange={(event) => updateField(field.name, event.target.value)}
-                  >
-                    <option value="">Selecione</option>
-                    {options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </SelectInput>
-                ) : (
-                  <TextInput
-                    maxLength={field.maxLength}
-                    placeholder={field.placeholder}
-                    required={field.required}
-                    type={field.type === "date" ? "date" : field.type === "currency" ? "number" : field.type || "text"}
-                    value={formData[field.name] || ""}
-                    onChange={(event) => updateField(field.name, event.target.value)}
-                  />
-                )}
-              </label>
-            );
-          })}
+  const formContent = (
+    <form className="space-y-5" onSubmit={handleSubmit}>
+      {/* --- SECAO: CAMPOS DO FORMULARIO --- */}
+      <div className="grid grid-cols-2 gap-4">
+        {fields.map((field) => {
+          const options = buildOptions(field, snapshot);
+          const isTextarea = field.type === "textarea";
+          const isCheckbox = field.type === "checkbox";
+          const isSelect =
+            field.type === "select" || field.source || field.optionGroup || field.type === "inventoryItem";
+
+          return (
+            <label className={field.full ? "col-span-2" : ""} key={field.name}>
+              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
+                {field.label}
+                {field.required ? <span className="text-amiste-red"> *</span> : null}
+              </span>
+              {isCheckbox ? (
+                <button
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray transition hover:border-amiste-red"
+                  type="button"
+                  onClick={() => updateField(field.name, !formData[field.name])}
+                >
+                  <span>{formData[field.name] ? "Sim" : "Nao"}</span>
+                  <span className={formData[field.name] ? "text-amiste-green" : "text-amiste-red"}>
+                    {formData[field.name] ? "Ativo" : "Inativo"}
+                  </span>
+                </button>
+              ) : isTextarea ? (
+                <TextArea
+                  maxLength={field.maxLength}
+                  placeholder={field.placeholder}
+                  value={formData[field.name] || ""}
+                  onChange={(event) => updateField(field.name, event.target.value)}
+                />
+              ) : isSelect ? (
+                <SelectInput
+                  required={field.required}
+                  value={formData[field.name] || ""}
+                  onChange={(event) => updateField(field.name, event.target.value)}
+                >
+                  <option value="">Selecione</option>
+                  {options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </SelectInput>
+              ) : (
+                <TextInput
+                  maxLength={field.maxLength}
+                  placeholder={field.placeholder}
+                  required={field.required}
+                  type={field.type === "date" ? "date" : field.type === "currency" ? "number" : field.type || "text"}
+                  value={formData[field.name] || ""}
+                  onChange={(event) => updateField(field.name, event.target.value)}
+                />
+              )}
+            </label>
+          );
+        })}
+      </div>
+
+      {errorMessage ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          {errorMessage}
         </div>
+      ) : null}
 
-        {errorMessage ? (
-          <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
-            {errorMessage}
-          </div>
-        ) : null}
+      {/* --- SECAO: ACOES DO FORMULARIO --- */}
+      <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-5">
+        <Button variant="secondary" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button icon="plus" type="submit">
+          Salvar
+        </Button>
+      </footer>
+    </form>
+  );
 
-        {/* --- SECAO: ACOES DO FORMULARIO --- */}
-        <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-5">
-          <Button variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button icon="plus" type="submit">
-            Salvar
-          </Button>
-        </footer>
-      </form>
+  return (
+    <Modal description={description} open={open} size={hasLivePreview ? "wide" : "default"} title={modalTitle} onClose={onClose}>
+      {hasLivePreview ? (
+        <div className="grid max-h-[calc(88vh-132px)] grid-cols-1 gap-5 overflow-hidden xl:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)]">
+          <div className="min-h-0 overflow-y-auto pr-1">{formContent}</div>
+          <DocumentLivePreviewPanel
+            documentType={livePreviewDocumentType}
+            record={previewRecord}
+            snapshot={snapshot}
+          />
+        </div>
+      ) : formContent}
     </Modal>
   );
 }

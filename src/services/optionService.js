@@ -23,8 +23,6 @@ export const OPTION_GROUPS = [
   "Meio de Atendimento",
   "Tipos de Cobranca",
   "Status Pagamento",
-  "Categorias de Etiquetas",
-  "Formatos de Arquivo",
   "Categorias Wiki",
   "Dificuldade Wiki",
   "Status Wiki",

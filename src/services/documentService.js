@@ -32,6 +32,10 @@ function findById(snapshot, collection, id) {
   return snapshot[collection]?.find((record) => record.id === id) || {};
 }
 
+function buildDocumentCode(prefix, id) {
+  return id ? `${prefix}-${String(id).slice(-5).toUpperCase()}` : `${prefix}-PREVIA`;
+}
+
 function downloadBlob(filename, content, type) {
   if (typeof window === "undefined") {
     return;
@@ -58,7 +62,7 @@ export function buildProposalDocument(record, snapshot) {
     client,
     clientName: client.name || "-",
     contact: client.contact || "-",
-    documentCode: `PROP-${String(record.id || "").slice(-5).toUpperCase()}`,
+    documentCode: buildDocumentCode("PROP", record.id),
     documentTitle: machine.name || "Maquina",
     footerLabel: "Validade comercial de 7 dias",
     machine,
@@ -88,7 +92,7 @@ export function buildServiceSheetDocument(record, snapshot) {
     checklist,
     client,
     clientName: client.name || "-",
-    documentCode: checklist.code || `FICHA-${String(record.id || "").slice(-5).toUpperCase()}`,
+    documentCode: checklist.code || buildDocumentCode("FICHA", record.id),
     documentTitle: `${record.sheetType || "Ficha"} - ${machine.name || "Maquina"}`,
     footerLabel: "Assinaturas obrigatorias no atendimento",
     machine,

@@ -1,13 +1,15 @@
 import IconButton from "../atoms/IconButton.jsx";
 
-export default function Modal({ title, description, open, children, onClose }) {
+export default function Modal({ title, description, open, children, size = "default", onClose }) {
   if (!open) {
     return null;
   }
 
+  const maxWidth = size === "wide" ? "max-w-6xl" : "max-w-3xl";
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-amiste-black/40 p-6 backdrop-blur-sm">
-      <section className="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
+      <section className={`max-h-[88vh] w-full ${maxWidth} overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl`}>
         {/* --- SECAO: CABECALHO DO MODAL --- */}
         <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-6 py-5">
           <div>

@@ -188,7 +188,7 @@ function buildSearchDocuments(database) {
       type: "Etiqueta",
       title: label.name,
       subtitle: compactText([label.category, label.format]),
-      meta: compactText([label.linkedTo, label.description]),
+      meta: compactText([label.originalFileName, label.fileSize, label.description]),
       status: "",
       keywords: "",
     })),

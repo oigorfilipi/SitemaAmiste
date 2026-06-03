@@ -169,6 +169,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
         description={config.formDescription}
         editingRecord={editingRecord}
         fields={config.fields}
+        livePreviewDocumentType={config.livePreviewDocumentType}
         open={modalOpen}
         snapshot={snapshot}
         title={config.formTitle}

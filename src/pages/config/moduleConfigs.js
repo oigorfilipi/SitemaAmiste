@@ -351,6 +351,7 @@ export const moduleConfigs = {
     layout: "table",
     formTitle: "Editor de Proposta",
     formDescription: "Proposta comercial com preview de documento e integracao ao financeiro.",
+    livePreviewDocumentType: "proposal",
     columns: [
       { key: "clientId", label: "Cliente", source: "clients" },
       { key: "machineId", label: "Maquina", source: "machines" },
@@ -386,6 +387,7 @@ export const moduleConfigs = {
     layout: "table",
     formTitle: "Gerador de Ficha",
     formDescription: "Ficha operacional com assinatura, preview e download de documento.",
+    livePreviewDocumentType: "serviceSheet",
     columns: [
       { key: "sheetType", label: "Tipo" },
       { key: "clientId", label: "Cliente", source: "clients" },
@@ -452,27 +454,10 @@ export const moduleConfigs = {
     ],
   },
   labels: {
-    title: "Etiquetas e Identidade Visual",
-    description: "Gerenciamento e download de layouts para maquinas e insumos.",
-    actionLabel: "Novo Upload",
+    title: "Etiquetas",
+    description: "Repositorio de arquivos externos de etiquetas, com preview, download e impressao.",
+    actionLabel: "Enviar Arquivo",
     collection: "labels",
-    layout: "table",
-    formTitle: "Nova Etiqueta",
-    formDescription: "Repositorio local de arquivos, links e layouts padronizados.",
-    columns: [
-      { key: "name", label: "Arquivo" },
-      { key: "category", label: "Categoria" },
-      { key: "linkedTo", label: "Vinculo" },
-      { key: "format", label: "Formato" },
-      { key: "description", label: "Descricao" },
-    ],
-    fields: [
-      { name: "name", label: "Nome do arquivo", required: true },
-      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Etiquetas" },
-      { name: "linkedTo", label: "Vinculo" },
-      { name: "format", label: "Formato", type: "select", optionGroup: "Formatos de Arquivo", options: [{ label: "PDF", value: "PDF" }, { label: "PNG", value: "PNG" }, { label: "JPG", value: "JPG" }, { label: "DOCX", value: "DOCX" }] },
-      { name: "description", label: "Descricao", type: "textarea", full: true },
-    ],
   },
   options: {
     title: "Adicionar Opcoes",
