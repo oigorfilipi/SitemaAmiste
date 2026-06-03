@@ -1,0 +1,165 @@
+import { useRef, useState } from "react";
+import IconButton from "../atoms/IconButton.jsx";
+import Button from "../atoms/Button.jsx";
+import HeaderShortcut from "../molecules/HeaderShortcut.jsx";
+import UserBadge from "../molecules/UserBadge.jsx";
+import TextInput from "../atoms/TextInput.jsx";
+import GlobalSearchPanel from "./GlobalSearchPanel.jsx";
+import NotificationCenter from "./NotificationCenter.jsx";
+import { useGlobalSearch } from "../../hooks/useGlobalSearch.js";
+import { useDashboard } from "../../hooks/useDashboard.js";
+import { cn } from "../../utils/cn.js";
+
+export default function AppHeader({
+  collapsed,
+  shortcuts,
+  activePage,
+  user,
+  previewUser,
+  onExitPreview,
+  onLogout,
+  onSelectPage,
+}) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const searchCloseTimer = useRef(null);
+  const { isSearching, results } = useGlobalSearch(searchTerm, user?.role || "VEN");
+  const { data: dashboard } = useDashboard(user?.role || "VEN");
+  const alerts = dashboard.alerts || [];
+  const searchOpen = searchFocused && searchTerm.trim().length >= 2;
+
+  function closeSearch() {
+    if (searchCloseTimer.current) {
+      window.clearTimeout(searchCloseTimer.current);
+      searchCloseTimer.current = null;
+    }
+
+    setSearchFocused(false);
+  }
+
+  function openSearch() {
+    if (searchCloseTimer.current) {
+      window.clearTimeout(searchCloseTimer.current);
+      searchCloseTimer.current = null;
+    }
+
+    setSearchFocused(true);
+    setAlertsOpen(false);
+  }
+
+  function scheduleCloseSearch() {
+    if (searchCloseTimer.current) {
+      window.clearTimeout(searchCloseTimer.current);
+    }
+
+    searchCloseTimer.current = window.setTimeout(() => {
+      setSearchFocused(false);
+      searchCloseTimer.current = null;
+    }, 120);
+  }
+
+  function handleSelectSearchResult(result) {
+    setSearchTerm("");
+    setSearchFocused(false);
+    onSelectPage(result.pageId);
+  }
+
+  function handleToggleAlerts() {
+    closeSearch();
+    setAlertsOpen((currentState) => !currentState);
+  }
+
+  function handleSelectAlert(alert) {
+    setAlertsOpen(false);
+
+    if (alert.pageId) {
+      onSelectPage(alert.pageId);
+    }
+  }
+
+  function handleSearchKeyDown(event) {
+    if (event.key === "Escape") {
+      closeSearch();
+    }
+  }
+
+  function handleSearchChange(event) {
+    setSearchTerm(event.target.value);
+    openSearch();
+  }
+
+  return (
+    <header
+      className={cn(
+        "fixed right-0 top-0 z-20 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/95 px-6 backdrop-blur transition-all duration-300",
+        collapsed ? "left-[76px]" : "left-[280px]"
+      )}
+    >
+      {/* --- SECAO: ATALHOS HORIZONTAIS --- */}
+      <nav className="flex h-full items-center gap-5">
+        {shortcuts.map((item) => (
+          <HeaderShortcut
+            key={item.id}
+            active={activePage === item.id}
+            item={item}
+            onSelect={onSelectPage}
+          />
+        ))}
+      </nav>
+
+      {/* --- SECAO: ACOES DO USUARIO --- */}
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <TextInput
+            className="w-72"
+            icon="search"
+            placeholder="Buscar no sistema"
+            value={searchTerm}
+            onBlur={scheduleCloseSearch}
+            onChange={handleSearchChange}
+            onClick={openSearch}
+            onFocus={openSearch}
+            onKeyDown={handleSearchKeyDown}
+          />
+          <GlobalSearchPanel
+            isSearching={isSearching}
+            open={searchOpen}
+            results={results}
+            term={searchTerm}
+            onClose={closeSearch}
+            onSelectResult={handleSelectSearchResult}
+          />
+        </div>
+        <div className="relative">
+          <IconButton active={alertsOpen} icon="bell" label="Alertas" onClick={handleToggleAlerts} />
+          {alerts.length ? (
+            <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-amiste-red text-[10px] font-black text-white ring-2 ring-white">
+              {alerts.length}
+            </span>
+          ) : null}
+          <NotificationCenter
+            alerts={alerts}
+            open={alertsOpen}
+            onClose={() => setAlertsOpen(false)}
+            onSelectAlert={handleSelectAlert}
+          />
+        </div>
+        {previewUser ? (
+          <Button className="h-10 px-3 text-xs" icon="refresh" variant="warning" onClick={onExitPreview}>
+            Visao {previewUser.role}
+          </Button>
+        ) : null}
+        <button
+          aria-label="Abrir perfil"
+          className="flex items-center gap-3 rounded-md border border-transparent px-2 py-1 transition hover:border-zinc-200 hover:bg-zinc-50"
+          type="button"
+          onClick={() => onSelectPage("perfil")}
+        >
+          <UserBadge user={user} />
+        </button>
+        <IconButton icon="logOut" label="Sair" onClick={onLogout} />
+      </div>
+    </header>
+  );
+}
