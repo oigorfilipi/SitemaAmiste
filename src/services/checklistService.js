@@ -62,11 +62,17 @@ export function evaluateChecklistCompatibility(record, snapshot) {
     };
   }
 
-  const amperageOk = asNumber(record.outletAmperage) >= asNumber(machine.amperage);
-  const waterOk = machine.hydraulic !== "Sim" || record.waterOk === "Sim";
+  const technical = record.machineTechnical || {};
+  const requiredAmperage = asNumber(technical.amperage || machine.amperage);
+  const requiredWater = technical.hydraulic || machine.hydraulic;
+  const requiredSewer = technical.sewer || machine.sewer || "Nao";
+  const amperageOk = asNumber(record.outletAmperage) >= requiredAmperage;
+  const waterOk = requiredWater !== "Sim" || (record.localWaterOk || record.waterOk) === "Sim";
+  const sewerOk = requiredSewer !== "Sim" || record.localSewerOk === "Sim";
   const issues = [
-    amperageOk ? "" : `${machine.name} exige ${machine.amperage}A, local informou ${record.outletAmperage || 0}A.`,
+    amperageOk ? "" : `${machine.name} exige ${requiredAmperage}A, local informou ${record.outletAmperage || 0}A.`,
     waterOk ? "" : `${machine.name} exige rede hidrica marcada como disponivel.`,
+    sewerOk ? "" : `${machine.name} exige esgoto marcado como disponivel.`,
   ].filter(Boolean);
 
   return {
@@ -75,6 +81,7 @@ export function evaluateChecklistCompatibility(record, snapshot) {
     compatibilityLabel: issues.length ? "Falsa equivalencia" : "Compativel",
     issues,
     machine,
+    sewerOk,
     waterOk,
   };
 }
@@ -96,7 +103,7 @@ export function buildChecklistRows(records, snapshot) {
     return {
       ...record,
       ...compatibility,
-      clientName: resolveName(snapshot, "clients", record.clientId),
+      clientName: record.clientId ? resolveName(snapshot, "clients", record.clientId) : record.eventCompanyName || record.eventName || "-",
       machineName: resolveName(snapshot, "machines", record.machineId),
       open: record.status !== "finalizado",
     };

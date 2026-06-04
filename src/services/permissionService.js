@@ -28,7 +28,10 @@ const ALL_PAGES = [
 
 const ROLE_PERMISSIONS = {
   DEV: ALL_PAGES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
-  CEO: ALL_PAGES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
+  CEO: {
+    ...ALL_PAGES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
+    configuracoes: ACCESS.OC,
+  },
   VEN: {
     home: ACCESS.AC,
     checklists: ACCESS.AC,
@@ -40,7 +43,7 @@ const ROLE_PERMISSIONS = {
     vendas: ACCESS.AC,
     financeiro: ACCESS.VIS,
     historico: ACCESS.OC,
-    configuracoes: ACCESS.VIS,
+    configuracoes: ACCESS.OC,
     perfil: ACCESS.AC,
     precos: ACCESS.UP,
     estoque: ACCESS.UP,
@@ -80,7 +83,7 @@ const ROLE_PERMISSIONS = {
     vendas: ACCESS.OC,
     financeiro: ACCESS.OC,
     historico: ACCESS.OC,
-    configuracoes: ACCESS.AC,
+    configuracoes: ACCESS.OC,
     perfil: ACCESS.AC,
     precos: ACCESS.VIS,
     estoque: ACCESS.UP,

@@ -27,6 +27,10 @@ export const OPTION_GROUPS = [
   "Dificuldade Wiki",
   "Status Wiki",
   "Prioridades de Conserto",
+  "Ferramentas Necessarias",
+  "Coisas Necessarias",
+  "Bebidas da Maquina",
+  "Tags de Insumos",
   "Ferramentas e Itens",
   "Grupos de Opcoes",
 ];

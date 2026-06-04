@@ -3,9 +3,9 @@ import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import EntityGroupTabs from "../../components/molecules/EntityGroupTabs.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
+import ChecklistEditorModal from "../../components/organisms/ChecklistEditorModal.jsx";
 import ChecklistOperationsTable from "../../components/organisms/ChecklistOperationsTable.jsx";
 import ChecklistRiskPanel from "../../components/organisms/ChecklistRiskPanel.jsx";
-import EntityFormModal from "../../components/organisms/EntityFormModal.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
 import RecordDetailModal from "../../components/organisms/RecordDetailModal.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
@@ -70,15 +70,23 @@ export default function ChecklistsPage({ accessLevel }) {
   }
 
   async function handleSubmit(payload) {
+    const wantsFinalize = payload.status === "finalizado";
+
     if (editingRecord) {
-      if (payload.status === "finalizado" && editingRecord.status !== "finalizado") {
-        await updateRecord(editingRecord.id, { ...payload, status: editingRecord.status });
-        await finalizeChecklist({ ...editingRecord, ...payload, status: editingRecord.status }, snapshot);
+      if (wantsFinalize && editingRecord.status !== "finalizado") {
+        const draftStatus = editingRecord.status || "rascunho";
+
+        await updateRecord(editingRecord.id, { ...payload, status: draftStatus });
+        await finalizeChecklist({ ...editingRecord, ...payload, status: draftStatus }, snapshot);
       } else {
         await updateRecord(editingRecord.id, payload);
       }
     } else {
-      await createRecord(payload);
+      const createdRecord = await createRecord(wantsFinalize ? { ...payload, status: "rascunho" } : payload);
+
+      if (wantsFinalize) {
+        await finalizeChecklist({ ...createdRecord, ...payload, status: "rascunho" }, snapshot);
+      }
     }
 
     setModalOpen(false);
@@ -149,14 +157,10 @@ export default function ChecklistsPage({ accessLevel }) {
         <ChecklistRiskPanel canMutate={canMutate} rows={rows} onFinalize={handleFinalize} />
       </div>
 
-      <EntityFormModal
-        description={config.formDescription}
+      <ChecklistEditorModal
         editingRecord={editingRecord}
-        fields={config.fields}
         open={modalOpen}
         snapshot={snapshot}
-        title={config.formTitle}
-        validate={config.validate}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
       />

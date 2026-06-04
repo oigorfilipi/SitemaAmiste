@@ -4,6 +4,7 @@ import BackupRestorePanel from "../../components/organisms/BackupRestorePanel.js
 import CollectionHealthTable from "../../components/organisms/CollectionHealthTable.jsx";
 import DataSourcePanel from "../../components/organisms/DataSourcePanel.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
+import TableEmptyState from "../../components/molecules/TableEmptyState.jsx";
 import { useErpSnapshot } from "../../hooks/useErpSnapshot.js";
 import {
   buildCollectionRows,
@@ -14,11 +15,11 @@ import {
   restoreBackupFromText,
 } from "../../services/settingsService.js";
 
-export default function ConfiguracoesPage({ accessLevel }) {
+function DeveloperSettingsContent() {
   const [backupText, setBackupText] = useState("");
   const [message, setMessage] = useState(null);
   const { snapshot, refresh } = useErpSnapshot();
-  const canMutate = accessLevel === "AC";
+  const canMutate = true;
   const sourceCards = useMemo(() => buildDataSourceCards(), []);
   const metrics = useMemo(() => buildSettingsMetrics(snapshot), [snapshot]);
   const collectionRows = useMemo(() => buildCollectionRows(snapshot), [snapshot]);
@@ -91,4 +92,18 @@ export default function ConfiguracoesPage({ accessLevel }) {
       <CollectionHealthTable rows={collectionRows} />
     </div>
   );
+}
+
+export default function ConfiguracoesPage({ accessLevel }) {
+  if (accessLevel !== "AC") {
+    return (
+      <TableEmptyState
+        description="Configuracoes tecnicas, dados do sistema e informacoes administrativas sao exclusivas do perfil DEV."
+        icon="shield"
+        title="Acesso negado"
+      />
+    );
+  }
+
+  return <DeveloperSettingsContent />;
 }
