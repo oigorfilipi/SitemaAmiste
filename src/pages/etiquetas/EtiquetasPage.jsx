@@ -24,6 +24,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { records, createRecord, deleteRecord } = useCollection("labels");
   const { snapshot } = useErpSnapshot();
   const config = moduleConfigs.labels;
@@ -71,6 +72,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
       return;
     }
 
+    setErrorMessage("");
     const payload = await buildUploadedLabelPayload(uploadData);
     const createdLabel = await createRecord(payload);
 
@@ -86,8 +88,14 @@ export default function EtiquetasPage({ accessLevel, user }) {
     const confirmed = window.confirm(`Excluir "${label.name}"?`);
 
     if (confirmed) {
-      await deleteStoredLabelFile(label);
-      await deleteRecord(label.id);
+      setErrorMessage("");
+
+      try {
+        await deleteRecord(label.id);
+        await deleteStoredLabelFile(label);
+      } catch (error) {
+        setErrorMessage(error.message);
+      }
     }
   }
 
@@ -122,6 +130,12 @@ export default function EtiquetasPage({ accessLevel, user }) {
           Exportar
         </Button>
       </div>
+
+      {errorMessage ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          {errorMessage}
+        </div>
+      ) : null}
 
       {/* --- SECAO: INDICADORES DO REPOSITORIO --- */}
       <MetricsGrid metrics={metrics} />

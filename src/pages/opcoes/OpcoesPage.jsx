@@ -23,6 +23,7 @@ export default function OpcoesPage({ accessLevel }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const config = moduleConfigs.options;
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("options");
@@ -48,6 +49,7 @@ export default function OpcoesPage({ accessLevel }) {
 
     setActiveGroup(groupId);
     setEditingRecord(null);
+    setErrorMessage("");
     setFeedbackMessage("");
     setModalOpen(true);
   }
@@ -59,11 +61,13 @@ export default function OpcoesPage({ accessLevel }) {
 
     setActiveGroup(option.group);
     setEditingRecord(option);
+    setErrorMessage("");
     setFeedbackMessage("");
     setModalOpen(true);
   }
 
   async function handleSubmit(payload) {
+    setErrorMessage("");
     const validationMessage = validateOptionPayload(payload, records, editingRecord);
 
     if (validationMessage) {
@@ -93,7 +97,14 @@ export default function OpcoesPage({ accessLevel }) {
     const confirmed = window.confirm(`Excluir "${option.name}"?`);
 
     if (confirmed) {
-      await deleteRecord(option.id);
+      setErrorMessage("");
+      setFeedbackMessage("");
+
+      try {
+        await deleteRecord(option.id);
+      } catch (error) {
+        setErrorMessage(error.message);
+      }
     }
   }
 
@@ -134,6 +145,12 @@ export default function OpcoesPage({ accessLevel }) {
       {feedbackMessage ? (
         <div className="rounded-md border border-amiste-green/25 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
           {feedbackMessage}
+        </div>
+      ) : null}
+
+      {errorMessage ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          {errorMessage}
         </div>
       ) : null}
 

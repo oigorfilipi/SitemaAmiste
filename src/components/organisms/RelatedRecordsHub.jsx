@@ -18,6 +18,7 @@ export default function RelatedRecordsHub({
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const { records, createRecord, updateRecord, deleteRecord } = useCollection(hub.collection);
   const resolvedFields = useMemo(() => {
     return typeof hub.fields === "function" ? hub.fields(parentRecord, snapshot) : hub.fields;
@@ -36,6 +37,7 @@ export default function RelatedRecordsHub({
       return;
     }
 
+    setErrorMessage("");
     setEditingRecord(null);
     setFormOpen(true);
   }
@@ -45,11 +47,13 @@ export default function RelatedRecordsHub({
       return;
     }
 
+    setErrorMessage("");
     setEditingRecord(record);
     setFormOpen(true);
   }
 
   async function handleSubmit(payload) {
+    setErrorMessage("");
     const nextPayload = {
       ...payload,
       [hub.parentKey]: parentRecord.id,
@@ -70,10 +74,15 @@ export default function RelatedRecordsHub({
       return;
     }
 
+    setErrorMessage("");
     const confirmed = window.confirm(`Excluir "${record.name || record.problem || record.id}"?`);
 
     if (confirmed) {
-      await deleteRecord(record.id);
+      try {
+        await deleteRecord(record.id);
+      } catch (error) {
+        setErrorMessage(error.message);
+      }
     }
   }
 
@@ -110,6 +119,12 @@ export default function RelatedRecordsHub({
           onDelete={handleDelete}
           onEdit={openEdit}
         />
+
+        {errorMessage ? (
+          <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+            {errorMessage}
+          </div>
+        ) : null}
 
         <EntityFormModal
           description={hub.formDescription}

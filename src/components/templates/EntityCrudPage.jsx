@@ -31,6 +31,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   const [activeHub, setActiveHub] = useState(null);
   const [hubParentRecord, setHubParentRecord] = useState(null);
   const [documentPreview, setDocumentPreview] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const { records, createRecord, updateRecord, deleteRecord } = useCollection(config.collection);
   const { snapshot } = useErpSnapshot();
   const canMutate = accessLevel === "AC";
@@ -52,6 +53,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       return;
     }
 
+    setErrorMessage("");
     setEditingRecord(null);
     setModalOpen(true);
   }
@@ -61,11 +63,13 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       return;
     }
 
+    setErrorMessage("");
     setEditingRecord(record);
     setModalOpen(true);
   }
 
   async function handleSubmit(payload, options = {}) {
+    setErrorMessage("");
     const targetId = options.targetId || editingRecord?.id;
 
     if (targetId) {
@@ -83,10 +87,15 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       return;
     }
 
+    setErrorMessage("");
     const confirmed = window.confirm(`Excluir "${record.name || record.code || record.id}"?`);
 
     if (confirmed) {
-      await deleteRecord(record.id);
+      try {
+        await deleteRecord(record.id);
+      } catch (error) {
+        setErrorMessage(error.message);
+      }
     }
   }
 
@@ -151,6 +160,12 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
           </Button>
         </div>
       </div>
+
+      {errorMessage ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          {errorMessage}
+        </div>
+      ) : null}
 
       {/* --- SECAO: LISTAGEM PRINCIPAL --- */}
       {config.layout === "cards" ? (

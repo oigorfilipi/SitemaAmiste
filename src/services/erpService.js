@@ -6,6 +6,10 @@ import {
   setCollection,
   updateRecord,
 } from "./local/localDatabase.js";
+import {
+  buildDeletionBlockedMessage,
+  getDeletionBlockers,
+} from "./referenceIntegrityService.js";
 
 function asCurrencyNumber(value) {
   return Number(value || 0);
@@ -119,6 +123,13 @@ export async function updateEntity(collectionName, id, payload, historyConfig) {
 }
 
 export async function deleteEntity(collectionName, id) {
+  const database = getDatabaseSnapshot();
+  const blockers = getDeletionBlockers(database, collectionName, id);
+
+  if (blockers.length) {
+    throw new Error(buildDeletionBlockedMessage(collectionName, id, blockers));
+  }
+
   return deleteRecord(collectionName, id);
 }
 

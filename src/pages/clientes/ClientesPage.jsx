@@ -21,6 +21,7 @@ export default function ClientesPage({ accessLevel }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const config = moduleConfigs.clients;
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("clients");
   const { snapshot } = useErpSnapshot();
@@ -42,6 +43,7 @@ export default function ClientesPage({ accessLevel }) {
     }
 
     setEditingRecord(null);
+    setErrorMessage("");
     setModalOpen(true);
   }
 
@@ -51,10 +53,13 @@ export default function ClientesPage({ accessLevel }) {
     }
 
     setEditingRecord(records.find((record) => record.id === client.id) || client);
+    setErrorMessage("");
     setModalOpen(true);
   }
 
   async function handleSubmit(payload) {
+    setErrorMessage("");
+
     if (editingRecord) {
       await updateRecord(editingRecord.id, payload);
     } else {
@@ -74,8 +79,14 @@ export default function ClientesPage({ accessLevel }) {
     const confirmed = window.confirm(`Excluir "${client.name}"?`);
 
     if (confirmed) {
-      await deleteRecord(client.id);
-      setSelectedClientId("");
+      setErrorMessage("");
+
+      try {
+        await deleteRecord(client.id);
+        setSelectedClientId("");
+      } catch (error) {
+        setErrorMessage(error.message);
+      }
     }
   }
 
@@ -109,6 +120,12 @@ export default function ClientesPage({ accessLevel }) {
           Exportar
         </Button>
       </div>
+
+      {errorMessage ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          {errorMessage}
+        </div>
+      ) : null}
 
       {/* --- SECAO: CARTEIRA E VISAO 360 --- */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
