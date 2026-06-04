@@ -15,6 +15,14 @@ const statusOptions = [
   { label: "Cancelado", value: "cancelado" },
 ];
 
+const machineCategoryOptions = [
+  { label: "Multibebidas", value: "Multibebidas" },
+  { label: "Profissional", value: "Profissional" },
+  { label: "Snacks", value: "Snacks" },
+  { label: "Coado", value: "Coado" },
+  { label: "Expresso", value: "Expresso" },
+];
+
 const checklistStatusOptions = [
   { label: "Pendente", value: "pendente" },
   { label: "Rascunho", value: "rascunho" },
@@ -40,6 +48,21 @@ const wikiStatusOptions = [
   { label: "Resolvido", value: "resolvido" },
   { label: "Em Andamento", value: "andamento" },
   { label: "Sem Solucao", value: "abandonado" },
+];
+
+const repairPriorityOptions = [
+  { label: "Baixa", value: "baixa" },
+  { label: "Media", value: "media" },
+  { label: "Alta", value: "alta" },
+  { label: "Critica", value: "critica" },
+];
+
+const repairStatusOptions = [
+  { label: "Entrada / Triagem", value: "triagem" },
+  { label: "Orcamento / Aprovacao", value: "orcamento" },
+  { label: "Em Manutencao", value: "manutencao" },
+  { label: "Pronto / Retirada", value: "pronto" },
+  { label: "Entregue", value: "entregue" },
 ];
 
 function resolveName(snapshot, collection, id) {
@@ -113,30 +136,87 @@ export const moduleConfigs = {
     fields: [
       { name: "name", label: "Nome da maquina", required: true, section: sections.identity },
       { name: "brand", label: "Marca", type: "select", optionGroup: "Marcas de Maquinas", required: true, section: sections.identity },
-      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Maquinas", required: true, section: sections.identity },
+      { name: "category", label: "Categoria", type: "select", options: machineCategoryOptions, required: true, section: sections.identity, helpText: "Categorias de maquina sao fixas e nativas do sistema." },
       { name: "status", label: "Status", type: "select", optionGroup: "Status Catalogo", options: statusOptions, defaultValue: "ativo", section: sections.identity },
       { name: "voltage", label: "Voltagem", type: "select", optionGroup: "Voltagens", options: [{ label: "110v", value: "110v" }, { label: "220v", value: "220v" }, { label: "Bivolt", value: "Bivolt" }], section: sections.technical },
       { name: "amperage", label: "Amperagem", type: "number", defaultValue: 10, min: 0, section: sections.technical },
+      { name: "power", label: "Potencia", section: sections.technical },
+      { name: "litreCapacity", label: "Litragem", section: sections.technical },
       { name: "hydraulic", label: "Rede hidrica", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
       { name: "sewer", label: "Esgoto", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
       { name: "steam", label: "Vapor", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
       { name: "paymentSystem", label: "Sistema de pagamento", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
       { name: "paymentSystemName", label: "Qual sistema?", section: sections.technical, visibleWhen: (data) => data.paymentSystem === "Sim", helpText: "Este campo alimenta checklists e fichas quando a maquina exige sistema de pagamento." },
+      { name: "hasSupplyReservoirs", label: "Possui reservatorios de insumo?", type: "checkbox", section: sections.technical, visibleWhen: (data) => data.category === "Multibebidas" },
+      { name: "reservoirCount", label: "Quantidade de reservatorios", type: "number", min: 0, section: sections.technical, visibleWhen: (data) => data.category === "Multibebidas" && data.hasSupplyReservoirs },
+      { name: "reservoirCapacity", label: "Capacidade de cada reservatorio", section: sections.technical, visibleWhen: (data) => data.category === "Multibebidas" && data.hasSupplyReservoirs },
+      { name: "hasIntegratedGrinder", label: "Possui moinho integrado?", type: "checkbox", section: sections.technical, visibleWhen: (data) => data.category === "Multibebidas" },
+      { name: "usesBeans", label: "Utiliza grao?", type: "checkbox", section: sections.technical, visibleWhen: (data) => data.category === "Multibebidas" },
+      { name: "solubleOnly", label: "E 100% soluvel?", type: "checkbox", section: sections.technical, visibleWhen: (data) => data.category === "Multibebidas" },
+      { name: "groupCount", label: "Quantidade de grupos", type: "select", options: [{ label: "1 Grupo", value: "1 Grupo" }, { label: "2 Grupos", value: "2 Grupos" }, { label: "3 Grupos", value: "3 Grupos" }], section: sections.technical, visibleWhen: (data) => data.category === "Profissional" },
+      { name: "hasPortafilter", label: "Possui porta-filtro?", type: "checkbox", section: sections.technical, visibleWhen: (data) => data.category === "Profissional" },
+      { name: "singlePortafilterCount", label: "Porta-filtros simples", type: "number", min: 0, section: sections.technical, visibleWhen: (data) => data.category === "Profissional" && data.hasPortafilter },
+      { name: "doublePortafilterCount", label: "Porta-filtros duplos", type: "number", min: 0, section: sections.technical, visibleWhen: (data) => data.category === "Profissional" && data.hasPortafilter },
+      { name: "extraSteamer", label: "Possui vaporizador extra?", type: "checkbox", section: sections.technical, visibleWhen: (data) => data.category === "Profissional" },
+      { name: "trayCount", label: "Quantidade de bandejas", type: "number", min: 0, section: sections.technical, visibleWhen: (data) => data.category === "Snacks" },
+      { name: "springsPerTray", label: "Molas por bandeja", type: "number", min: 0, section: sections.technical, visibleWhen: (data) => data.category === "Snacks" },
+      { name: "filterType", label: "Tipo de filtro suportado", type: "select", options: [{ label: "Papel", value: "Papel" }, { label: "Plastico", value: "Plastico" }, { label: "Pano", value: "Pano" }], section: sections.technical, visibleWhen: (data) => data.category === "Coado" },
+      { name: "maxDrinkCount", label: "Maximo de bebidas suportadas", type: "number", min: 0, section: sections.technical, helpText: "Usado para limitar a configuracao de bebidas da maquina." },
       { name: "stock", label: "Estoque atual", type: "number", defaultValue: 0, min: 0, section: sections.inventory },
       { name: "minStock", label: "Estoque minimo", type: "number", defaultValue: 1, min: 0, section: sections.inventory, warningWhen: (data) => Number(data.minStock || 0) > Number(data.stock || 0), warningText: () => "Estoque minimo acima do estoque atual: o sistema deve sinalizar reposicao." },
       { name: "priceRent", label: "Valor aluguel", type: "currency", min: 0, section: sections.pricing },
       { name: "priceSale", label: "Valor venda", type: "currency", min: 0, section: sections.pricing },
       { name: "acquisitionCost", label: "Custo aquisicao", type: "currency", min: 0, section: sections.pricing, helpText: "Usado como base futura para payback real da maquina." },
       { name: "imageUrl", label: "URL da foto", section: sections.operation },
+      { name: "imageDataUrl", label: "Upload de imagem", type: "imageUpload", full: true, section: sections.operation, fallbackUrlField: "imageUrl" },
       { name: "videoUrl", label: "Link de video", section: sections.operation },
+      { name: "hasModelVariants", label: "Possui multiplos modelos/versoes?", type: "checkbox", section: sections.operation },
+      { name: "modelVariants", label: "Variacoes de modelo", type: "variantList", full: true, defaultValue: [], section: sections.operation, visibleWhen: (data) => data.hasModelVariants },
       { name: "defaultProposalText", label: "Texto padrao de proposta", type: "textarea", full: true, section: sections.operation },
       { name: "description", label: "Descricao tecnica", type: "textarea", full: true, maxLength: 800, section: sections.operation },
     ],
     extraActions: [
       {
+        id: "repairOrders",
+        label: "Consertos",
+        icon: "fileClock",
+        permissionId: "tab:machines.repairs",
+        type: "hub",
+        hub: {
+          collection: "repairOrders",
+          parentKey: "machineId",
+          title: (machine) => `Consertos SLA - ${machine?.name || ""}`,
+          description: () => "Fila tecnica e historico de consertos vinculados a esta maquina.",
+          emptyTitle: "Ordens de conserto vinculadas",
+          actionLabel: "Nova O.S.",
+          formTitle: "Ordem de Conserto",
+          formDescription: "Registro tecnico interno com prioridade, SLA e diagnostico.",
+          columns: [
+            { key: "code", label: "O.S." },
+            { key: "clientId", label: "Cliente", source: "clients" },
+            { key: "technician", label: "Tecnico" },
+            { key: "priority", label: "Prioridade" },
+            { key: "status", label: "Etapa", type: "status" },
+          ],
+          fields: [
+            { name: "code", label: "Codigo", placeholder: "OS-0000", section: sections.identity },
+            { name: "clientId", label: "Cliente", source: "clients", required: true, section: sections.identity },
+            { name: "technician", label: "Tecnico", type: "select", optionGroup: "Tecnicos", required: true, section: sections.operation },
+            { name: "priority", label: "Prioridade", type: "select", optionGroup: "Prioridades de Conserto", options: repairPriorityOptions, defaultValue: "media", section: sections.operation },
+            { name: "status", label: "Etapa", type: "select", options: repairStatusOptions, defaultValue: "triagem", section: sections.operation },
+            { name: "issue", label: "Problema relatado", type: "textarea", required: true, full: true, section: sections.operation },
+            { name: "diagnosis", label: "Diagnostico", type: "textarea", full: true, section: sections.operation },
+            { name: "estimatedValue", label: "Valor estimado", type: "currency", min: 0, section: sections.pricing },
+            { name: "approvedByClient", label: "Aprovado pelo cliente", type: "checkbox", section: sections.pricing },
+            { name: "notes", label: "Notas internas", type: "textarea", full: true, section: sections.operation },
+          ],
+        },
+      },
+      {
         id: "machineConfigs",
         label: "Config",
         icon: "settings",
+        permissionId: "module:machines.configs",
         type: "hub",
         hub: {
           collection: "machineConfigs",
@@ -153,22 +233,51 @@ export const moduleConfigs = {
             { key: "drinks", label: "Bebidas" },
             { key: "temperature", label: "Temp." },
           ],
-          fields: [
-            { name: "name", label: "Nome da configuracao", required: true },
-            { name: "clientId", label: "Cliente vinculado", source: "clients" },
-            { name: "isDefault", label: "Configuracao padrao", type: "checkbox" },
-            { name: "reservoirs", label: "Reservatorios", type: "textarea", full: true },
-            { name: "drinks", label: "Bebidas / ML", type: "textarea", full: true },
-            { name: "temperature", label: "Temperatura" },
-            { name: "grind", label: "Moagem" },
-            { name: "notes", label: "Observacoes", type: "textarea", full: true },
-          ],
+          fields: (machine) => {
+            const reservoirCount = Math.max(0, Number(machine?.reservoirCount || 0));
+            const maxDrinkCount = Math.max(8, Number(machine?.maxDrinkCount || 8));
+
+            return [
+              { name: "name", label: "Nome da configuracao", required: true, section: sections.identity },
+              { name: "clientId", label: "Cliente vinculado", source: "clients", section: sections.identity },
+              { name: "isDefault", label: "Configuracao padrao", type: "checkbox", section: sections.identity },
+              {
+                name: "reservoirs",
+                label: "Reservatorios",
+                type: "dynamicTextList",
+                full: true,
+                section: sections.operation,
+                addLabel: "Adicionar reservatorio",
+                defaultValue: Array.from({ length: reservoirCount }).map((_, index) => `Reservatorio ${index + 1}`),
+                itemLabel: "Reservatorio",
+                maxItems: reservoirCount,
+                helpText: reservoirCount
+                  ? `Esta maquina possui ${reservoirCount} reservatorio(s) cadastrados no catalogo.`
+                  : "Cadastre a quantidade de reservatorios no catalogo da maquina para liberar estes campos.",
+              },
+              {
+                name: "drinks",
+                label: "Bebidas / ML",
+                type: "dynamicTextList",
+                full: true,
+                section: sections.operation,
+                addLabel: "Adicionar bebida",
+                defaultValue: Array.from({ length: Math.min(8, maxDrinkCount) }).map((_, index) => `Bebida ${index + 1}`),
+                itemLabel: "Bebida",
+                maxItems: maxDrinkCount,
+              },
+              { name: "temperature", label: "Temperatura", section: sections.technical },
+              { name: "grind", label: "Moagem", section: sections.technical },
+              { name: "notes", label: "Programacao", type: "textarea", full: true, section: sections.operation },
+            ];
+          },
         },
       },
       {
         id: "wikiSolutions",
         label: "Wiki",
         icon: "wrench",
+        permissionId: "module:machines.wiki",
         type: "hub",
         hub: {
           collection: "wikiSolutions",
@@ -191,7 +300,11 @@ export const moduleConfigs = {
             { name: "status", label: "Status", type: "select", optionGroup: "Status Wiki", options: wikiStatusOptions, defaultValue: "andamento" },
             { name: "difficulty", label: "Dificuldade", type: "select", optionGroup: "Dificuldade Wiki", options: [{ label: "Simples", value: "Simples" }, { label: "Media", value: "Media" }, { label: "Dificil", value: "Dificil" }] },
             { name: "tags", label: "Tags de busca" },
-            { name: "evidence", label: "Midias e evidencias", type: "textarea", full: true },
+            { name: "evidence", label: "Resumo das evidencias", type: "textarea", full: true },
+            { name: "evidenceImageDataUrl", label: "Upload de imagem", type: "imageUpload", full: true },
+            { name: "evidenceVideoFile", label: "Upload de video", type: "fileUpload", accept: "video/*", full: true, storageKeyPrefix: "wiki_video" },
+            { name: "evidenceUrl", label: "URL de referencia", type: "url", full: true },
+            { name: "evidenceLinks", label: "Links externos", type: "dynamicTextList", itemLabel: "Link", addLabel: "Adicionar link", full: true },
             { name: "solution", label: "Passo a passo da solucao", type: "textarea", full: true },
           ],
         },
@@ -243,6 +356,7 @@ export const moduleConfigs = {
         id: "recipes",
         label: "Receitas",
         icon: "receipt",
+        permissionId: "module:insumos.recipes",
         type: "hub",
         hub: {
           collection: "recipes",

@@ -52,9 +52,11 @@ export default function DataTable({
   onDelete,
   onExtraAction,
   actions = true,
+  canDelete = actions,
+  canEdit = actions,
   extraActions = [],
 }) {
-  const hasActionColumn = actions || extraActions.length > 0;
+  const hasActionColumn = canEdit || canDelete || extraActions.length > 0;
 
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
@@ -88,12 +90,8 @@ export default function DataTable({
                         onClick={() => onExtraAction(action, record)}
                       />
                     ))}
-                    {actions ? (
-                      <>
-                        <IconButton icon="pencil" label="Editar" onClick={() => onEdit(record)} />
-                        <IconButton icon="trash" label="Excluir" onClick={() => onDelete(record)} />
-                      </>
-                    ) : null}
+                    {canEdit ? <IconButton icon="pencil" label="Editar" onClick={() => onEdit(record)} /> : null}
+                    {canDelete ? <IconButton icon="trash" label="Excluir" onClick={() => onDelete(record)} /> : null}
                   </div>
                 </td>
               ) : null}

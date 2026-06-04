@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell from "./layouts/AppShell.jsx";
 import { useCurrentUser } from "./hooks/useCurrentUser.js";
 import { useNavigation } from "./hooks/useNavigation.js";
+import FirstLoginPage from "./pages/login/FirstLoginPage.jsx";
 import LoginPage from "./pages/login/LoginPage.jsx";
 import { pageRegistry } from "./pages/pageRegistry.jsx";
 import {
@@ -15,7 +16,14 @@ export default function App() {
   const [activePage, setActivePage] = useState("home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewUserId, setPreviewUserId] = useState("");
-  const { data: userContext, isLoading: isUserLoading, login, logout } = useCurrentUser();
+  const {
+    completeFirstAccess,
+    data: userContext,
+    isLoading: isUserLoading,
+    login,
+    logout,
+    requestAccess,
+  } = useCurrentUser();
   const { data: navigation } = useNavigation();
 
   const activeUser = useMemo(() => {
@@ -77,6 +85,18 @@ export default function App() {
         accounts={userContext.loginAccounts}
         isLoading={isUserLoading}
         onLogin={login}
+        onRequestAccess={requestAccess}
+      />
+    );
+  }
+
+  if (userContext.user.mustChangePassword) {
+    return (
+      <FirstLoginPage
+        isLoading={isUserLoading}
+        user={userContext.user}
+        onComplete={completeFirstAccess}
+        onLogout={logout}
       />
     );
   }

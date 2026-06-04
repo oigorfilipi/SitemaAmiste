@@ -2,11 +2,18 @@ import { PAGE_LABELS, ROLE_LABELS } from "./accountService.js";
 import { ALL_PAGES, getAccessLabel, getRolePermissions } from "./permissionService.js";
 
 export const PROFILE_FORM_FIELDS = [
-  { name: "displayName", label: "Nome curto", required: true },
-  { name: "fullName", label: "Nome completo", required: true },
-  { name: "email", label: "Email", required: true },
-  { name: "phone", label: "Telefone" },
-  { name: "avatarInitials", label: "Iniciais", maxLength: 3 },
+  { name: "displayName", label: "Nome de exibicao", required: true, section: "editable" },
+  { name: "fullName", label: "Nome completo", required: true, section: "editable" },
+  { name: "phone", label: "Telefone", section: "editable" },
+  { name: "profilePhotoUrl", label: "URL da foto", section: "photo" },
+  { name: "profilePhotoDataUrl", label: "Upload de foto", type: "image", section: "photo" },
+  { name: "avatarInitials", label: "Iniciais", maxLength: 3, section: "photo" },
+  { name: "email", label: "E-mail", locked: true, section: "locked" },
+  { name: "cpfDocument", label: "CPF ou RG", locked: true, section: "locked" },
+  { name: "birthDate", label: "Data de nascimento", locked: true, section: "locked", type: "date" },
+  { name: "securityNewPassword", label: "Nova senha", type: "password", section: "security" },
+  { name: "securityConfirmPassword", label: "Confirmar senha", type: "password", section: "security" },
+  { name: "twoFactorEnabled", label: "Ativar autenticacao em duas etapas (2FA)", type: "checkbox", section: "security" },
 ];
 
 function buildInitials(value) {
@@ -96,14 +103,19 @@ export function buildProfileAccessRows(profile) {
 }
 
 export function buildProfileFormData(profile) {
-  return PROFILE_FORM_FIELDS.reduce((formData, field) => {
-    formData[field.name] = profile?.[field.name] || "";
-    return formData;
+  const formData = PROFILE_FORM_FIELDS.reduce((currentFormData, field) => {
+    currentFormData[field.name] = profile?.[field.name] ?? (field.type === "checkbox" ? false : "");
+    return currentFormData;
   }, {});
+
+  formData.activeSessions = profile?.activeSessions || [];
+
+  return formData;
 }
 
 export function normalizeProfilePayload(formData, profile) {
   const displayName = formData.displayName || formData.fullName || profile?.displayName || "Usuario";
+  const newPassword = formData.securityNewPassword?.trim();
 
   /* --- SECAO: DADOS EDITAVEIS DO PERFIL ---
    * Cargo, status e historico ficam preservados para que o proprio usuario nao altere
@@ -113,8 +125,13 @@ export function normalizeProfilePayload(formData, profile) {
     ...profile,
     displayName,
     fullName: formData.fullName || displayName,
-    email: formData.email || profile?.email || "",
+    email: profile?.email || "",
     phone: formData.phone || "",
     avatarInitials: String(formData.avatarInitials || buildInitials(displayName)).slice(0, 3).toUpperCase(),
+    password: newPassword || profile?.password || profile?.temporaryPassword || "1234",
+    activeSessions: Array.isArray(formData.activeSessions) ? formData.activeSessions : profile?.activeSessions || [],
+    profilePhotoDataUrl: formData.profilePhotoDataUrl || "",
+    profilePhotoUrl: formData.profilePhotoUrl || "",
+    twoFactorEnabled: Boolean(formData.twoFactorEnabled),
   };
 }

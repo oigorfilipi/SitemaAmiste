@@ -20,7 +20,7 @@
   }
 
   body {
-    min-width: 1120px;
+    min-width: 0;
     color: #0f0f0f;
     background:
       linear-gradient(180deg, rgba(168, 32, 32, 0.05), transparent 260px),

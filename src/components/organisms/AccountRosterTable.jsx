@@ -38,8 +38,10 @@ export default function AccountRosterTable({
               key={account.id}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amiste-red text-sm font-black text-white">
-                  {account.avatarInitials}
+                <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-amiste-red text-sm font-black text-white">
+                  {account.profilePhotoDataUrl || account.profilePhotoUrl ? (
+                    <img alt={account.displayName} className="h-full w-full object-cover" src={account.profilePhotoDataUrl || account.profilePhotoUrl} />
+                  ) : account.avatarInitials}
                 </span>
                 <span className="min-w-0">
                   <strong className="block truncate text-sm font-black text-amiste-black">{account.displayName}</strong>

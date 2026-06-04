@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  completeFirstLogin,
   getCurrentUser,
   getLoginAccounts,
   getSidebarUsers,
   loginWithUser,
   logoutCurrentUser,
+  requestAccountAccess,
 } from "../services/authService.js";
 
 export function useCurrentUser() {
@@ -58,5 +60,18 @@ export function useCurrentUser() {
     await refresh();
   }, [refresh]);
 
-  return { data, error, isLoading, login, logout, refresh };
+  const completeFirstAccess = useCallback(async (payload) => {
+    if (!data.user?.id) {
+      return;
+    }
+
+    await completeFirstLogin(data.user.id, payload);
+    await refresh();
+  }, [data.user?.id, refresh]);
+
+  const requestAccess = useCallback(async (payload) => {
+    await requestAccountAccess(payload);
+  }, []);
+
+  return { completeFirstAccess, data, error, isLoading, login, logout, refresh, requestAccess };
 }

@@ -35,6 +35,8 @@ export default function EntityCardsGrid({
   onEdit,
   onDelete,
   onExtraAction,
+  canDelete = actions,
+  canEdit = actions,
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -76,7 +78,7 @@ export default function EntityCardsGrid({
             </dl>
 
             {/* --- SECAO: ACOES DO CARD --- */}
-            {actions || extraActions.length ? (
+            {canEdit || canDelete || extraActions.length ? (
               <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
                 {extraActions.map((action) => (
                   <Button
@@ -90,12 +92,8 @@ export default function EntityCardsGrid({
                     {action.label}
                   </Button>
                 ))}
-                {actions ? (
-                  <>
-                    <IconButton icon="pencil" label={`Editar ${titleValue}`} onClick={() => onEdit(record)} />
-                    <IconButton icon="trash" label={`Excluir ${titleValue}`} onClick={() => onDelete(record)} />
-                  </>
-                ) : null}
+                {canEdit ? <IconButton icon="pencil" label={`Editar ${titleValue}`} onClick={() => onEdit(record)} /> : null}
+                {canDelete ? <IconButton icon="trash" label={`Excluir ${titleValue}`} onClick={() => onDelete(record)} /> : null}
               </div>
             ) : null}
           </article>

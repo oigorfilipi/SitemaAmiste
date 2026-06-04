@@ -371,7 +371,7 @@ function RepairOrderDetailsModal({ order, snapshot, open, onClose }) {
   );
 }
 
-export default function ServiceOrdersPage({ accessLevel, user }) {
+export default function ServiceOrdersPage({ accessLevel, embedded = false, user }) {
   const [formOpen, setFormOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState(null);
   const { records, createRecord, updateRecord } = useCollection("repairOrders");
@@ -414,13 +414,29 @@ export default function ServiceOrdersPage({ accessLevel, user }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        actionIcon="plus"
-        actionLabel={canMutate ? "Nova Entrada" : ""}
-        description="Fila tecnica de consertos com controle de etapa, SLA de 3 dias e historico de movimentacoes."
-        title="Consertos SLA"
-        onAction={() => setFormOpen(true)}
-      />
+      {embedded ? (
+        <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <div>
+            <h2 className="font-display text-xl font-black text-amiste-black">Consertos SLA</h2>
+            <p className="mt-1 text-sm italic text-amiste-gray/60">
+              Funcionalidade interna do Catalogo de Maquinas.
+            </p>
+          </div>
+          {canMutate ? (
+            <Button icon="plus" onClick={() => setFormOpen(true)}>
+              Nova Entrada
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <PageHeader
+          actionIcon="plus"
+          actionLabel={canMutate ? "Nova Entrada" : ""}
+          description="Fila tecnica de consertos com controle de etapa, SLA de 3 dias e historico de movimentacoes."
+          title="Consertos SLA"
+          onAction={() => setFormOpen(true)}
+        />
+      )}
 
       {/* --- SECAO: INDICADORES DE SLA --- */}
       <section className="grid grid-cols-4 gap-4">

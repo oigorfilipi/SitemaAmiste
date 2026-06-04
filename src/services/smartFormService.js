@@ -4,9 +4,9 @@ function asNumber(value) {
   return Number.isFinite(numericValue) ? numericValue : 0;
 }
 
-function getDefaultValue(field) {
+function getDefaultValue(field, snapshot, editingRecord) {
   if (field.defaultValue !== undefined) {
-    return field.defaultValue;
+    return typeof field.defaultValue === "function" ? field.defaultValue(snapshot, editingRecord) : field.defaultValue;
   }
 
   if (field.type === "number" || field.type === "currency") {
@@ -17,7 +17,26 @@ function getDefaultValue(field) {
     return false;
   }
 
+  if (field.type === "dynamicTextList" || field.type === "variantList") {
+    return [];
+  }
+
   return "";
+}
+
+function normalizeInitialFieldValue(field, value, snapshot, editingRecord) {
+  if (field.type === "dynamicTextList" && typeof value === "string") {
+    return value
+      .split(/[,;\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  if ((field.type === "dynamicTextList" || field.type === "variantList") && !Array.isArray(value)) {
+    return getDefaultValue(field, snapshot, editingRecord);
+  }
+
+  return value;
 }
 
 export function isFieldVisible(field, formData, snapshot) {
@@ -35,7 +54,12 @@ export function buildInitialSmartFormData(fields, editingRecord, snapshot) {
       return data;
     }
 
-    data[field.name] = editingRecord?.[field.name] ?? getDefaultValue(field);
+    data[field.name] = normalizeInitialFieldValue(
+      field,
+      editingRecord?.[field.name] ?? getDefaultValue(field, snapshot, editingRecord),
+      snapshot,
+      editingRecord
+    );
     return data;
   }, {});
 
@@ -79,7 +103,7 @@ export function normalizeSmartPayload(fields, formData, snapshot) {
     }
 
     if (!visible && field.clearWhenHidden !== false) {
-      payload[field.name] = getDefaultValue(field);
+      payload[field.name] = getDefaultValue(field, snapshot);
       return payload;
     }
 

@@ -94,8 +94,8 @@ function DeveloperSettingsContent() {
   );
 }
 
-export default function ConfiguracoesPage({ accessLevel }) {
-  if (accessLevel !== "AC") {
+export default function ConfiguracoesPage({ accessLevel, user }) {
+  if (accessLevel !== "AC" || user?.role !== "DEV") {
     return (
       <TableEmptyState
         description="Configuracoes tecnicas, dados do sistema e informacoes administrativas sao exclusivas do perfil DEV."

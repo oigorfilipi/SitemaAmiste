@@ -5,10 +5,23 @@ import EntityFormModal from "./EntityFormModal.jsx";
 import Modal from "../molecules/Modal.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 
-export default function RelatedRecordsHub({ open, hub, parentRecord, snapshot, canMutate, onClose }) {
+export default function RelatedRecordsHub({
+  open,
+  hub,
+  parentRecord,
+  snapshot,
+  canCreate = true,
+  canDelete = true,
+  canMutate,
+  canUpdate = true,
+  onClose,
+}) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const { records, createRecord, updateRecord, deleteRecord } = useCollection(hub.collection);
+  const resolvedFields = useMemo(() => {
+    return typeof hub.fields === "function" ? hub.fields(parentRecord, snapshot) : hub.fields;
+  }, [hub, parentRecord, snapshot]);
 
   const relatedRecords = useMemo(() => {
     if (!parentRecord) {
@@ -19,11 +32,19 @@ export default function RelatedRecordsHub({ open, hub, parentRecord, snapshot, c
   }, [hub.parentKey, parentRecord, records]);
 
   function openCreate() {
+    if (!canCreate) {
+      return;
+    }
+
     setEditingRecord(null);
     setFormOpen(true);
   }
 
   function openEdit(record) {
+    if (!canUpdate) {
+      return;
+    }
+
     setEditingRecord(record);
     setFormOpen(true);
   }
@@ -45,6 +66,10 @@ export default function RelatedRecordsHub({ open, hub, parentRecord, snapshot, c
   }
 
   async function handleDelete(record) {
+    if (!canDelete) {
+      return;
+    }
+
     const confirmed = window.confirm(`Excluir "${record.name || record.problem || record.id}"?`);
 
     if (confirmed) {
@@ -68,7 +93,7 @@ export default function RelatedRecordsHub({ open, hub, parentRecord, snapshot, c
               {relatedRecords.length} registro(s) vinculado(s).
             </span>
           </div>
-          {canMutate ? (
+          {canCreate ? (
             <Button icon="plus" onClick={openCreate}>
               {hub.actionLabel}
             </Button>
@@ -76,7 +101,9 @@ export default function RelatedRecordsHub({ open, hub, parentRecord, snapshot, c
         </div>
 
         <DataTable
-          actions={canMutate}
+          actions={canUpdate || canDelete}
+          canDelete={canDelete}
+          canEdit={canUpdate}
           columns={hub.columns}
           records={relatedRecords}
           snapshot={snapshot}
@@ -87,7 +114,7 @@ export default function RelatedRecordsHub({ open, hub, parentRecord, snapshot, c
         <EntityFormModal
           description={hub.formDescription}
           editingRecord={editingRecord}
-          fields={hub.fields}
+          fields={resolvedFields}
           open={formOpen}
           snapshot={snapshot}
           title={hub.formTitle}

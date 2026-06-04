@@ -1,7 +1,6 @@
 export const primaryNavigationMock = [
   { id: "home", label: "Home", icon: "home" },
   { id: "checklists", label: "Checklists", icon: "checkSquare" },
-  { id: "serviceOrders", label: "Consertos SLA", icon: "wrench" },
   { id: "machines", label: "Cadastro de Maquinas", icon: "cog" },
   { id: "insumos", label: "Insumos", icon: "packagePlus" },
   { id: "acessorios", label: "Acessorios", icon: "boxes" },

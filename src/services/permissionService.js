@@ -26,11 +26,35 @@ const ALL_PAGES = [
   "accounts",
 ];
 
+const INTERNAL_MODULES = [
+  "tab:machines.catalog",
+  "tab:machines.repairs",
+  "module:machines.configs",
+  "module:machines.wiki",
+  "module:insumos.recipes",
+  "module:labels.files",
+  "module:accounts.rbac",
+];
+
+const ACTION_RESOURCES = [
+  "action:create",
+  "action:update",
+  "action:delete",
+  "action:upload",
+  "action:print",
+  "action:rbac.edit",
+  "action:user.protectedEdit",
+];
+
+const ALL_PERMISSION_RESOURCES = [...ALL_PAGES, ...INTERNAL_MODULES, ...ACTION_RESOURCES];
+const PERMISSION_OVERRIDE_KEY = "amiste_erp_permission_overrides_v1";
+
 const ROLE_PERMISSIONS = {
-  DEV: ALL_PAGES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
+  DEV: ALL_PERMISSION_RESOURCES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
   CEO: {
-    ...ALL_PAGES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
+    ...ALL_PERMISSION_RESOURCES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
     configuracoes: ACCESS.OC,
+    "action:rbac.edit": ACCESS.VIS,
   },
   VEN: {
     home: ACCESS.AC,
@@ -51,6 +75,13 @@ const ROLE_PERMISSIONS = {
     opcoes: ACCESS.VIS,
     etiquetas: ACCESS.UP,
     accounts: ACCESS.OC,
+    "action:create": ACCESS.AC,
+    "action:update": ACCESS.AC,
+    "action:delete": ACCESS.UP,
+    "action:upload": ACCESS.UP,
+    "action:print": ACCESS.UP,
+    "action:rbac.edit": ACCESS.OC,
+    "action:user.protectedEdit": ACCESS.OC,
   },
   ADM: {
     home: ACCESS.AC,
@@ -71,6 +102,13 @@ const ROLE_PERMISSIONS = {
     opcoes: ACCESS.VIS,
     etiquetas: ACCESS.UP,
     accounts: ACCESS.OC,
+    "action:create": ACCESS.AC,
+    "action:update": ACCESS.AC,
+    "action:delete": ACCESS.UP,
+    "action:upload": ACCESS.UP,
+    "action:print": ACCESS.UP,
+    "action:rbac.edit": ACCESS.OC,
+    "action:user.protectedEdit": ACCESS.OC,
   },
   TEC: {
     home: ACCESS.AC,
@@ -91,6 +129,13 @@ const ROLE_PERMISSIONS = {
     opcoes: ACCESS.UP,
     etiquetas: ACCESS.UP,
     accounts: ACCESS.OC,
+    "action:create": ACCESS.AC,
+    "action:update": ACCESS.UP,
+    "action:delete": ACCESS.OC,
+    "action:upload": ACCESS.UP,
+    "action:print": ACCESS.UP,
+    "action:rbac.edit": ACCESS.OC,
+    "action:user.protectedEdit": ACCESS.OC,
   },
   FIN: {
     home: ACCESS.AC,
@@ -111,6 +156,13 @@ const ROLE_PERMISSIONS = {
     opcoes: ACCESS.UP,
     etiquetas: ACCESS.UP,
     accounts: ACCESS.OC,
+    "action:create": ACCESS.AC,
+    "action:update": ACCESS.AC,
+    "action:delete": ACCESS.UP,
+    "action:upload": ACCESS.UP,
+    "action:print": ACCESS.UP,
+    "action:rbac.edit": ACCESS.OC,
+    "action:user.protectedEdit": ACCESS.OC,
   },
 };
 
@@ -133,8 +185,77 @@ const SCOPED_COLLECTION_PERMISSIONS = {
   },
 };
 
+function canUseLocalStorage() {
+  return typeof window !== "undefined" && Boolean(window.localStorage);
+}
+
+function readPermissionOverrides() {
+  if (!canUseLocalStorage()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(window.localStorage.getItem(PERMISSION_OVERRIDE_KEY) || "{}");
+  } catch {
+    window.localStorage.removeItem(PERMISSION_OVERRIDE_KEY);
+    return {};
+  }
+}
+
+function emitPermissionChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("amiste-permissions-change"));
+  }
+}
+
+function resolveFallbackAccess(role, resourceId, permissions) {
+  if (resourceId.startsWith("tab:machines") || resourceId.startsWith("module:machines")) {
+    return permissions.machines || ACCESS.OC;
+  }
+
+  if (resourceId.startsWith("module:insumos")) {
+    return permissions.insumos || ACCESS.OC;
+  }
+
+  if (resourceId.startsWith("module:labels")) {
+    return permissions.etiquetas || ACCESS.OC;
+  }
+
+  if (resourceId.startsWith("module:accounts")) {
+    return permissions.accounts || ACCESS.OC;
+  }
+
+  if (resourceId === "action:rbac.edit") {
+    return role === "DEV" ? ACCESS.AC : ACCESS.OC;
+  }
+
+  if (resourceId === "action:user.protectedEdit") {
+    return role === "DEV" || role === "CEO" ? ACCESS.AC : ACCESS.OC;
+  }
+
+  if (resourceId.startsWith("action:")) {
+    return role === "DEV" || role === "CEO" ? ACCESS.AC : ACCESS.UP;
+  }
+
+  return ACCESS.OC;
+}
+
+function normalizeRolePermissions(role, permissions = {}) {
+  return ALL_PERMISSION_RESOURCES.reduce((normalized, resourceId) => {
+    normalized[resourceId] = permissions[resourceId] || resolveFallbackAccess(role, resourceId, permissions);
+    return normalized;
+  }, {});
+}
+
 export function getRolePermissions(role) {
-  return ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.VEN;
+  const normalizedRole = ROLE_PERMISSIONS[role] ? role : "VEN";
+  const basePermissions = normalizeRolePermissions(normalizedRole, ROLE_PERMISSIONS[normalizedRole]);
+  const overrides = readPermissionOverrides()[normalizedRole] || {};
+
+  return normalizeRolePermissions(normalizedRole, {
+    ...basePermissions,
+    ...overrides,
+  });
 }
 
 export function getPageAccess(role, pageId) {
@@ -152,6 +273,37 @@ export function canMutatePage(role, pageId) {
 export function getScopedCollectionAccess(role, scope, collectionName) {
   const rolePermissions = SCOPED_COLLECTION_PERMISSIONS[scope]?.[role] || SCOPED_COLLECTION_PERMISSIONS[scope]?.VEN;
   return rolePermissions?.[collectionName] || ACCESS.OC;
+}
+
+export function updateRolePermission(role, resourceId, access) {
+  if (!ROLE_PERMISSIONS[role] || !ALL_PERMISSION_RESOURCES.includes(resourceId) || !ACCESS[access]) {
+    return getRolePermissions(role);
+  }
+
+  if (!canUseLocalStorage()) {
+    return getRolePermissions(role);
+  }
+
+  const overrides = readPermissionOverrides();
+  const nextOverrides = {
+    ...overrides,
+    [role]: {
+      ...(overrides[role] || {}),
+      [resourceId]: access,
+    },
+  };
+
+  window.localStorage.setItem(PERMISSION_OVERRIDE_KEY, JSON.stringify(nextOverrides));
+  emitPermissionChange();
+
+  return getRolePermissions(role);
+}
+
+export function resetRolePermissionOverrides() {
+  if (canUseLocalStorage()) {
+    window.localStorage.removeItem(PERMISSION_OVERRIDE_KEY);
+    emitPermissionChange();
+  }
 }
 
 export function filterNavigationByRole(items, role) {
@@ -173,4 +325,4 @@ export function getAccessLabel(access) {
   return labels[access] || labels.OC;
 }
 
-export { ACCESS, ALL_PAGES, ROLE_PERMISSIONS };
+export { ACCESS, ALL_PAGES, ALL_PERMISSION_RESOURCES, ROLE_PERMISSIONS };

@@ -1,7 +1,7 @@
-import { listRecords, updateRecord } from "./localDatabase.js";
+import { createRecord, listRecords, updateRecord } from "./localDatabase.js";
 
 const SESSION_KEY = "amiste_erp_auth_session_v1";
-const LOCAL_AUTH_PIN = "1234";
+const LOCAL_DEFAULT_PASSWORD = "1234";
 
 function canUseLocalStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage);
@@ -40,6 +40,28 @@ async function findActiveAccount(userId) {
   return accounts.find((account) => account.id === userId && account.status === "ativo") || null;
 }
 
+async function findActiveAccountByEmail(email) {
+  const accounts = await listRecords("accounts");
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+
+  return accounts.find((account) =>
+    account.status === "ativo" &&
+    String(account.email || "").trim().toLowerCase() === normalizedEmail
+  ) || null;
+}
+
+function buildAccessHistory(account, label) {
+  const history = Array.isArray(account.accessHistory) ? account.accessHistory : [];
+
+  return [
+    {
+      at: new Date().toISOString(),
+      label,
+    },
+    ...history,
+  ].slice(0, 20);
+}
+
 export async function getCurrentUserLocal() {
   const session = readSession();
 
@@ -63,18 +85,22 @@ export async function getSidebarUsersLocal() {
 }
 
 export async function getLoginAccountsLocal() {
-  return getSidebarUsersLocal();
+  const accounts = await getSidebarUsersLocal();
+
+  return accounts.map(({ password, temporaryPassword, ...account }) => account);
 }
 
-export async function loginWithUserLocal({ pin, userId }) {
-  if (pin !== LOCAL_AUTH_PIN) {
-    throw new Error("PIN invalido para a sessao local.");
-  }
-
-  const account = await findActiveAccount(userId);
+export async function loginWithUserLocal({ email, password }) {
+  const account = await findActiveAccountByEmail(email);
 
   if (!account) {
-    throw new Error("Conta inativa ou nao encontrada.");
+    throw new Error("E-mail ou senha invalidos.");
+  }
+
+  const expectedPassword = account.password || account.temporaryPassword || LOCAL_DEFAULT_PASSWORD;
+
+  if (String(password || "") !== String(expectedPassword)) {
+    throw new Error("E-mail ou senha invalidos.");
   }
 
   saveSession(account.id);
@@ -86,7 +112,18 @@ export async function loginWithUserLocal({ pin, userId }) {
   return updateRecord(
     "accounts",
     account.id,
-    { lastLogin: new Date().toISOString() },
+    {
+      accessHistory: buildAccessHistory(account, "Login corporativo local"),
+      activeSessions: [
+        {
+          createdAt: new Date().toISOString(),
+          device: "Navegador local",
+          id: `session_${Date.now()}`,
+        },
+        ...(account.activeSessions || []),
+      ].slice(0, 5),
+      lastLogin: new Date().toISOString(),
+    },
     {
       action: "Login",
       details: "Entrada local no ERP.",
@@ -94,6 +131,71 @@ export async function loginWithUserLocal({ pin, userId }) {
       title: account.displayName,
     }
   );
+}
+
+export async function completeFirstLoginLocal(userId, payload) {
+  const account = await findActiveAccount(userId);
+
+  if (!account) {
+    throw new Error("Conta ativa nao encontrada para concluir o primeiro acesso.");
+  }
+
+  if (!payload.password?.trim()) {
+    throw new Error("Informe a nova senha.");
+  }
+
+  if (!payload.displayName?.trim()) {
+    throw new Error("Informe o nome de exibicao.");
+  }
+
+  if (!payload.profilePhotoDataUrl && !payload.profilePhotoUrl) {
+    throw new Error("Adicione uma foto de perfil para continuar.");
+  }
+
+  return updateRecord(
+    "accounts",
+    userId,
+    {
+      accessHistory: buildAccessHistory(account, "Primeiro acesso concluido"),
+      displayName: payload.displayName.trim(),
+      firstLoginCompletedAt: new Date().toISOString(),
+      fullName: account.fullName || payload.displayName.trim(),
+      mustChangePassword: false,
+      password: payload.password,
+      profilePhotoDataUrl: payload.profilePhotoDataUrl || account.profilePhotoDataUrl || "",
+      profilePhotoUrl: payload.profilePhotoUrl || account.profilePhotoUrl || "",
+      temporaryPassword: "",
+    },
+    {
+      action: "Primeiro Login",
+      details: "Usuario concluiu senha, nome de exibicao e foto obrigatoria.",
+      module: "Sessao",
+      title: payload.displayName,
+    }
+  );
+}
+
+export async function requestAccountAccessLocal(payload) {
+  const accounts = await listRecords("accounts");
+  const recipients = accounts
+    .filter((account) => account.role === "DEV" || account.role === "CEO")
+    .map((account) => ({
+      email: account.email,
+      name: account.displayName,
+      phone: account.phone,
+      role: account.role,
+    }));
+
+  return createRecord("accountRequests", {
+    ...payload,
+    dispatches: recipients.flatMap((recipient) => [
+      { channel: "email", recipient: recipient.email, status: "simulado" },
+      { channel: "whatsapp", recipient: recipient.phone, status: "simulado" },
+    ]),
+    recipients,
+    requestedAt: new Date().toISOString(),
+    status: "pendente",
+  });
 }
 
 export async function logoutCurrentUserLocal() {
@@ -107,7 +209,10 @@ export async function logoutCurrentUserLocal() {
   await updateRecord(
     "accounts",
     account.id,
-    {},
+    {
+      activeSessions: [],
+      accessHistory: buildAccessHistory(account, "Logout local"),
+    },
     {
       action: "Logout",
       details: "Saida local do ERP.",

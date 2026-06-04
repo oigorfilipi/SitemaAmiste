@@ -13,6 +13,7 @@ import ServiceSheetEditorModal from "../organisms/ServiceSheetEditorModal.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import { useErpSnapshot } from "../../hooks/useErpSnapshot.js";
 import { buildExportColumnsFromConfig, exportRecordsToCsv } from "../../services/exportService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 
 function recordMatchesSearch(record, searchTerm) {
   if (!searchTerm) {
@@ -22,7 +23,7 @@ function recordMatchesSearch(record, searchTerm) {
   return Object.values(record).join(" ").toLowerCase().includes(searchTerm.toLowerCase());
 }
 
-export default function EntityCrudPage({ config, accessLevel = "AC", showHeader = true }) {
+export default function EntityCrudPage({ config, accessLevel = "AC", showHeader = true, user }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -33,6 +34,13 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   const { records, createRecord, updateRecord, deleteRecord } = useCollection(config.collection);
   const { snapshot } = useErpSnapshot();
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canCreate = canMutate && rolePermissions["action:create"] === "AC";
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
+  const visibleExtraActions = useMemo(() => {
+    return (config.extraActions || []).filter((action) => !action.permissionId || rolePermissions[action.permissionId] !== "OC");
+  }, [config.extraActions, rolePermissions]);
 
   const filteredRecords = useMemo(
     () => records.filter((record) => recordMatchesSearch(record, searchTerm)),
@@ -40,7 +48,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   );
 
   function openCreateModal() {
-    if (!canMutate) {
+    if (!canCreate) {
       return;
     }
 
@@ -49,7 +57,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   }
 
   function openEditModal(record) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -71,7 +79,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   }
 
   async function handleDelete(record) {
-    if (!canMutate) {
+    if (!canDelete) {
       return;
     }
 
@@ -117,7 +125,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       {showHeader ? (
         <PageHeader
           actionIcon="plus"
-          actionLabel={canMutate ? config.actionLabel : ""}
+          actionLabel={canCreate ? config.actionLabel : ""}
           description={config.description}
           title={config.title}
           onAction={openCreateModal}
@@ -133,7 +141,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
           onChange={(event) => setSearchTerm(event.target.value)}
         />
         <div className="flex gap-2">
-          {!showHeader && canMutate ? (
+          {!showHeader && canCreate ? (
             <Button icon="plus" onClick={openCreateModal}>
               {config.actionLabel}
             </Button>
@@ -148,8 +156,10 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       {config.layout === "cards" ? (
         <EntityCardsGrid
           card={config.card}
-          actions={canMutate}
-          extraActions={config.extraActions || []}
+          actions={canUpdate || canDelete}
+          canDelete={canDelete}
+          canEdit={canUpdate}
+          extraActions={visibleExtraActions}
           records={filteredRecords}
           snapshot={snapshot}
           onDelete={handleDelete}
@@ -159,8 +169,10 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       ) : (
         <DataTable
           columns={config.columns}
-          actions={canMutate}
-          extraActions={config.extraActions || []}
+          actions={canUpdate || canDelete}
+          canDelete={canDelete}
+          canEdit={canUpdate}
+          extraActions={visibleExtraActions}
           records={filteredRecords}
           snapshot={snapshot}
           onDelete={handleDelete}
@@ -211,7 +223,10 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
 
       {activeHub ? (
         <RelatedRecordsHub
+          canCreate={canCreate}
+          canDelete={canDelete}
           canMutate={canMutate}
+          canUpdate={canUpdate}
           hub={activeHub}
           open={Boolean(hubParentRecord)}
           parentRecord={hubParentRecord}

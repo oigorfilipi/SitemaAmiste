@@ -9,7 +9,7 @@ import {
   buildCatalogMetrics,
 } from "../../services/catalogService.js";
 
-export default function CatalogHubPage({ accessLevel, collectionName, config }) {
+export default function CatalogHubPage({ accessLevel, collectionName, config, user }) {
   const { snapshot } = useErpSnapshot();
   const metrics = useMemo(() => buildCatalogMetrics(collectionName, snapshot), [collectionName, snapshot]);
   const alerts = useMemo(() => buildCatalogAlerts(collectionName, snapshot), [collectionName, snapshot]);
@@ -28,7 +28,7 @@ export default function CatalogHubPage({ accessLevel, collectionName, config }) 
       <CatalogHealthPanel alerts={alerts} />
 
       {/* --- SECAO: CRUD E HUBS DO CATALOGO --- */}
-      <EntityCrudPage accessLevel={accessLevel} config={config} showHeader={false} />
+      <EntityCrudPage accessLevel={accessLevel} config={config} showHeader={false} user={user} />
     </div>
   );
 }

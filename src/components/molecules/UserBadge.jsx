@@ -5,10 +5,14 @@ export default function UserBadge({ user, compact = false }) {
     return null;
   }
 
+  const profilePhoto = user.profilePhotoDataUrl || user.profilePhotoUrl;
+
   return (
     <div className="flex items-center gap-3">
-      <span className="grid size-10 place-items-center rounded-full bg-amiste-red text-sm font-black text-white">
-        {user.avatarInitials}
+      <span className="grid size-10 place-items-center overflow-hidden rounded-full bg-amiste-red text-sm font-black text-white">
+        {profilePhoto ? (
+          <img alt={user.displayName} className="h-full w-full object-cover" src={profilePhoto} />
+        ) : user.avatarInitials}
       </span>
       {!compact ? (
         <span className="min-w-0 leading-tight">

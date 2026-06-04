@@ -4,7 +4,10 @@ import TableEmptyState from "../molecules/TableEmptyState.jsx";
 import { cn } from "../../utils/cn.js";
 
 export default function LabelRepositoryGrid({
+  canDelete,
+  canDownload = true,
   canMutate,
+  canPrint = true,
   labels,
   selectedId,
   onDelete,
@@ -64,18 +67,18 @@ export default function LabelRepositoryGrid({
           <footer className="mt-4 flex justify-end gap-2 border-t border-zinc-100 pt-4" onClick={(event) => event.stopPropagation()}>
             <IconButton icon="fileText" label={`Visualizar ${label.name}`} onClick={() => onPreview(label)} />
             <IconButton
-              disabled={!label.hasFile}
+              disabled={!canDownload || !label.hasFile}
               icon="download"
               label={`Baixar ${label.name}`}
               onClick={() => onDownload(label)}
             />
             <IconButton
-              disabled={!label.canPrint}
+              disabled={!canPrint || !label.canPrint}
               icon="printer"
               label={`Imprimir ${label.name}`}
               onClick={() => onPrint(label)}
             />
-            {canMutate ? (
+            {canDelete ? (
               <IconButton icon="trash" label={`Excluir ${label.name}`} onClick={() => onDelete(label)} />
             ) : null}
           </footer>

@@ -1,6 +1,5 @@
 export const OPTION_GROUPS = [
   "Marcas de Maquinas",
-  "Categorias de Maquinas",
   "Voltagens",
   "Rede Hidrica",
   "Status Catalogo",

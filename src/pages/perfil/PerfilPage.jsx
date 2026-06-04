@@ -14,6 +14,7 @@ import {
 
 export default function PerfilPage({ accessLevel, previewUser, user }) {
   const [formData, setFormData] = useState({});
+  const [errorMessage, setErrorMessage] = useState("");
   const [message, setMessage] = useState("");
   const { records, updateRecord } = useCollection("accounts");
   const profile = records.find((account) => account.id === user?.id) || user;
@@ -27,6 +28,7 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
   useEffect(() => {
     setFormData(initialFormData);
     setMessage("");
+    setErrorMessage("");
   }, [initialFormData]);
 
   function handleChange(fieldName, value) {
@@ -35,17 +37,24 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
       [fieldName]: value,
     }));
     setMessage("");
+    setErrorMessage("");
   }
 
   function handleCancel() {
     setFormData(initialFormData);
     setMessage("");
+    setErrorMessage("");
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
     if (!canMutate || !isDirty) {
+      return;
+    }
+
+    if (formData.securityNewPassword && formData.securityNewPassword !== formData.securityConfirmPassword) {
+      setErrorMessage("As senhas nao conferem.");
       return;
     }
 
@@ -82,9 +91,11 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
           <ProfileIdentityPanel profile={profile} />
           <ProfileFormPanel
             canMutate={canMutate}
+            errorMessage={errorMessage}
             formData={formData}
             isDirty={isDirty}
             message={message}
+            profile={profile}
             onCancel={handleCancel}
             onChange={handleChange}
             onSubmit={handleSubmit}

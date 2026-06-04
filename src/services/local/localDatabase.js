@@ -5,6 +5,7 @@ const AUTH_SESSION_KEY = "amiste_erp_auth_session_v1";
 
 const COLLECTION_LABELS = {
   accounts: "Contas",
+  accountRequests: "Solicitacoes de Conta",
   machines: "Maquinas",
   supplies: "Insumos",
   accessories: "Acessorios",

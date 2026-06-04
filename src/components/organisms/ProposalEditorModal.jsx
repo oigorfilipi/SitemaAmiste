@@ -80,7 +80,7 @@ export default function ProposalEditorModal({ editingRecord, open, snapshot, onC
       ...currentForm,
       machineConfigId: configs.length === 1 ? configs[0].value : "",
       machineId,
-      proposalText: currentForm.proposalText || machine?.description || "",
+      proposalText: currentForm.proposalText || machine?.defaultProposalText || machine?.description || "",
       totalValue: currentForm.totalValue || machine?.priceSale || "",
       videoUrl: currentForm.videoUrl || machine?.videoUrl || "",
     }));

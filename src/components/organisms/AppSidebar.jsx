@@ -87,8 +87,10 @@ export default function AppSidebar({
               type="button"
               onClick={() => onPreviewUser(user.id)}
             >
-              <span className="grid size-7 place-items-center rounded-full bg-white/12 text-[11px] font-black text-white">
-                {user.avatarInitials}
+              <span className="grid size-7 place-items-center overflow-hidden rounded-full bg-white/12 text-[11px] font-black text-white">
+                {user.profilePhotoDataUrl || user.profilePhotoUrl ? (
+                  <img alt={user.displayName} className="h-full w-full object-cover" src={user.profilePhotoDataUrl || user.profilePhotoUrl} />
+                ) : user.avatarInitials}
               </span>
               {!collapsed ? (
                 <>

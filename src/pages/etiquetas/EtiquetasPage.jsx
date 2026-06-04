@@ -17,9 +17,10 @@ import {
   exportLabels,
   printLabelFile,
 } from "../../services/labelService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
 
-export default function EtiquetasPage({ accessLevel }) {
+export default function EtiquetasPage({ accessLevel, user }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -27,6 +28,11 @@ export default function EtiquetasPage({ accessLevel }) {
   const { snapshot } = useErpSnapshot();
   const config = moduleConfigs.labels;
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canUpload = canMutate && ["AC", "UP"].includes(rolePermissions["action:upload"]);
+  const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
+  const canDownload = rolePermissions["action:upload"] !== "OC";
+  const canPrint = rolePermissions["action:print"] !== "OC";
 
   const labels = useMemo(() => buildLabelRows(records), [records]);
   const filteredLabels = useMemo(() => {
@@ -61,7 +67,7 @@ export default function EtiquetasPage({ accessLevel }) {
   }, [filteredLabels, selectedId]);
 
   async function handleUpload(uploadData) {
-    if (!canMutate) {
+    if (!canUpload) {
       return;
     }
 
@@ -73,7 +79,7 @@ export default function EtiquetasPage({ accessLevel }) {
   }
 
   async function handleDelete(label) {
-    if (!canMutate) {
+    if (!canDelete) {
       return;
     }
 
@@ -97,7 +103,7 @@ export default function EtiquetasPage({ accessLevel }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="upload"
-        actionLabel={canMutate ? config.actionLabel : ""}
+        actionLabel={canUpload ? config.actionLabel : ""}
         description={config.description}
         title={config.title}
         onAction={() => setUploadOpen(true)}
@@ -123,7 +129,10 @@ export default function EtiquetasPage({ accessLevel }) {
       {/* --- SECAO: ARQUIVOS E PREVIEW --- */}
       <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_560px]">
         <LabelRepositoryGrid
+          canDelete={canDelete}
+          canDownload={canDownload}
           canMutate={canMutate}
+          canPrint={canPrint}
           labels={filteredLabels}
           selectedId={selectedLabel?.id || ""}
           onDelete={handleDelete}

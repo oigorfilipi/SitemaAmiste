@@ -18,7 +18,7 @@ const PORTFOLIO_TABS = [
   { id: "sheets", label: "Fichas de Instalacao e Retirada" },
 ];
 
-export default function PortfoliosPage({ accessLevel }) {
+export default function PortfoliosPage({ accessLevel, user }) {
   const [activeTab, setActiveTab] = useState("proposals");
   const [loadingId, setLoadingId] = useState("");
   const [workflowMessage, setWorkflowMessage] = useState("");
@@ -77,7 +77,7 @@ export default function PortfoliosPage({ accessLevel }) {
       {/* --- SECAO: ABAS INTERNAS --- */}
       <EntityGroupTabs activeGroup={activeTab} groups={PORTFOLIO_TABS} onSelectGroup={setActiveTab} />
 
-      <EntityCrudPage accessLevel={accessLevel} config={activeConfig} showHeader={false} />
+      <EntityCrudPage accessLevel={accessLevel} config={activeConfig} showHeader={false} user={user} />
     </div>
   );
 }

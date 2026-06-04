@@ -1,7 +1,9 @@
 import {
+  ALL_PERMISSION_RESOURCES,
   ALL_PAGES,
   ROLE_PERMISSIONS,
   getAccessLabel,
+  getRolePermissions,
 } from "./permissionService.js";
 
 export const ACCOUNT_TABS = [
@@ -29,11 +31,27 @@ export const ROLE_OPTIONS = [
 ];
 
 export const ACCOUNT_FORM_FIELDS = [
-  { name: "displayName", label: "Nome curto", required: true },
-  { name: "fullName", label: "Nome completo", required: true },
-  { name: "email", label: "Email", required: true },
-  { name: "phone", label: "Telefone" },
-  { name: "role", label: "Cargo", type: "select", options: ROLE_OPTIONS, required: true },
+  { name: "fullName", label: "Nome completo", required: true, section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" } },
+  { name: "displayName", label: "Nome de exibicao", required: true, section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" } },
+  { name: "email", label: "E-mail corporativo", type: "email", required: true, section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" } },
+  { name: "cpfDocument", label: "CPF ou RG", required: true, section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" } },
+  { name: "birthDate", label: "Data de nascimento", type: "date", section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" } },
+  { name: "phone", label: "Telefone", section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" } },
+  {
+    name: "gender",
+    label: "Genero",
+    type: "select",
+    options: [
+      { label: "Nao informado", value: "Nao informado" },
+      { label: "Feminino", value: "Feminino" },
+      { label: "Masculino", value: "Masculino" },
+      { label: "Outro", value: "Outro" },
+    ],
+    defaultValue: "Nao informado",
+    section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" },
+  },
+  { name: "temporaryPassword", label: "Senha provisoria", type: "password", section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" } },
+  { name: "role", label: "Cargo", type: "select", options: ROLE_OPTIONS, required: true, section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" } },
   {
     name: "status",
     label: "Status",
@@ -43,11 +61,24 @@ export const ACCOUNT_FORM_FIELDS = [
       { label: "Desativado", value: "desativado" },
     ],
     defaultValue: "ativo",
+    section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" },
   },
-  { name: "avatarInitials", label: "Iniciais", maxLength: 3 },
+  { name: "profilePhotoUrl", label: "URL da foto de perfil", section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
+  { name: "profilePhotoDataUrl", label: "Upload de foto", type: "imageUpload", full: true, fallbackUrlField: "profilePhotoUrl", section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
+  { name: "avatarInitials", label: "Iniciais", maxLength: 3, section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
+  { name: "requestedByCollaborator", label: "Solicitado pelo colaborador?", type: "checkbox", defaultValue: false, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
+  { name: "termsAccepted", label: "Concordo com os termos de criacao", type: "checkbox", defaultValue: false, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
+  { name: "captchaAccepted", label: "Nao sou robo", type: "checkbox", defaultValue: false, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
 ];
 
 export const PAGE_LABELS = {
+  "action:create": "Acao: Criar registros",
+  "action:delete": "Acao: Excluir registros",
+  "action:print": "Acao: Imprimir",
+  "action:rbac.edit": "Acao: Editar Matriz RBAC",
+  "action:update": "Acao: Editar registros",
+  "action:upload": "Acao: Upload de arquivos",
+  "action:user.protectedEdit": "Acao: Editar dados protegidos",
   accounts: "Gestao de Contas",
   acessorios: "Catalogo de Acessorios",
   checklists: "Checklists",
@@ -65,6 +96,13 @@ export const PAGE_LABELS = {
   portfolios: "Portfolios",
   precos: "Precos",
   serviceOrders: "Consertos SLA",
+  "module:accounts.rbac": "Modulo: Matriz RBAC",
+  "module:insumos.recipes": "Modulo: Receitas",
+  "module:labels.files": "Modulo: Arquivos de Etiquetas",
+  "module:machines.configs": "Modulo: Configuracao de Maquina",
+  "module:machines.wiki": "Modulo: Wiki Tecnica",
+  "tab:machines.catalog": "Aba: Catalogo de Maquinas",
+  "tab:machines.repairs": "Aba: Consertos no Catalogo",
   vendas: "Vendas",
 };
 
@@ -79,7 +117,9 @@ function buildInitials(value) {
 }
 
 function countAccess(role, accessType) {
-  return ALL_PAGES.filter((pageId) => ROLE_PERMISSIONS[role]?.[pageId] === accessType).length;
+  const permissions = getRolePermissions(role);
+
+  return ALL_PERMISSION_RESOURCES.filter((pageId) => permissions[pageId] === accessType).length;
 }
 
 export function buildAccountRows(accounts) {
@@ -160,11 +200,13 @@ export function filterAccountRows(rows, tabId, searchTerm = "") {
 export function buildRoleMatrix() {
   const roles = Object.keys(ROLE_PERMISSIONS);
 
-  return ALL_PAGES.map((pageId) => ({
+  return ALL_PERMISSION_RESOURCES.map((pageId) => ({
     pageId,
     pageLabel: PAGE_LABELS[pageId] || pageId,
+    resourceType: pageId.includes(":") ? pageId.split(":")[0] : "pagina",
     permissions: roles.map((role) => {
-      const access = ROLE_PERMISSIONS[role]?.[pageId] || "OC";
+      const rolePermissions = getRolePermissions(role);
+      const access = rolePermissions[pageId] || "OC";
 
       return {
         access,
@@ -177,7 +219,7 @@ export function buildRoleMatrix() {
 }
 
 export function buildRoleSummary(role) {
-  const permissions = ROLE_PERMISSIONS[role] || {};
+  const permissions = getRolePermissions(role) || {};
 
   return {
     accessFullCount: countAccess(role, "AC"),
@@ -185,7 +227,7 @@ export function buildRoleSummary(role) {
     accessPartialCount: countAccess(role, "UP"),
     accessViewCount: countAccess(role, "VIS"),
     label: ROLE_LABELS[role] || role,
-    modules: ALL_PAGES.map((pageId) => ({
+    modules: ALL_PERMISSION_RESOURCES.map((pageId) => ({
       access: permissions[pageId] || "OC",
       accessLabel: getAccessLabel(permissions[pageId] || "OC"),
       pageId,
@@ -198,12 +240,57 @@ export function buildRoleSummary(role) {
 export function normalizeAccountPayload(payload, editingRecord) {
   const now = new Date().toISOString();
   const displayName = payload.displayName || payload.fullName || "Usuario";
+  const passwordChanged = Boolean(payload.temporaryPassword) && payload.temporaryPassword !== editingRecord?.temporaryPassword;
+  const inviteDispatches = payload.requestedByCollaborator
+    ? [
+      { channel: "email", status: "simulado", target: payload.email || "" },
+      { channel: "whatsapp", status: "simulado", target: payload.phone || "" },
+    ]
+    : editingRecord?.inviteDispatches || [];
 
   return {
     ...payload,
     avatarInitials: payload.avatarInitials || buildInitials(displayName),
     createdAt: editingRecord?.createdAt || now,
+    firstLoginCompletedAt: passwordChanged ? "" : editingRecord?.firstLoginCompletedAt || "",
+    inviteDispatches,
     lastLogin: editingRecord?.lastLogin || "",
+    mustChangePassword: passwordChanged ? true : Boolean(editingRecord?.mustChangePassword),
+    password: payload.temporaryPassword || editingRecord?.password || "1234",
     status: payload.status || "ativo",
+    temporaryPassword: payload.temporaryPassword || editingRecord?.temporaryPassword || "",
   };
+}
+
+export function validateAccountPayload(payload, snapshot, editingRecord) {
+  if (!payload.fullName?.trim() || !payload.displayName?.trim()) {
+    return "Informe nome completo e nome de exibicao.";
+  }
+
+  if (!payload.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+    return "Informe um e-mail corporativo valido.";
+  }
+
+  if (!editingRecord && !payload.temporaryPassword?.trim()) {
+    return "Informe uma senha provisoria para o primeiro acesso.";
+  }
+
+  if (!payload.cpfDocument?.trim()) {
+    return "Informe CPF ou RG do colaborador.";
+  }
+
+  const duplicateEmail = (snapshot.accounts || []).some((account) =>
+    account.id !== editingRecord?.id &&
+    String(account.email || "").trim().toLowerCase() === payload.email.trim().toLowerCase()
+  );
+
+  if (duplicateEmail) {
+    return "Ja existe uma conta com este e-mail.";
+  }
+
+  if (!editingRecord && (!payload.termsAccepted || !payload.captchaAccepted)) {
+    return "Confirme os termos de criacao e a validacao de seguranca.";
+  }
+
+  return "";
 }

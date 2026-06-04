@@ -2,8 +2,10 @@ import {
   getCurrentUserLocal,
   getLoginAccountsLocal,
   getSidebarUsersLocal,
+  completeFirstLoginLocal,
   loginWithUserLocal,
   logoutCurrentUserLocal,
+  requestAccountAccessLocal,
 } from "./local/authLocalService.js";
 
 /* --- SECAO: FACHADA DE AUTENTICACAO ---
@@ -24,6 +26,14 @@ export async function getLoginAccounts() {
 
 export async function loginWithUser(credentials) {
   return loginWithUserLocal(credentials);
+}
+
+export async function completeFirstLogin(userId, payload) {
+  return completeFirstLoginLocal(userId, payload);
+}
+
+export async function requestAccountAccess(payload) {
+  return requestAccountAccessLocal(payload);
 }
 
 export async function logoutCurrentUser() {
