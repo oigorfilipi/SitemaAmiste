@@ -7,7 +7,9 @@ const COLLECTION_LABELS = {
   accounts: "Contas",
   accountRequests: "Solicitacoes de Conta",
   inventoryCounts: "Historico de Contagem",
+  machineConfigs: "Configuracoes de Maquina",
   machines: "Maquinas",
+  recipes: "Receitas",
   supplies: "Insumos",
   accessories: "Acessorios",
   clients: "Clientes",
@@ -20,8 +22,18 @@ const COLLECTION_LABELS = {
   payables: "Contas a Pagar",
   labels: "Etiquetas",
   options: "Adicionar Opcoes",
+  wikiSolutions: "Wiki",
   history: "Historico",
 };
+
+const AUDIT_IGNORED_FIELDS = new Set([
+  "createdAt",
+  "fileDataUrl",
+  "imageDataUrl",
+  "photoDataUrl",
+  "profilePhotoDataUrl",
+  "updatedAt",
+]);
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -142,6 +154,67 @@ function buildId(collectionName) {
   return `${collectionName}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
+function summarizeAuditValue(value) {
+  if (value === undefined || value === null || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Sim" : "Nao";
+  }
+
+  if (Array.isArray(value)) {
+    return `${value.length} item(ns)`;
+  }
+
+  if (typeof value === "object") {
+    return `${Object.keys(value).length} campo(s)`;
+  }
+
+  const text = String(value);
+
+  return text.length > 90 ? `${text.slice(0, 87)}...` : text;
+}
+
+function valuesAreEqual(firstValue, secondValue) {
+  return JSON.stringify(firstValue ?? "") === JSON.stringify(secondValue ?? "");
+}
+
+function buildRecordSnapshotDetails(record = {}) {
+  const priorityFields = [
+    "name",
+    "code",
+    "status",
+    "clientId",
+    "machineId",
+    "category",
+    "value",
+    "totalValue",
+    "date",
+  ];
+  const fields = priorityFields
+    .filter((fieldName) => record[fieldName] !== undefined && record[fieldName] !== "")
+    .map((fieldName) => `${fieldName}: ${summarizeAuditValue(record[fieldName])}`);
+
+  return fields.length ? fields.join(" | ") : `ID: ${record.id || "-"}`;
+}
+
+function buildChangeDetails(previousRecord = {}, nextRecord = {}) {
+  const fieldNames = Array.from(new Set([
+    ...Object.keys(previousRecord),
+    ...Object.keys(nextRecord),
+  ])).filter((fieldName) => !AUDIT_IGNORED_FIELDS.has(fieldName));
+  const changes = fieldNames
+    .filter((fieldName) => !valuesAreEqual(previousRecord[fieldName], nextRecord[fieldName]))
+    .map((fieldName) => `${fieldName}: ${summarizeAuditValue(previousRecord[fieldName])} -> ${summarizeAuditValue(nextRecord[fieldName])}`);
+
+  if (!changes.length) {
+    return "Registro salvo sem alteracoes relevantes nos campos auditaveis.";
+  }
+
+  return changes.slice(0, 12).join("\n");
+}
+
 function resolveHistoryActor(database, overrides = {}) {
   const session = readAuthSession();
   const account = (database.accounts || []).find((record) => record.id === session?.userId);
@@ -192,7 +265,13 @@ export async function createRecord(collectionName, payload) {
   };
 
   database[collectionName] = [record, ...(database[collectionName] || [])];
-  addHistoryEntry(database, collectionName, "Criou", record.name || record.code || record.description || record.origin || record.id);
+  addHistoryEntry(
+    database,
+    collectionName,
+    "Criou",
+    record.name || record.code || record.description || record.origin || record.id,
+    `Registro criado. ${buildRecordSnapshotDetails(record)}`
+  );
   saveDatabase(database);
 
   return clone(record);
@@ -220,7 +299,7 @@ export async function updateRecord(collectionName, id, payload, historyConfig = 
     collectionName,
     historyConfig.action || "Editou",
     historyConfig.title || updatedRecord.name || updatedRecord.code || updatedRecord.description || id,
-    historyConfig.details || "",
+    historyConfig.details || buildChangeDetails(existingRecord, updatedRecord),
     historyConfig
   );
   saveDatabase(database);
@@ -238,7 +317,13 @@ export async function deleteRecord(collectionName, id) {
   }
 
   database[collectionName] = records.filter((record) => record.id !== id);
-  addHistoryEntry(database, collectionName, "Excluiu", deletedRecord?.name || deletedRecord?.code || id);
+  addHistoryEntry(
+    database,
+    collectionName,
+    "Excluiu",
+    deletedRecord?.name || deletedRecord?.code || id,
+    `Registro excluido. ${buildRecordSnapshotDetails(deletedRecord)}`
+  );
   saveDatabase(database);
 
   return clone(deletedRecord);
