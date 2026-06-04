@@ -12,6 +12,7 @@ import {
   buildLabelMetrics,
   buildLabelRows,
   buildUploadedLabelPayload,
+  deleteStoredLabelFile,
   downloadLabelFile,
   exportLabels,
   printLabelFile,
@@ -79,6 +80,7 @@ export default function EtiquetasPage({ accessLevel }) {
     const confirmed = window.confirm(`Excluir "${label.name}"?`);
 
     if (confirmed) {
+      await deleteStoredLabelFile(label);
       await deleteRecord(label.id);
     }
   }

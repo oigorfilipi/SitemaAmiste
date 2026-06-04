@@ -54,13 +54,36 @@ function mergeSeedOptions(options = []) {
   return [...options, ...clone(missingSeedOptions)];
 }
 
+function normalizeLabels(labels = []) {
+  return labels.map((label) => {
+    const { fileDataUrl, ...metadata } = label;
+
+    /* --- SECAO: COMPACTACAO DE ETIQUETAS ---
+     * Arquivos de etiquetas nao podem ficar dentro do banco principal em
+     * localStorage. Mantemos apenas metadados para evitar erro de quota.
+     */
+    return fileDataUrl && !metadata.fileStorageKey
+      ? { ...metadata, storageStatus: "arquivo-legado-nao-migrado" }
+      : metadata;
+  });
+}
+
+function hasInlineLabelFiles(database) {
+  return (database?.labels || []).some((label) => Boolean(label.fileDataUrl));
+}
+
 function normalizeDatabase(database) {
   return Object.keys(erpSeed).reduce((normalized, collectionName) => {
     const records = Array.isArray(database?.[collectionName])
       ? database[collectionName]
       : clone(erpSeed[collectionName]);
 
-    normalized[collectionName] = collectionName === "options" ? mergeSeedOptions(records) : records;
+    if (collectionName === "options") {
+      normalized[collectionName] = mergeSeedOptions(records);
+      return normalized;
+    }
+
+    normalized[collectionName] = collectionName === "labels" ? normalizeLabels(records) : records;
 
     return normalized;
   }, {});
@@ -81,7 +104,17 @@ export function getDatabaseSnapshot() {
 
   try {
     const parsedDatabase = JSON.parse(storedDatabase);
-    return normalizeDatabase(parsedDatabase);
+    const normalizedDatabase = normalizeDatabase(parsedDatabase);
+
+    if (hasInlineLabelFiles(parsedDatabase)) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedDatabase));
+      } catch {
+        return normalizedDatabase;
+      }
+    }
+
+    return normalizedDatabase;
   } catch {
     const seededDatabase = clone(erpSeed);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seededDatabase));

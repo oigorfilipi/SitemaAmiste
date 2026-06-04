@@ -1,4 +1,10 @@
 import { exportRecordsToCsv } from "./exportService.js";
+import {
+  buildLabelFileStorageKey,
+  deleteLabelFile,
+  getLabelFile,
+  saveLabelFile,
+} from "./labelFileStorageService.js";
 
 export const LABEL_FILE_ACCEPT = [
   ".pdf",
@@ -16,7 +22,7 @@ export const LABEL_FILE_ACCEPT = [
   ".html",
 ].join(",");
 
-const LABEL_FILE_SIZE_LIMIT = 6 * 1024 * 1024;
+const LABEL_FILE_SIZE_LIMIT = 25 * 1024 * 1024;
 
 const LABEL_EXPORT_COLUMNS = [
   { key: "name", label: "Nome" },
@@ -38,6 +44,10 @@ function sanitizeFilename(value) {
 
 function getExtension(filename = "") {
   return String(filename).split(".").pop()?.toLowerCase() || "";
+}
+
+function buildLocalLabelId() {
+  return `labels_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
 export function formatFileSize(bytes = 0) {
@@ -90,28 +100,32 @@ function resolvePreviewKind(label = {}) {
   return "unsupported";
 }
 
-function downloadDataUrl(filename, dataUrl) {
-  if (typeof window === "undefined" || !dataUrl) {
+function downloadUrl(filename, url) {
+  if (typeof window === "undefined" || !url) {
     return;
   }
 
   const link = document.createElement("a");
 
-  link.href = dataUrl;
+  link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+function buildDownloadFilename(label) {
+  const extension = getExtension(label.originalFileName);
 
-    reader.addEventListener("load", () => resolve(reader.result));
-    reader.addEventListener("error", () => reject(new Error("Nao foi possivel ler o arquivo selecionado.")));
-    reader.readAsDataURL(file);
-  });
+  return `${sanitizeFilename(label.name)}${extension ? `.${extension}` : ""}`;
+}
+
+function createObjectUrl(blob) {
+  if (typeof window === "undefined" || !blob) {
+    return "";
+  }
+
+  return window.URL.createObjectURL(blob);
 }
 
 export function buildLabelCategoryOptions(snapshot) {
@@ -154,14 +168,22 @@ export async function buildUploadedLabelPayload({ category, description = "", fi
     throw new Error(`Arquivo muito grande. Limite atual: ${formatFileSize(LABEL_FILE_SIZE_LIMIT)}.`);
   }
 
-  const fileDataUrl = await readFileAsDataUrl(file);
+  const id = buildLocalLabelId();
+  const fileStorageKey = buildLabelFileStorageKey(id);
+
+  /* --- SECAO: ARQUIVO FORA DO BANCO PRINCIPAL ---
+   * O localStorage guarda somente metadados. O arquivo binario vai para IndexedDB,
+   * evitando que PDFs/imagens grandes estourem a quota do banco local do ERP.
+   */
+  await saveLabelFile(fileStorageKey, file);
 
   return {
     category,
     description,
-    fileDataUrl,
+    fileStorageKey,
     fileSize: file.size,
     format: resolveFileFormat(file),
+    id,
     mimeType: file.type || "application/octet-stream",
     name: name.trim(),
     originalFileName: file.name,
@@ -173,7 +195,7 @@ export function buildLabelRows(records) {
   return records
     .map((label) => {
       const previewKind = resolvePreviewKind(label);
-      const hasFile = Boolean(label.fileDataUrl);
+      const hasFile = Boolean(label.fileStorageKey || label.fileDataUrl);
 
       return {
         ...label,
@@ -236,31 +258,74 @@ export function buildLabelMetrics(records) {
   ];
 }
 
-export function downloadLabelFile(label) {
-  if (!label?.fileDataUrl) {
+export async function resolveLabelFileUrl(label) {
+  if (!label?.hasFile && !label?.fileStorageKey && !label?.fileDataUrl) {
+    return {
+      shouldRevoke: false,
+      url: "",
+    };
+  }
+
+  if (label.fileDataUrl) {
+    return {
+      shouldRevoke: false,
+      url: label.fileDataUrl,
+    };
+  }
+
+  const blob = await getLabelFile(label.fileStorageKey);
+  const url = createObjectUrl(blob);
+
+  return {
+    shouldRevoke: Boolean(url),
+    url,
+  };
+}
+
+export async function deleteStoredLabelFile(label) {
+  if (label?.fileStorageKey) {
+    await deleteLabelFile(label.fileStorageKey);
+  }
+}
+
+export async function downloadLabelFile(label) {
+  const { shouldRevoke, url } = await resolveLabelFileUrl(label);
+
+  if (!url) {
     return;
   }
 
-  const extension = getExtension(label.originalFileName);
-  const filename = `${sanitizeFilename(label.name)}${extension ? `.${extension}` : ""}`;
+  downloadUrl(buildDownloadFilename(label), url);
 
-  downloadDataUrl(filename, label.fileDataUrl);
+  if (shouldRevoke) {
+    window.URL.revokeObjectURL(url);
+  }
 }
 
-export function printLabelFile(label) {
-  if (typeof window === "undefined" || !label?.canPrint || !label.fileDataUrl) {
+export async function printLabelFile(label) {
+  if (typeof window === "undefined" || !label?.canPrint) {
+    return;
+  }
+
+  const { shouldRevoke, url } = await resolveLabelFileUrl(label);
+
+  if (!url) {
     return;
   }
 
   const printWindow = window.open("", "_blank");
 
   if (!printWindow) {
+    if (shouldRevoke) {
+      window.URL.revokeObjectURL(url);
+    }
+
     return;
   }
 
   const content = label.previewKind === "image"
-    ? `<img src="${label.fileDataUrl}" alt="${label.name}" />`
-    : `<iframe src="${label.fileDataUrl}" title="${label.name}"></iframe>`;
+    ? `<img src="${url}" alt="${label.name}" />`
+    : `<iframe src="${url}" title="${label.name}"></iframe>`;
 
   printWindow.document.write(`<!doctype html>
 <html lang="pt-BR">
@@ -280,6 +345,9 @@ export function printLabelFile(label) {
   printWindow.setTimeout(() => {
     printWindow.focus();
     printWindow.print();
+    if (shouldRevoke) {
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+    }
   }, 450);
 }
 

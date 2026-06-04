@@ -17,7 +17,7 @@ export default function DocumentLivePreviewPanel({ documentType, record, snapsho
         <h3 className="mt-1 font-display text-xl font-black text-amiste-black">{title}</h3>
       </div>
 
-      <div className="origin-top">
+      <div className="min-w-0 origin-top">
         {documentType === "proposal" ? (
           <ProposalDocumentPreview model={model} />
         ) : (

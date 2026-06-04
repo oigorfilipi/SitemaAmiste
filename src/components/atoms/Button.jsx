@@ -22,6 +22,7 @@ export default function Button({
       className={cn(
         "inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold shadow-sm transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amiste-red/30",
         VARIANTS[variant],
+        props.disabled ? "cursor-not-allowed opacity-45 hover:translate-y-0" : "",
         className
       )}
       type={type}

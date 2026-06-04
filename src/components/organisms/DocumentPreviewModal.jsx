@@ -4,7 +4,7 @@ import ProposalDocumentPreview from "./ProposalDocumentPreview.jsx";
 import ServiceSheetDocumentPreview from "./ServiceSheetDocumentPreview.jsx";
 import {
   buildDocumentModel,
-  downloadDocumentHtml,
+  downloadDocumentPdf,
 } from "../../services/documentService.js";
 
 export default function DocumentPreviewModal({ open, record, documentType, snapshot, onClose }) {
@@ -16,13 +16,14 @@ export default function DocumentPreviewModal({ open, record, documentType, snaps
   const model = buildDocumentModel(documentType, record, snapshot);
 
   function handleDownload() {
-    downloadDocumentHtml(documentType, record, snapshot);
+    downloadDocumentPdf(documentType, record, snapshot);
   }
 
   return (
     <Modal
       description="Visualizacao interna do documento antes da geracao/exportacao final."
       open={open}
+      size="wide"
       title={title}
       onClose={onClose}
     >
@@ -35,7 +36,7 @@ export default function DocumentPreviewModal({ open, record, documentType, snaps
 
         <div className="flex justify-end gap-3">
           <Button icon="download" onClick={handleDownload}>
-            Baixar HTML
+            Baixar PDF
           </Button>
           <Button icon="fileText" variant="secondary" onClick={() => window.print()}>
             Imprimir

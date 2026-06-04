@@ -1,9 +1,25 @@
+import { useEffect, useState } from "react";
 import AppIcon from "../atoms/AppIcon.jsx";
 import Button from "../atoms/Button.jsx";
 import TableEmptyState from "../molecules/TableEmptyState.jsx";
+import { resolveLabelFileUrl } from "../../services/labelService.js";
 
-function PreviewFrame({ label }) {
-  if (!label?.hasFile) {
+function PreviewFrame({ isLoading, label, previewUrl }) {
+  if (isLoading) {
+    return (
+      <div className="grid min-h-[420px] place-items-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
+        <div>
+          <AppIcon className="mx-auto text-amiste-gray/45" name="fileClock" size={42} />
+          <strong className="mt-4 block font-display text-lg font-black text-amiste-black">Carregando preview</strong>
+          <p className="mt-2 text-sm font-semibold text-amiste-gray/65">
+            Preparando o arquivo salvo no repositorio local.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!label?.hasFile || !previewUrl) {
     return (
       <div className="grid min-h-[420px] place-items-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
         <div>
@@ -20,7 +36,7 @@ function PreviewFrame({ label }) {
   if (label.previewKind === "image") {
     return (
       <div className="grid min-h-[520px] place-items-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 p-4">
-        <img alt={label.name} className="max-h-[640px] max-w-full object-contain" src={label.fileDataUrl} />
+        <img alt={label.name} className="max-h-[640px] max-w-full object-contain" src={previewUrl} />
       </div>
     );
   }
@@ -29,7 +45,7 @@ function PreviewFrame({ label }) {
     return (
       <iframe
         className="h-[640px] w-full rounded-md border border-zinc-200 bg-white"
-        src={label.fileDataUrl}
+        src={previewUrl}
         title={`Preview ${label.name}`}
       />
     );
@@ -51,6 +67,48 @@ function PreviewFrame({ label }) {
 }
 
 export default function LabelFilePreviewPanel({ label, onDownload, onPrint }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = "";
+
+    async function loadPreview() {
+      setPreviewUrl("");
+
+      if (!label) {
+        return;
+      }
+
+      setIsLoading(true);
+      const resolved = await resolveLabelFileUrl(label);
+
+      if (cancelled) {
+        if (resolved.shouldRevoke && resolved.url) {
+          window.URL.revokeObjectURL(resolved.url);
+        }
+
+        return;
+      }
+
+      objectUrl = resolved.shouldRevoke ? resolved.url : "";
+      setPreviewUrl(resolved.url);
+      setIsLoading(false);
+    }
+
+    loadPreview();
+
+    return () => {
+      cancelled = true;
+      setIsLoading(false);
+
+      if (objectUrl) {
+        window.URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [label]);
+
   if (!label) {
     return (
       <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
@@ -84,7 +142,7 @@ export default function LabelFilePreviewPanel({ label, onDownload, onPrint }) {
         </div>
       </header>
 
-      <PreviewFrame label={label} />
+      <PreviewFrame isLoading={isLoading} label={label} previewUrl={previewUrl} />
     </section>
   );
 }

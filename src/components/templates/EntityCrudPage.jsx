@@ -6,8 +6,10 @@ import DataTable from "../organisms/DataTable.jsx";
 import DocumentPreviewModal from "../organisms/DocumentPreviewModal.jsx";
 import EntityCardsGrid from "../organisms/EntityCardsGrid.jsx";
 import EntityFormModal from "../organisms/EntityFormModal.jsx";
+import ProposalEditorModal from "../organisms/ProposalEditorModal.jsx";
 import RecordDetailModal from "../organisms/RecordDetailModal.jsx";
 import RelatedRecordsHub from "../organisms/RelatedRecordsHub.jsx";
+import ServiceSheetEditorModal from "../organisms/ServiceSheetEditorModal.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import { useErpSnapshot } from "../../hooks/useErpSnapshot.js";
 import { buildExportColumnsFromConfig, exportRecordsToCsv } from "../../services/exportService.js";
@@ -55,9 +57,11 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
     setModalOpen(true);
   }
 
-  async function handleSubmit(payload) {
-    if (editingRecord) {
-      await updateRecord(editingRecord.id, payload);
+  async function handleSubmit(payload, options = {}) {
+    const targetId = options.targetId || editingRecord?.id;
+
+    if (targetId) {
+      await updateRecord(targetId, payload);
     } else {
       await createRecord(payload);
     }
@@ -165,18 +169,36 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
         />
       )}
 
-      <EntityFormModal
-        description={config.formDescription}
-        editingRecord={editingRecord}
-        fields={config.fields}
-        livePreviewDocumentType={config.livePreviewDocumentType}
-        open={modalOpen}
-        snapshot={snapshot}
-        title={config.formTitle}
-        validate={config.validate}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleSubmit}
-      />
+      {config.collection === "proposals" ? (
+        <ProposalEditorModal
+          editingRecord={editingRecord}
+          open={modalOpen}
+          snapshot={snapshot}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleSubmit}
+        />
+      ) : config.collection === "serviceSheets" ? (
+        <ServiceSheetEditorModal
+          editingRecord={editingRecord}
+          open={modalOpen}
+          snapshot={snapshot}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleSubmit}
+        />
+      ) : (
+        <EntityFormModal
+          description={config.formDescription}
+          editingRecord={editingRecord}
+          fields={config.fields}
+          livePreviewDocumentType={config.livePreviewDocumentType}
+          open={modalOpen}
+          snapshot={snapshot}
+          title={config.formTitle}
+          validate={config.validate}
+          onClose={() => setModalOpen(false)}
+          onSubmit={handleSubmit}
+        />
+      )}
 
       <RecordDetailModal
         config={config.detail}
