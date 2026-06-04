@@ -86,6 +86,7 @@ export const erpSeed = {
     },
   ],
   accountRequests: [],
+  inventoryCounts: [],
   machines: [
     {
       id: "mac_lio2c",

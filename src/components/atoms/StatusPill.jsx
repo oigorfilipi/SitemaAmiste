@@ -19,6 +19,7 @@ const STATUS_STYLES = {
   triagem: "bg-amiste-blue/10 text-amiste-blue ring-amiste-blue/20",
   manutencao: "bg-amiste-blue/10 text-amiste-blue ring-amiste-blue/20",
   abandonado: "bg-amiste-red/10 text-amiste-red ring-amiste-red/20",
+  acabou: "bg-amiste-red/10 text-amiste-red ring-amiste-red/20",
   cancelado: "bg-amiste-red/10 text-amiste-red ring-amiste-red/20",
   desativado: "bg-amiste-red/10 text-amiste-red ring-amiste-red/20",
   atrasado: "bg-amiste-red/10 text-amiste-red ring-amiste-red/20",
