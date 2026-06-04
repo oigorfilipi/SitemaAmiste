@@ -28,7 +28,7 @@ export default function MachinesPage({ accessLevel, user }) {
     <div className="space-y-5">
       <EntityGroupTabs activeGroup={activeTab} groups={visibleTabs} onSelectGroup={setActiveTab} />
       {activeTab === "repairs" ? (
-        <ServiceOrdersPage accessLevel={accessLevel} embedded user={user} />
+        <ServiceOrdersPage accessLevel={accessLevel} user={user} />
       ) : (
         <CatalogHubPage accessLevel={accessLevel} collectionName="machines" config={moduleConfigs.machines} user={user} />
       )}

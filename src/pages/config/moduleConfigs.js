@@ -50,21 +50,6 @@ const wikiStatusOptions = [
   { label: "Sem Solucao", value: "abandonado" },
 ];
 
-const repairPriorityOptions = [
-  { label: "Baixa", value: "baixa" },
-  { label: "Media", value: "media" },
-  { label: "Alta", value: "alta" },
-  { label: "Critica", value: "critica" },
-];
-
-const repairStatusOptions = [
-  { label: "Entrada / Triagem", value: "triagem" },
-  { label: "Orcamento / Aprovacao", value: "orcamento" },
-  { label: "Em Manutencao", value: "manutencao" },
-  { label: "Pronto / Retirada", value: "pronto" },
-  { label: "Entregue", value: "entregue" },
-];
-
 function resolveName(snapshot, collection, id) {
   return snapshot[collection]?.find((record) => record.id === id)?.name || "-";
 }
@@ -176,42 +161,6 @@ export const moduleConfigs = {
       { name: "description", label: "Descricao tecnica", type: "textarea", full: true, maxLength: 800, section: sections.operation },
     ],
     extraActions: [
-      {
-        id: "repairOrders",
-        label: "Consertos",
-        icon: "fileClock",
-        permissionId: "tab:machines.repairs",
-        type: "hub",
-        hub: {
-          collection: "repairOrders",
-          parentKey: "machineId",
-          title: (machine) => `Consertos SLA - ${machine?.name || ""}`,
-          description: () => "Fila tecnica e historico de consertos vinculados a esta maquina.",
-          emptyTitle: "Ordens de conserto vinculadas",
-          actionLabel: "Nova O.S.",
-          formTitle: "Ordem de Conserto",
-          formDescription: "Registro tecnico interno com prioridade, SLA e diagnostico.",
-          columns: [
-            { key: "code", label: "O.S." },
-            { key: "clientId", label: "Cliente", source: "clients" },
-            { key: "technician", label: "Tecnico" },
-            { key: "priority", label: "Prioridade" },
-            { key: "status", label: "Etapa", type: "status" },
-          ],
-          fields: [
-            { name: "code", label: "Codigo", placeholder: "OS-0000", section: sections.identity },
-            { name: "clientId", label: "Cliente", source: "clients", required: true, section: sections.identity },
-            { name: "technician", label: "Tecnico", type: "select", optionGroup: "Tecnicos", required: true, section: sections.operation },
-            { name: "priority", label: "Prioridade", type: "select", optionGroup: "Prioridades de Conserto", options: repairPriorityOptions, defaultValue: "media", section: sections.operation },
-            { name: "status", label: "Etapa", type: "select", options: repairStatusOptions, defaultValue: "triagem", section: sections.operation },
-            { name: "issue", label: "Problema relatado", type: "textarea", required: true, full: true, section: sections.operation },
-            { name: "diagnosis", label: "Diagnostico", type: "textarea", full: true, section: sections.operation },
-            { name: "estimatedValue", label: "Valor estimado", type: "currency", min: 0, section: sections.pricing },
-            { name: "approvedByClient", label: "Aprovado pelo cliente", type: "checkbox", section: sections.pricing },
-            { name: "notes", label: "Notas internas", type: "textarea", full: true, section: sections.operation },
-          ],
-        },
-      },
       {
         id: "machineConfigs",
         label: "Config",
