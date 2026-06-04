@@ -35,12 +35,56 @@ function adjustStock(database, collectionName, id, quantityDelta) {
   return database;
 }
 
+function getSelectedQuantity(selection) {
+  if (!selection?.selected) {
+    return 0;
+  }
+
+  return Math.max(1, Number(selection.quantity || 1));
+}
+
+function adjustChecklistInventory(database, checklist, quantityDirection = -1) {
+  adjustStock(database, "machines", checklist.machineId, quantityDirection * Number(checklist.quantity || checklist.machineQuantity || 1));
+
+  Object.entries(checklist.supplies || {}).forEach(([supplyId, selection]) => {
+    const quantity = getSelectedQuantity(selection);
+
+    if (quantity > 0) {
+      adjustStock(database, "supplies", supplyId, quantityDirection * quantity);
+    }
+  });
+
+  Object.entries(checklist.accessories || {}).forEach(([accessoryId, selection]) => {
+    const quantity = getSelectedQuantity(selection);
+
+    if (quantity > 0) {
+      adjustStock(database, "accessories", accessoryId, quantityDirection * quantity);
+    }
+  });
+}
+
+function buildChecklistReceivableOrigin(checklist) {
+  return `Checklist ${checklist.code || checklist.id}`;
+}
+
+function hasChecklistReceivable(database, checklist) {
+  const origin = buildChecklistReceivableOrigin(checklist);
+
+  return (database.receivables || []).some((receivable) => receivable.origin === origin);
+}
+
 async function persistStockCollection(database, collectionName) {
   if (!collectionName || !Array.isArray(database?.[collectionName])) {
     return;
   }
 
   await setCollection(collectionName, database[collectionName]);
+}
+
+async function persistChecklistInventory(database) {
+  await persistStockCollection(database, "machines");
+  await persistStockCollection(database, "supplies");
+  await persistStockCollection(database, "accessories");
 }
 
 async function createSale(payload) {
@@ -77,22 +121,30 @@ async function createSale(payload) {
 }
 
 async function createChecklist(payload) {
-  const checklist = await createRecord("checklists", payload);
+  const shouldSyncCompletion = payload.status === "finalizado";
+  const syncDate = new Date().toISOString();
+  const checklist = await createRecord("checklists", shouldSyncCompletion
+    ? {
+      ...payload,
+      financeSyncedAt: Number(payload.value || 0) > 0 ? syncDate : payload.financeSyncedAt,
+      inventorySyncedAt: syncDate,
+    }
+    : payload);
 
   /* --- SECAO: INTEGRACAO OPERACIONAL ---
    * Checklists finalizados ja movimentam estoque e financeiro no MVP local.
    */
-  if (payload.status === "finalizado") {
+  if (shouldSyncCompletion) {
     const database = getDatabaseSnapshot();
-    adjustStock(database, "machines", payload.machineId, -Number(payload.quantity || 1));
-    await persistStockCollection(database, "machines");
+    adjustChecklistInventory(database, checklist);
+    await persistChecklistInventory(database);
 
-    if (Number(payload.value || 0) > 0) {
+    if (Number(checklist.value || 0) > 0 && !hasChecklistReceivable(database, checklist)) {
       await createRecord("receivables", {
-        origin: `Checklist ${payload.code || checklist.id}`,
-        clientId: payload.clientId,
-        dueDate: payload.date,
-        value: Number(payload.value || 0),
+        origin: buildChecklistReceivableOrigin(checklist),
+        clientId: checklist.clientId,
+        dueDate: checklist.date,
+        value: Number(checklist.value || 0),
         status: "pendente",
         notes: "Cobranca gerada automaticamente pelo checklist finalizado.",
       });
@@ -100,6 +152,44 @@ async function createChecklist(payload) {
   }
 
   return checklist;
+}
+
+async function updateChecklist(id, payload, historyConfig) {
+  const database = getDatabaseSnapshot();
+  const existingChecklist = (database.checklists || []).find((checklist) => checklist.id === id);
+  const finalizingNow = payload.status === "finalizado" && existingChecklist?.status !== "finalizado";
+  const shouldSyncInventory = finalizingNow && !existingChecklist?.inventorySyncedAt;
+  const syncDate = new Date().toISOString();
+  const updatedChecklist = await updateRecord("checklists", id, shouldSyncInventory
+    ? {
+      ...payload,
+      financeSyncedAt: Number(payload.value || existingChecklist?.value || 0) > 0 ? syncDate : payload.financeSyncedAt,
+      inventorySyncedAt: syncDate,
+    }
+    : payload, historyConfig);
+
+  /* --- SECAO: FINALIZACAO IDEMPOTENTE ---
+   * A baixa de estoque e a criacao de recebivel acontecem apenas na primeira
+   * transicao para finalizado. Edicoes posteriores nao duplicam movimentos.
+   */
+  if (shouldSyncInventory) {
+    const nextDatabase = getDatabaseSnapshot();
+    adjustChecklistInventory(nextDatabase, updatedChecklist);
+    await persistChecklistInventory(nextDatabase);
+
+    if (Number(updatedChecklist.value || 0) > 0 && !hasChecklistReceivable(nextDatabase, updatedChecklist)) {
+      await createRecord("receivables", {
+        origin: buildChecklistReceivableOrigin(updatedChecklist),
+        clientId: updatedChecklist.clientId,
+        dueDate: updatedChecklist.date,
+        value: Number(updatedChecklist.value || 0),
+        status: "pendente",
+        notes: "Cobranca gerada automaticamente pelo checklist finalizado.",
+      });
+    }
+  }
+
+  return updatedChecklist;
 }
 
 export async function listEntity(collectionName) {
@@ -119,6 +209,10 @@ export async function createEntity(collectionName, payload) {
 }
 
 export async function updateEntity(collectionName, id, payload, historyConfig) {
+  if (collectionName === "checklists") {
+    return updateChecklist(id, payload, historyConfig);
+  }
+
   return updateRecord(collectionName, id, payload, historyConfig);
 }
 
