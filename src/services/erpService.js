@@ -47,6 +47,64 @@ function validateSelectedInventoryStock(database, collectionName, selectionMap =
   return "";
 }
 
+function resolveSaleProductParts(payload = {}, existingSale = {}) {
+  const inventoryItem = payload.inventoryItem ?? existingSale.inventoryItem;
+
+  if (inventoryItem) {
+    const [productCollection, productId] = String(inventoryItem).split(":");
+
+    return { productCollection, productId };
+  }
+
+  return {
+    productCollection: payload.productCollection ?? existingSale.productCollection,
+    productId: payload.productId ?? existingSale.productId,
+  };
+}
+
+function buildSalePayload(payload, existingSale = {}) {
+  const { productCollection, productId } = resolveSaleProductParts(payload, existingSale);
+  const quantity = asQuantity(payload.quantity ?? existingSale.quantity);
+  const unitValue = asCurrencyNumber(payload.unitValue ?? existingSale.unitValue);
+
+  return {
+    ...payload,
+    clientId: payload.clientId ?? existingSale.clientId,
+    date: payload.date ?? existingSale.date,
+    generateCharge: Boolean(payload.generateCharge ?? existingSale.generateCharge),
+    inventoryItem: `${productCollection || ""}:${productId || ""}`,
+    paymentStatus: payload.paymentStatus ?? existingSale.paymentStatus ?? "pendente",
+    productCollection,
+    productId,
+    quantity,
+    totalValue: quantity * unitValue,
+    unitValue,
+  };
+}
+
+function saleUsesSameProduct(firstSale = {}, secondSale = {}) {
+  return firstSale.productCollection === secondSale.productCollection && firstSale.productId === secondSale.productId;
+}
+
+function buildSaleReceivableOrigin(sale) {
+  const numericSuffix = String(sale.id || "").match(/(\d+)$/)?.[1];
+
+  return numericSuffix ? `Venda #${numericSuffix}` : `Venda ${String(sale.id || "").slice(-5).toUpperCase()}`;
+}
+
+function getSaleReceivableOrigins(sale) {
+  return Array.from(new Set([
+    buildSaleReceivableOrigin(sale),
+    `Venda ${String(sale.id || "").slice(-5).toUpperCase()}`,
+  ].filter(Boolean)));
+}
+
+function findSaleReceivable(database, sale) {
+  const origins = getSaleReceivableOrigins(sale);
+
+  return (database.receivables || []).find((receivable) => origins.includes(receivable.origin)) || null;
+}
+
 function adjustStock(database, collectionName, id, quantityDelta) {
   if (!collectionName || !id || !database[collectionName]) {
     return database;
@@ -75,28 +133,28 @@ function getSelectedQuantity(selection) {
   return Math.max(1, Number(selection.quantity ?? 1));
 }
 
-function validateSalePayload(database, payload) {
-  const [productCollection, productId] = String(payload.inventoryItem || "").split(":");
-  const quantity = asQuantity(payload.quantity);
-  const unitValue = asCurrencyNumber(payload.unitValue);
+function validateSalePayload(database, payload, existingSale = null) {
+  const sale = buildSalePayload(payload, existingSale || {});
+  const quantity = asQuantity(sale.quantity);
+  const unitValue = asCurrencyNumber(sale.unitValue);
 
-  if (!payload.clientId) {
+  if (!sale.clientId) {
     return "Selecione o cliente da venda.";
   }
 
-  if (!findRecord(database, "clients", payload.clientId)) {
+  if (!findRecord(database, "clients", sale.clientId)) {
     return "Cliente selecionado nao encontrado. Selecione um cliente valido.";
   }
 
-  if (!payload.date) {
+  if (!sale.date) {
     return "Informe a data da venda.";
   }
 
-  if (!["supplies", "accessories"].includes(productCollection)) {
+  if (!["supplies", "accessories"].includes(sale.productCollection)) {
     return "Selecione um item de estoque valido.";
   }
 
-  const product = findRecord(database, productCollection, productId);
+  const product = findRecord(database, sale.productCollection, sale.productId);
 
   if (!product) {
     return "Selecione um produto valido.";
@@ -106,8 +164,12 @@ function validateSalePayload(database, payload) {
     return "Informe uma quantidade maior que zero.";
   }
 
-  if (quantity > Number(product.stock || 0)) {
-    return `Estoque insuficiente: ${product.name} possui ${Number(product.stock || 0)} unidade(s) disponiveis.`;
+  const availableStock = Number(product.stock || 0) + (
+    existingSale && saleUsesSameProduct(sale, existingSale) ? asQuantity(existingSale.quantity) : 0
+  );
+
+  if (quantity > availableStock) {
+    return `Estoque insuficiente: ${product.name} possui ${availableStock} unidade(s) disponiveis.`;
   }
 
   if (unitValue <= 0) {
@@ -205,6 +267,57 @@ async function persistChecklistInventory(database) {
   await persistStockCollection(database, "accessories");
 }
 
+async function persistSaleStockDelta(previousSale, nextSale) {
+  const database = getDatabaseSnapshot();
+  const touchedCollections = new Set();
+
+  if (previousSale?.productCollection && previousSale?.productId) {
+    adjustStock(database, previousSale.productCollection, previousSale.productId, asQuantity(previousSale.quantity));
+    touchedCollections.add(previousSale.productCollection);
+  }
+
+  if (nextSale?.productCollection && nextSale?.productId) {
+    adjustStock(database, nextSale.productCollection, nextSale.productId, -asQuantity(nextSale.quantity));
+    touchedCollections.add(nextSale.productCollection);
+  }
+
+  for (const collectionName of touchedCollections) {
+    await persistStockCollection(database, collectionName);
+  }
+}
+
+async function syncSaleReceivable(sale, previousSale = sale) {
+  const database = getDatabaseSnapshot();
+  const receivable = findSaleReceivable(database, sale) || findSaleReceivable(database, previousSale);
+  const receivablePayload = {
+    origin: buildSaleReceivableOrigin(sale),
+    clientId: sale.clientId,
+    dueDate: sale.date,
+    value: asCurrencyNumber(sale.totalValue),
+    status: sale.paymentStatus === "pago" ? "pago" : "pendente",
+    notes: "Cobranca gerada automaticamente pela venda rapida.",
+  };
+
+  if (sale.generateCharge) {
+    if (receivable) {
+      await updateRecord("receivables", receivable.id, receivablePayload, {
+        action: "Sincronizou",
+        details: `${receivablePayload.origin}: valor ${receivablePayload.value} | status ${receivablePayload.status}`,
+        module: "Financeiro",
+        title: receivablePayload.origin,
+      });
+      return;
+    }
+
+    await createRecord("receivables", receivablePayload);
+    return;
+  }
+
+  if (receivable) {
+    await deleteRecord("receivables", receivable.id);
+  }
+}
+
 async function createSale(payload) {
   const database = getDatabaseSnapshot();
   const validationMessage = validateSalePayload(database, payload);
@@ -213,36 +326,56 @@ async function createSale(payload) {
     throw new Error(validationMessage);
   }
 
-  const [productCollection, productId] = String(payload.inventoryItem || "").split(":");
-  const quantity = asQuantity(payload.quantity);
-  const unitValue = asCurrencyNumber(payload.unitValue);
-  const totalValue = quantity * unitValue;
+  const normalizedPayload = buildSalePayload(payload);
 
   const sale = await createRecord("sales", {
-    ...payload,
-    productCollection,
-    productId,
-    quantity,
-    unitValue,
-    totalValue,
+    ...normalizedPayload,
   });
 
-  const nextDatabase = getDatabaseSnapshot();
-  adjustStock(nextDatabase, productCollection, productId, -quantity);
-  await persistStockCollection(nextDatabase, productCollection);
+  await persistSaleStockDelta(null, sale);
 
-  if (payload.generateCharge) {
-    await createRecord("receivables", {
-      origin: `Venda ${sale.id.slice(-5).toUpperCase()}`,
-      clientId: payload.clientId,
-      dueDate: payload.date,
-      value: totalValue,
-      status: payload.paymentStatus === "pago" ? "pago" : "pendente",
-      notes: "Cobranca gerada automaticamente pela venda rapida.",
-    });
-  }
+  await syncSaleReceivable(sale);
 
   return sale;
+}
+
+async function updateSale(id, payload, historyConfig) {
+  const database = getDatabaseSnapshot();
+  const existingSale = findRecord(database, "sales", id);
+
+  if (!existingSale) {
+    throw new Error("Venda nao encontrada.");
+  }
+
+  const normalizedPayload = buildSalePayload(payload, existingSale);
+  const validationMessage = validateSalePayload(database, normalizedPayload, existingSale);
+
+  if (validationMessage) {
+    throw new Error(validationMessage);
+  }
+
+  const updatedSale = await updateRecord("sales", id, normalizedPayload, historyConfig);
+
+  await persistSaleStockDelta(existingSale, updatedSale);
+  await syncSaleReceivable(updatedSale, existingSale);
+
+  return updatedSale;
+}
+
+async function deleteSale(id) {
+  const database = getDatabaseSnapshot();
+  const existingSale = findRecord(database, "sales", id);
+
+  if (!existingSale) {
+    throw new Error("Venda nao encontrada.");
+  }
+
+  const deletedSale = await deleteRecord("sales", id);
+
+  await persistSaleStockDelta(deletedSale, null);
+  await syncSaleReceivable({ ...deletedSale, generateCharge: false }, deletedSale);
+
+  return deletedSale;
 }
 
 async function createChecklist(payload) {
@@ -355,6 +488,10 @@ export async function createEntity(collectionName, payload) {
 }
 
 export async function updateEntity(collectionName, id, payload, historyConfig) {
+  if (collectionName === "sales") {
+    return updateSale(id, payload, historyConfig);
+  }
+
   if (collectionName === "checklists") {
     return updateChecklist(id, payload, historyConfig);
   }
@@ -368,6 +505,10 @@ export async function deleteEntity(collectionName, id) {
 
   if (blockers.length) {
     throw new Error(buildDeletionBlockedMessage(collectionName, id, blockers));
+  }
+
+  if (collectionName === "sales") {
+    return deleteSale(id);
   }
 
   return deleteRecord(collectionName, id);
