@@ -90,7 +90,7 @@ export const PAGE_LABELS = {
   historico: "Historico Geral",
   home: "Home",
   insumos: "Catalogo de Insumos",
-  machines: "Catalogo de Maquinas",
+  machines: "Maquinas",
   opcoes: "Adicionar Opcoes",
   perfil: "Perfil",
   portfolios: "Portfolios",
@@ -101,8 +101,8 @@ export const PAGE_LABELS = {
   "module:labels.files": "Modulo: Arquivos de Etiquetas",
   "module:machines.configs": "Modulo: Configuracao de Maquina",
   "module:machines.wiki": "Modulo: Wiki Tecnica",
-  "tab:machines.catalog": "Aba: Catalogo de Maquinas",
-  "tab:machines.repairs": "Aba: Consertos no Catalogo",
+  "tab:machines.catalog": "Aba: Maquinas",
+  "tab:machines.repairs": "Aba: Consertos em Maquinas",
   vendas: "Vendas",
 };
 

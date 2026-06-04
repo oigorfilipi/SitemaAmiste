@@ -6,7 +6,7 @@ import { moduleConfigs } from "../config/moduleConfigs.js";
 import ServiceOrdersPage from "../service-orders/ServiceOrdersPage.jsx";
 
 const MACHINE_TABS = [
-  { id: "catalog", label: "Catalogo", permissionId: "tab:machines.catalog" },
+  { id: "catalog", label: "Maquinas", permissionId: "tab:machines.catalog" },
   { id: "repairs", label: "Consertos SLA", permissionId: "tab:machines.repairs" },
 ];
 

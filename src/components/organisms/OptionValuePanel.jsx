@@ -28,6 +28,13 @@ export default function OptionValuePanel({
           <span className="mt-1 block text-sm font-semibold text-amiste-gray/60">
             {group.count} valor(es) disponiveis para dropdowns.
           </span>
+          <p className="mt-2 max-w-3xl text-sm font-semibold text-amiste-gray">
+            {group.description}
+          </p>
+          <div className="mt-3 rounded-md border border-amiste-red/15 bg-amiste-red/5 px-3 py-2">
+            <span className="text-[11px] font-black uppercase text-amiste-red">Onde sera usado</span>
+            <p className="mt-1 text-sm font-semibold text-amiste-gray">{group.usage}</p>
+          </div>
         </div>
         {canMutate ? (
           <Button aria-label={`Adicionar opcao em ${group.label}`} icon="plus" onClick={() => onCreate(group.id)}>
@@ -62,7 +69,7 @@ export default function OptionValuePanel({
       ) : (
         <div className="p-5">
           <TableEmptyState
-            description="Cadastre valores para que este grupo apareca nos formularios."
+            description={`Cadastre valores para disponibilizar este grupo nos locais indicados: ${group.usage}`}
             icon="plus"
             title="Grupo sem opcoes"
           />

@@ -32,6 +32,9 @@ export default function OptionGroupList({ activeGroup, groups, onSelectGroup }) 
               <span className={activeGroup === group.id ? "text-xs font-semibold text-white/70" : "text-xs font-semibold text-amiste-gray/60"}>
                 {group.count} opcao(oes)
               </span>
+              <span className={activeGroup === group.id ? "mt-1 line-clamp-2 text-xs font-semibold text-white/70" : "mt-1 line-clamp-2 text-xs font-semibold text-amiste-gray/55"}>
+                {group.description}
+              </span>
             </span>
             <span className={activeGroup === group.id ? "rounded-md bg-white/18 px-2 py-1 text-xs font-black" : "rounded-md bg-white px-2 py-1 text-xs font-black text-amiste-gray"}>
               {group.empty ? "Vazio" : group.count}

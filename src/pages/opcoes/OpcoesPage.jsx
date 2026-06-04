@@ -9,6 +9,7 @@ import OptionValuePanel from "../../components/organisms/OptionValuePanel.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import {
   buildOptionGroups,
+  buildOptionFeedbackMessage,
   buildOptionMetrics,
   buildOptionPayload,
   exportOptions,
@@ -22,6 +23,7 @@ export default function OpcoesPage({ accessLevel }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
   const config = moduleConfigs.options;
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("options");
   const canMutate = accessLevel === "AC";
@@ -46,6 +48,7 @@ export default function OpcoesPage({ accessLevel }) {
 
     setActiveGroup(groupId);
     setEditingRecord(null);
+    setFeedbackMessage("");
     setModalOpen(true);
   }
 
@@ -56,6 +59,7 @@ export default function OpcoesPage({ accessLevel }) {
 
     setActiveGroup(option.group);
     setEditingRecord(option);
+    setFeedbackMessage("");
     setModalOpen(true);
   }
 
@@ -67,6 +71,7 @@ export default function OpcoesPage({ accessLevel }) {
     }
 
     const nextPayload = buildOptionPayload(payload);
+    const isEditing = Boolean(editingRecord);
 
     if (editingRecord) {
       await updateRecord(editingRecord.id, nextPayload);
@@ -75,6 +80,7 @@ export default function OpcoesPage({ accessLevel }) {
     }
 
     setActiveGroup(nextPayload.group);
+    setFeedbackMessage(buildOptionFeedbackMessage(nextPayload.group, isEditing));
     setModalOpen(false);
     setEditingRecord(null);
   }
@@ -104,6 +110,32 @@ export default function OpcoesPage({ accessLevel }) {
         title={config.title}
         onAction={() => openCreateModal(activeGroup)}
       />
+
+      {/* --- SECAO: ORIENTACAO DA PAGINA --- */}
+      <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            <span className="text-xs font-black uppercase text-amiste-red">Central de opcoes reutilizaveis</span>
+            <p className="mt-2 text-sm font-semibold leading-6 text-amiste-gray">
+              Esta pagina permite cadastrar opcoes reutilizaveis no sistema, como marcas, ferramentas,
+              bebidas, insumos, acessorios, status e parametros que aparecem em formularios e paginas relacionadas.
+            </p>
+          </div>
+          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+            <strong className="block text-sm font-black text-amiste-black">O que esta pagina nao faz</strong>
+            <p className="mt-2 text-sm font-semibold leading-6 text-amiste-gray">
+              Ela nao cria novas paginas, modulos ou funcionalidades. Cada opcao cadastrada apenas alimenta
+              listas e campos ja existentes no ERP.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {feedbackMessage ? (
+        <div className="rounded-md border border-amiste-green/25 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
+          {feedbackMessage}
+        </div>
+      ) : null}
 
       {/* --- SECAO: INDICADORES DE OPCOES --- */}
       <MetricsGrid metrics={metrics} />

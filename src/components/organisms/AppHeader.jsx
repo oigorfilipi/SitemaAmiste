@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import IconButton from "../atoms/IconButton.jsx";
 import Button from "../atoms/Button.jsx";
 import HeaderShortcut from "../molecules/HeaderShortcut.jsx";
@@ -8,6 +8,11 @@ import GlobalSearchPanel from "./GlobalSearchPanel.jsx";
 import NotificationCenter from "./NotificationCenter.jsx";
 import { useGlobalSearch } from "../../hooks/useGlobalSearch.js";
 import { useDashboard } from "../../hooks/useDashboard.js";
+import {
+  buildNotificationScope,
+  getUnreadAlerts,
+  markAlertsAsViewed,
+} from "../../services/notificationReadService.js";
 import { cn } from "../../utils/cn.js";
 
 export default function AppHeader({
@@ -23,11 +28,23 @@ export default function AppHeader({
   const [searchTerm, setSearchTerm] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [notificationReadVersion, setNotificationReadVersion] = useState(0);
   const searchCloseTimer = useRef(null);
   const { isSearching, results } = useGlobalSearch(searchTerm, user?.role || "VEN");
   const { data: dashboard } = useDashboard(user?.role || "VEN");
   const alerts = dashboard.alerts || [];
+  const notificationScope = buildNotificationScope(user);
+  const unreadAlerts = useMemo(
+    () => getUnreadAlerts(alerts, notificationScope),
+    [alerts, notificationReadVersion, notificationScope]
+  );
   const searchOpen = searchFocused && searchTerm.trim().length >= 2;
+
+  useEffect(() => {
+    if (alertsOpen && markAlertsAsViewed(alerts, notificationScope)) {
+      setNotificationReadVersion((currentVersion) => currentVersion + 1);
+    }
+  }, [alerts, alertsOpen, notificationScope]);
 
   function closeSearch() {
     if (searchCloseTimer.current) {
@@ -67,6 +84,10 @@ export default function AppHeader({
 
   function handleToggleAlerts() {
     closeSearch();
+    if (!alertsOpen && markAlertsAsViewed(alerts, notificationScope)) {
+      setNotificationReadVersion((currentVersion) => currentVersion + 1);
+    }
+
     setAlertsOpen((currentState) => !currentState);
   }
 
@@ -133,9 +154,9 @@ export default function AppHeader({
         </div>
         <div className="relative">
           <IconButton active={alertsOpen} icon="bell" label="Alertas" onClick={handleToggleAlerts} />
-          {alerts.length ? (
+          {unreadAlerts.length ? (
             <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-amiste-red text-[10px] font-black text-white ring-2 ring-white">
-              {alerts.length}
+              {unreadAlerts.length}
             </span>
           ) : null}
           <NotificationCenter

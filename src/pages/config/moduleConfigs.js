@@ -96,7 +96,7 @@ function inventorySummary(record) {
 
 export const moduleConfigs = {
   machines: {
-    title: "Catalogo de Maquinas",
+    title: "Maquinas",
     description: "Gerencie os modelos e equipamentos disponiveis.",
     actionLabel: "Nova Maquina",
     collection: "machines",
@@ -606,12 +606,12 @@ export const moduleConfigs = {
   },
   options: {
     title: "Adicionar Opcoes",
-    description: "Gerenciamento de listas, categorias, parametros tecnicos e itens de checklist.",
+    description: "Cadastre opcoes reutilizaveis para dropdowns e formularios do sistema. Esta pagina nao cria paginas novas nem novas funcionalidades.",
     actionLabel: "Adicionar",
     collection: "options",
     layout: "table",
     formTitle: "Nova Opcao",
-    formDescription: "Parametro usado por dropdowns e cadastros do sistema.",
+    formDescription: "Parametro reutilizavel em formularios existentes. Escolha o grupo correto para definir onde ele aparecera.",
     validate: validateOptionPayload,
     smartSummary: (record) => `${record.group || "Grupo"} | ${record.name || "Opcao"} = ${record.value || "-"}.`,
     columns: [
