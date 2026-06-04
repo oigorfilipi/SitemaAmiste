@@ -177,6 +177,12 @@ export function buildPricingFormData(group, item) {
 }
 
 export async function savePricingUpdate({ collectionName, formData, group, item }) {
+  const invalidField = group.fields.find((field) => asNumber(formData[field.key]) < 0);
+
+  if (invalidField) {
+    throw new Error(`${invalidField.label} nao pode ser negativo.`);
+  }
+
   const payload = group.fields.reduce((values, field) => ({
     ...values,
     [field.key]: asNumber(formData[field.key]),

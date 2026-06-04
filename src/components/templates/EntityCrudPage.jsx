@@ -192,6 +192,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
           fields={config.fields}
           livePreviewDocumentType={config.livePreviewDocumentType}
           open={modalOpen}
+          smartSummary={config.smartSummary}
           snapshot={snapshot}
           title={config.formTitle}
           validate={config.validate}

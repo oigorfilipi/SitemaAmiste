@@ -139,6 +139,7 @@ export default function EtiquetasPage({ accessLevel }) {
       </div>
 
       <LabelUploadModal
+        existingLabels={labels}
         open={uploadOpen}
         snapshot={snapshot}
         onClose={() => setUploadOpen(false)}

@@ -1,4 +1,11 @@
 import { validateChecklistPayload } from "../../services/checklistService.js";
+import {
+  validateAccessoryPayload,
+  validateClientPayload,
+  validateMachinePayload,
+  validateOptionPayload,
+  validateSupplyPayload,
+} from "../../services/formValidationService.js";
 import { OPTION_GROUP_CHOICES } from "../../services/optionService.js";
 
 const statusOptions = [
@@ -39,6 +46,46 @@ function resolveName(snapshot, collection, id) {
   return snapshot[collection]?.find((record) => record.id === id)?.name || "-";
 }
 
+const sections = {
+  commercial: { id: "commercial", eyebrow: "Comercial", title: "Precificacao e condicoes" },
+  contact: { id: "contact", eyebrow: "Contato", title: "Contato e relacionamento" },
+  contract: { id: "contract", eyebrow: "Contrato", title: "Contrato e vinculos" },
+  identity: { id: "identity", eyebrow: "Identificacao", title: "Identificacao do cadastro" },
+  inventory: { id: "inventory", eyebrow: "Estoque", title: "Estoque e reposicao" },
+  operation: { id: "operation", eyebrow: "Operacao", title: "Uso operacional" },
+  pricing: { id: "pricing", eyebrow: "Precos", title: "Custos e precificacao" },
+  technical: { id: "technical", eyebrow: "Tecnico", title: "Caracteristicas tecnicas" },
+};
+
+function findMachine(snapshot, machineId) {
+  return snapshot.machines?.find((machine) => machine.id === machineId) || {};
+}
+
+function resolveClientContractValue(formData, snapshot) {
+  const machine = findMachine(snapshot, formData.machineId);
+
+  if (formData.contractType === "Venda") {
+    return machine.priceSale || "";
+  }
+
+  if (formData.contractType === "Aluguel" || formData.contractType === "Comodato") {
+    return machine.priceRent || "";
+  }
+
+  return "";
+}
+
+function formatCurrencySummary(value) {
+  return new Intl.NumberFormat("pt-BR", {
+    currency: "BRL",
+    style: "currency",
+  }).format(Number(value || 0));
+}
+
+function inventorySummary(record) {
+  return `Estoque ${record.stock || 0} | minimo ${record.minStock || 0} | status ${record.status || "-"}.`;
+}
+
 export const moduleConfigs = {
   machines: {
     title: "Catalogo de Maquinas",
@@ -49,6 +96,9 @@ export const moduleConfigs = {
     searchPlaceholder: "Buscar por maquina, marca ou categoria",
     formTitle: "Cadastro de Maquina",
     formDescription: "Parametros tecnicos, estoque e precificacao base do equipamento.",
+    validate: validateMachinePayload,
+    smartSummary: (record) =>
+      `${inventorySummary(record)} Aluguel ${formatCurrencySummary(record.priceRent)} | venda ${formatCurrencySummary(record.priceSale)}.`,
     card: {
       title: { key: "name" },
       subtitle: { key: "brand" },
@@ -61,22 +111,26 @@ export const moduleConfigs = {
       ],
     },
     fields: [
-      { name: "name", label: "Nome da maquina", required: true },
-      { name: "brand", label: "Marca", type: "select", optionGroup: "Marcas de Maquinas", required: true },
-      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Maquinas", required: true },
-      { name: "voltage", label: "Voltagem", type: "select", optionGroup: "Voltagens", options: [{ label: "110v", value: "110v" }, { label: "220v", value: "220v" }, { label: "Bivolt", value: "Bivolt" }] },
-      { name: "amperage", label: "Amperagem", type: "number", defaultValue: 10 },
-      { name: "hydraulic", label: "Rede hidrica", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }] },
-      { name: "sewer", label: "Esgoto", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao" },
-      { name: "steam", label: "Vapor", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao" },
-      { name: "paymentSystem", label: "Sistema de pagamento", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao" },
-      { name: "paymentSystemName", label: "Qual sistema?" },
-      { name: "stock", label: "Estoque", type: "number", defaultValue: 0 },
-      { name: "minStock", label: "Estoque minimo", type: "number", defaultValue: 1 },
-      { name: "priceRent", label: "Valor aluguel", type: "currency" },
-      { name: "priceSale", label: "Valor venda", type: "currency" },
-      { name: "status", label: "Status", type: "select", optionGroup: "Status Catalogo", options: statusOptions, defaultValue: "ativo" },
-      { name: "description", label: "Descricao", type: "textarea", full: true, maxLength: 800 },
+      { name: "name", label: "Nome da maquina", required: true, section: sections.identity },
+      { name: "brand", label: "Marca", type: "select", optionGroup: "Marcas de Maquinas", required: true, section: sections.identity },
+      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Maquinas", required: true, section: sections.identity },
+      { name: "status", label: "Status", type: "select", optionGroup: "Status Catalogo", options: statusOptions, defaultValue: "ativo", section: sections.identity },
+      { name: "voltage", label: "Voltagem", type: "select", optionGroup: "Voltagens", options: [{ label: "110v", value: "110v" }, { label: "220v", value: "220v" }, { label: "Bivolt", value: "Bivolt" }], section: sections.technical },
+      { name: "amperage", label: "Amperagem", type: "number", defaultValue: 10, min: 0, section: sections.technical },
+      { name: "hydraulic", label: "Rede hidrica", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
+      { name: "sewer", label: "Esgoto", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
+      { name: "steam", label: "Vapor", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
+      { name: "paymentSystem", label: "Sistema de pagamento", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical },
+      { name: "paymentSystemName", label: "Qual sistema?", section: sections.technical, visibleWhen: (data) => data.paymentSystem === "Sim", helpText: "Este campo alimenta checklists e fichas quando a maquina exige sistema de pagamento." },
+      { name: "stock", label: "Estoque atual", type: "number", defaultValue: 0, min: 0, section: sections.inventory },
+      { name: "minStock", label: "Estoque minimo", type: "number", defaultValue: 1, min: 0, section: sections.inventory, warningWhen: (data) => Number(data.minStock || 0) > Number(data.stock || 0), warningText: () => "Estoque minimo acima do estoque atual: o sistema deve sinalizar reposicao." },
+      { name: "priceRent", label: "Valor aluguel", type: "currency", min: 0, section: sections.pricing },
+      { name: "priceSale", label: "Valor venda", type: "currency", min: 0, section: sections.pricing },
+      { name: "acquisitionCost", label: "Custo aquisicao", type: "currency", min: 0, section: sections.pricing, helpText: "Usado como base futura para payback real da maquina." },
+      { name: "imageUrl", label: "URL da foto", section: sections.operation },
+      { name: "videoUrl", label: "Link de video", section: sections.operation },
+      { name: "defaultProposalText", label: "Texto padrao de proposta", type: "textarea", full: true, section: sections.operation },
+      { name: "description", label: "Descricao tecnica", type: "textarea", full: true, maxLength: 800, section: sections.operation },
     ],
     extraActions: [
       {
@@ -153,6 +207,9 @@ export const moduleConfigs = {
     searchPlaceholder: "Buscar por insumo, marca ou categoria",
     formTitle: "Cadastro de Insumo",
     formDescription: "Dados comerciais, estoque minimo e rendimento para operacao.",
+    validate: validateSupplyPayload,
+    smartSummary: (record) =>
+      `${inventorySummary(record)} Preco ${formatCurrencySummary(record.price)} | custo ${formatCurrencySummary(record.cost)}.`,
     card: {
       title: { key: "name" },
       subtitle: { key: "brand" },
@@ -165,16 +222,21 @@ export const moduleConfigs = {
       ],
     },
     fields: [
-      { name: "name", label: "Nome do produto", required: true },
-      { name: "brand", label: "Marca", type: "select", optionGroup: "Marcas de Insumos" },
-      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Insumos" },
-      { name: "unit", label: "Tamanho / medida", type: "select", optionGroup: "Unidades de Produto" },
-      { name: "stock", label: "Estoque", type: "number", defaultValue: 0 },
-      { name: "minStock", label: "Estoque minimo", type: "number", defaultValue: 1 },
-      { name: "price", label: "Preco venda", type: "currency" },
-      { name: "cost", label: "Custo", type: "currency" },
-      { name: "status", label: "Status", type: "select", optionGroup: "Status Catalogo", options: statusOptions, defaultValue: "ativo" },
-      { name: "description", label: "Descricao", type: "textarea", full: true, maxLength: 800 },
+      { name: "name", label: "Nome do produto", required: true, section: sections.identity },
+      { name: "sku", label: "SKU / codigo interno", section: sections.identity },
+      { name: "brand", label: "Marca", type: "select", optionGroup: "Marcas de Insumos", section: sections.identity },
+      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Insumos", section: sections.identity },
+      { name: "tag", label: "Tag operacional", type: "select", optionGroup: "Tags de Insumos", section: sections.identity },
+      { name: "unit", label: "Tamanho / medida", type: "select", optionGroup: "Unidades de Produto", section: sections.inventory },
+      { name: "stock", label: "Estoque", type: "number", defaultValue: 0, min: 0, section: sections.inventory },
+      { name: "minStock", label: "Estoque minimo", type: "number", defaultValue: 1, min: 0, section: sections.inventory, warningWhen: (data) => Number(data.minStock || 0) > Number(data.stock || 0), warningText: () => "Este insumo deve aparecer como ponto de reposicao." },
+      { name: "supplier", label: "Fornecedor principal", section: sections.inventory },
+      { name: "leadTimeDays", label: "Prazo reposicao (dias)", type: "number", min: 0, section: sections.inventory },
+      { name: "price", label: "Preco venda", type: "currency", min: 0, section: sections.pricing },
+      { name: "cost", label: "Custo", type: "currency", min: 0, section: sections.pricing },
+      { name: "status", label: "Status", type: "select", optionGroup: "Status Catalogo", options: statusOptions, defaultValue: "ativo", section: sections.pricing },
+      { name: "compatibleMachines", label: "Maquinas compativeis", type: "textarea", full: true, section: sections.operation, helpText: "Use este campo quando o insumo for exclusivo de modelos especificos." },
+      { name: "description", label: "Descricao", type: "textarea", full: true, maxLength: 800, section: sections.operation },
     ],
     extraActions: [
       {
@@ -218,6 +280,9 @@ export const moduleConfigs = {
     layout: "cards",
     formTitle: "Cadastro de Acessorio",
     formDescription: "Dados de compatibilidade, estoque e precificacao do acessorio.",
+    validate: validateAccessoryPayload,
+    smartSummary: (record) =>
+      `${inventorySummary(record)} Preco ${formatCurrencySummary(record.price)} | custo ${formatCurrencySummary(record.cost)}.`,
     card: {
       title: { key: "name" },
       subtitle: { key: "brand" },
@@ -230,17 +295,20 @@ export const moduleConfigs = {
       ],
     },
     fields: [
-      { name: "name", label: "Nome do acessorio", required: true },
-      { name: "brand", label: "Marca", type: "select", optionGroup: "Marcas de Acessorios" },
-      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Acessorios" },
-      { name: "color", label: "Cor", type: "select", optionGroup: "Cores" },
-      { name: "size", label: "Tamanho", type: "select", optionGroup: "Tamanhos" },
-      { name: "stock", label: "Estoque", type: "number", defaultValue: 0 },
-      { name: "minStock", label: "Estoque minimo", type: "number", defaultValue: 1 },
-      { name: "price", label: "Preco", type: "currency" },
-      { name: "cost", label: "Custo", type: "currency" },
-      { name: "status", label: "Status", type: "select", optionGroup: "Status Catalogo", options: statusOptions, defaultValue: "ativo" },
-      { name: "description", label: "Descricao", type: "textarea", full: true, maxLength: 800 },
+      { name: "name", label: "Nome do acessorio", required: true, section: sections.identity },
+      { name: "sku", label: "SKU / codigo interno", section: sections.identity },
+      { name: "brand", label: "Marca", type: "select", optionGroup: "Marcas de Acessorios", section: sections.identity },
+      { name: "category", label: "Categoria", type: "select", optionGroup: "Categorias de Acessorios", section: sections.identity },
+      { name: "color", label: "Cor", type: "select", optionGroup: "Cores", section: sections.identity },
+      { name: "size", label: "Tamanho", type: "select", optionGroup: "Tamanhos", section: sections.identity },
+      { name: "stock", label: "Estoque", type: "number", defaultValue: 0, min: 0, section: sections.inventory },
+      { name: "minStock", label: "Estoque minimo", type: "number", defaultValue: 1, min: 0, section: sections.inventory, warningWhen: (data) => Number(data.minStock || 0) > Number(data.stock || 0), warningText: () => "Este acessorio deve aparecer como ponto de reposicao." },
+      { name: "supplier", label: "Fornecedor principal", section: sections.inventory },
+      { name: "price", label: "Preco", type: "currency", min: 0, section: sections.pricing },
+      { name: "cost", label: "Custo", type: "currency", min: 0, section: sections.pricing },
+      { name: "status", label: "Status", type: "select", optionGroup: "Status Catalogo", options: statusOptions, defaultValue: "ativo", section: sections.pricing },
+      { name: "compatibleMachines", label: "Maquinas compativeis", type: "textarea", full: true, section: sections.operation },
+      { name: "description", label: "Descricao", type: "textarea", full: true, maxLength: 800, section: sections.operation },
     ],
   },
   clients: {
@@ -251,6 +319,9 @@ export const moduleConfigs = {
     layout: "table",
     formTitle: "Cadastro de Cliente",
     formDescription: "Dados de contato, contrato e maquina vinculada.",
+    validate: validateClientPayload,
+    smartSummary: (record) =>
+      `${record.name || "Cliente"} | contrato ${record.contractType || "-"} | valor ${formatCurrencySummary(record.contractValue)}.`,
     columns: [
       { key: "name", label: "Cliente" },
       { key: "contact", label: "Contato" },
@@ -260,16 +331,23 @@ export const moduleConfigs = {
       { key: "status", label: "Status", type: "status" },
     ],
     fields: [
-      { name: "name", label: "Nome / empresa", required: true },
-      { name: "contact", label: "Pessoa de contato" },
-      { name: "phone", label: "Telefone" },
-      { name: "email", label: "Email" },
-      { name: "contractType", label: "Tipo de contrato", type: "select", optionGroup: "Tipos de Contrato", options: [{ label: "Aluguel", value: "Aluguel" }, { label: "Venda", value: "Venda" }, { label: "Comodato", value: "Comodato" }, { label: "Comprador de Insumos", value: "Comprador de Insumos" }] },
-      { name: "machineId", label: "Maquina vinculada", source: "machines" },
-      { name: "contractValue", label: "Valor contrato", type: "currency" },
-      { name: "status", label: "Status", type: "select", optionGroup: "Status Cliente", options: [{ label: "Concluido", value: "concluido" }, { label: "Cancelado", value: "cancelado" }, { label: "Quebra", value: "quebra" }], defaultValue: "concluido" },
-      { name: "startDate", label: "Inicio contrato", type: "date" },
-      { name: "address", label: "Endereco", type: "textarea", full: true },
+      { name: "name", label: "Nome / empresa", required: true, section: sections.identity },
+      { name: "companyDocument", label: "CNPJ / CPF", section: sections.identity },
+      { name: "status", label: "Status", type: "select", optionGroup: "Status Cliente", options: [{ label: "Concluido", value: "concluido" }, { label: "Cancelado", value: "cancelado" }, { label: "Quebra", value: "quebra" }], defaultValue: "concluido", section: sections.identity },
+      { name: "contact", label: "Pessoa de contato", section: sections.contact },
+      { name: "phone", label: "Telefone", section: sections.contact },
+      { name: "email", label: "Email", type: "email", section: sections.contact },
+      { name: "billingContact", label: "Contato financeiro", section: sections.contact },
+      { name: "contractType", label: "Tipo de contrato", type: "select", optionGroup: "Tipos de Contrato", options: [{ label: "Aluguel", value: "Aluguel" }, { label: "Venda", value: "Venda" }, { label: "Comodato", value: "Comodato" }, { label: "Comprador de Insumos", value: "Comprador de Insumos" }], defaultValue: "Aluguel", section: sections.contract },
+      { name: "contractNumber", label: "Numero do contrato", section: sections.contract },
+      { name: "machineId", label: "Maquina vinculada", source: "machines", section: sections.contract, visibleWhen: (data) => data.contractType !== "Comprador de Insumos" },
+      { name: "contractValue", label: "Valor contrato", type: "currency", min: 0, section: sections.contract, autoFill: resolveClientContractValue, autoFillDependencies: ["contractType", "machineId"], helpText: "Quando a maquina e o tipo de contrato sao escolhidos, o valor base vem da pagina de precos." },
+      { name: "startDate", label: "Inicio contrato", type: "date", section: sections.contract },
+      { name: "outletAmperage", label: "Tomada local", type: "number", min: 0, section: sections.technical, autoFill: (data, snapshot) => findMachine(snapshot, data.machineId).amperage || 10, autoFillDependencies: ["machineId"] },
+      { name: "waterAvailable", label: "Agua disponivel", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical, autoFill: (data, snapshot) => findMachine(snapshot, data.machineId).hydraulic || "Nao", autoFillDependencies: ["machineId"] },
+      { name: "sewerAvailable", label: "Esgoto disponivel", type: "select", optionGroup: "Rede Hidrica", options: [{ label: "Sim", value: "Sim" }, { label: "Nao", value: "Nao" }], defaultValue: "Nao", section: sections.technical, autoFill: (data, snapshot) => findMachine(snapshot, data.machineId).sewer || "Nao", autoFillDependencies: ["machineId"] },
+      { name: "address", label: "Endereco", type: "textarea", full: true, section: sections.operation },
+      { name: "installNotes", label: "Observacoes de instalacao", type: "textarea", full: true, section: sections.operation },
     ],
   },
   checklists: {
@@ -471,15 +549,20 @@ export const moduleConfigs = {
     layout: "table",
     formTitle: "Nova Opcao",
     formDescription: "Parametro usado por dropdowns e cadastros do sistema.",
+    validate: validateOptionPayload,
+    smartSummary: (record) => `${record.group || "Grupo"} | ${record.name || "Opcao"} = ${record.value || "-"}.`,
     columns: [
       { key: "group", label: "Grupo" },
       { key: "name", label: "Nome" },
       { key: "value", label: "Valor" },
     ],
     fields: [
-      { name: "group", label: "Grupo", type: "select", options: OPTION_GROUP_CHOICES, required: true },
-      { name: "name", label: "Nome", required: true },
-      { name: "value", label: "Valor", required: true },
+      { name: "group", label: "Grupo", type: "select", options: OPTION_GROUP_CHOICES, required: true, section: sections.identity },
+      { name: "name", label: "Nome visivel", required: true, section: sections.identity },
+      { name: "value", label: "Valor interno", required: true, section: sections.identity, helpText: "Use valores padronizados para evitar duplicidade nos cadastros." },
+      { name: "description", label: "Descricao de uso", type: "textarea", full: true, section: sections.operation },
+      { name: "requiredQuantity", label: "Quantidade padrao", type: "number", min: 0, section: sections.operation, visibleWhen: (data) => ["Ferramentas Necessarias", "Coisas Necessarias"].includes(data.group) },
+      { name: "defaultMl", label: "ML padrao", type: "number", min: 0, section: sections.operation, visibleWhen: (data) => data.group === "Bebidas da Maquina" },
     ],
   },
 };

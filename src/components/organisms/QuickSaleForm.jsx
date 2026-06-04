@@ -2,6 +2,7 @@ import Button from "../atoms/Button.jsx";
 import SelectInput from "../atoms/SelectInput.jsx";
 import StatusPill from "../atoms/StatusPill.jsx";
 import TextInput from "../atoms/TextInput.jsx";
+import FormSection from "../molecules/FormSection.jsx";
 import {
   buildSaleProductOptions,
   enrichSaleForm,
@@ -27,6 +28,15 @@ export default function QuickSaleForm({
   const selectedProduct = sale.product;
 
   function updateField(fieldName, value) {
+    if (fieldName === "paymentStatus") {
+      onChange({
+        ...formData,
+        generateCharge: value !== "pago",
+        [fieldName]: value,
+      });
+      return;
+    }
+
     onChange({
       ...formData,
       [fieldName]: value,
@@ -54,84 +64,87 @@ export default function QuickSaleForm({
       </div>
 
       <form className="mt-5 space-y-4" onSubmit={onSubmit}>
-        {/* --- SECAO: DADOS DA VENDA --- */}
-        <div className="grid grid-cols-2 gap-4">
+        <FormSection eyebrow="Venda" title="Cliente e produto">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label>
+              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Data</span>
+              <TextInput
+                disabled={!canMutate}
+                type="date"
+                value={formData.date || ""}
+                onChange={(event) => updateField("date", event.target.value)}
+              />
+            </label>
+            <label>
+              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Cliente</span>
+              <SelectInput
+                disabled={!canMutate}
+                value={formData.clientId || ""}
+                onChange={(event) => updateField("clientId", event.target.value)}
+              >
+                <option value="">Selecione</option>
+                {(snapshot.clients || []).map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
+                  </option>
+                ))}
+              </SelectInput>
+            </label>
+          </div>
+
           <label>
-            <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Data</span>
-            <TextInput
-              disabled={!canMutate}
-              type="date"
-              value={formData.date || ""}
-              onChange={(event) => updateField("date", event.target.value)}
-            />
-          </label>
-          <label>
-            <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Cliente</span>
+            <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Produto</span>
             <SelectInput
               disabled={!canMutate}
-              value={formData.clientId || ""}
-              onChange={(event) => updateField("clientId", event.target.value)}
+              value={formData.inventoryItem || ""}
+              onChange={(event) => handleProductChange(event.target.value)}
             >
               <option value="">Selecione</option>
-              {(snapshot.clients || []).map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
+              {productOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </SelectInput>
           </label>
-        </div>
+        </FormSection>
 
-        <label>
-          <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Produto</span>
-          <SelectInput
-            disabled={!canMutate}
-            value={formData.inventoryItem || ""}
-            onChange={(event) => handleProductChange(event.target.value)}
-          >
-            <option value="">Selecione</option>
-            {productOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectInput>
-        </label>
-
-        <div className="grid grid-cols-3 gap-4">
-          <label>
-            <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Quantidade</span>
-            <TextInput
-              disabled={!canMutate}
-              min="1"
-              type="number"
-              value={formData.quantity || 1}
-              onChange={(event) => updateField("quantity", Number(event.target.value || 1))}
-            />
-          </label>
-          <label>
-            <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Valor unitario</span>
-            <TextInput
-              disabled={!canMutate}
-              min="0"
-              step="0.01"
-              type="number"
-              value={formData.unitValue ?? ""}
-              onChange={(event) => updateField("unitValue", Number(event.target.value || 0))}
-            />
-          </label>
-          <label>
-            <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Pagamento</span>
-            <SelectInput
-              disabled={!canMutate}
-              value={formData.paymentStatus || "pendente"}
-              onChange={(event) => updateField("paymentStatus", event.target.value)}
-            >
-              <option value="pendente">Pendente</option>
-              <option value="pago">Pago</option>
-            </SelectInput>
-          </label>
-        </div>
+        <FormSection eyebrow="Valores" title="Quantidade, preco e cobranca">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <label>
+              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Quantidade</span>
+              <TextInput
+                disabled={!canMutate}
+                min="1"
+                type="number"
+                value={formData.quantity || 1}
+                onChange={(event) => updateField("quantity", Number(event.target.value || 1))}
+              />
+            </label>
+            <label>
+              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Valor unitario</span>
+              <TextInput
+                disabled={!canMutate}
+                min="0"
+                step="0.01"
+                type="number"
+                value={formData.unitValue ?? ""}
+                onChange={(event) => updateField("unitValue", Number(event.target.value || 0))}
+              />
+            </label>
+            <label>
+              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Pagamento</span>
+              <SelectInput
+                disabled={!canMutate}
+                value={formData.paymentStatus || "pendente"}
+                onChange={(event) => updateField("paymentStatus", event.target.value)}
+              >
+                <option value="pendente">Pendente</option>
+                <option value="pago">Pago</option>
+              </SelectInput>
+            </label>
+          </div>
+        </FormSection>
 
         {/* --- SECAO: RESUMO DO PRODUTO --- */}
         <div className="grid grid-cols-3 gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">

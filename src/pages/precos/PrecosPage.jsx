@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import EntityGroupTabs from "../../components/molecules/EntityGroupTabs.jsx";
+import FormSection from "../../components/molecules/FormSection.jsx";
 import Modal from "../../components/molecules/Modal.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
@@ -22,6 +23,7 @@ import { getScopedCollectionAccess } from "../../services/permissionService.js";
 export default function PrecosPage({ user }) {
   const [activeGroup, setActiveGroup] = useState("machines");
   const [editingItem, setEditingItem] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState({});
   const { snapshot, refresh } = useErpSnapshot();
   const group = getPricingGroup(activeGroup);
@@ -36,6 +38,7 @@ export default function PrecosPage({ user }) {
     }
 
     setEditingItem(item);
+    setErrorMessage("");
     setFormData(buildPricingFormData(group, item));
   }
 
@@ -56,14 +59,20 @@ export default function PrecosPage({ user }) {
 
   async function savePrice(event) {
     event.preventDefault();
-    await savePricingUpdate({
-      collectionName: activeGroup,
-      formData,
-      group,
-      item: editingItem,
-    });
-    setEditingItem(null);
-    await refresh();
+    setErrorMessage("");
+
+    try {
+      await savePricingUpdate({
+        collectionName: activeGroup,
+        formData,
+        group,
+        item: editingItem,
+      });
+      setEditingItem(null);
+      await refresh();
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar a precificacao.");
+    }
   }
 
   return (
@@ -95,18 +104,43 @@ export default function PrecosPage({ user }) {
         onClose={() => setEditingItem(null)}
       >
         <form className="space-y-4" onSubmit={savePrice}>
-          {group.fields.map((field) => (
-            <label key={field.key}>
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">{field.label}</span>
-              <TextInput
-                min="0"
-                step="0.01"
-                type="number"
-                value={formData[field.key] ?? ""}
-                onChange={(event) => handleFieldChange(field.key, event.target.value)}
-              />
-            </label>
-          ))}
+          <FormSection eyebrow="Precos" title="Valores base">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {group.fields.map((field) => (
+                <label key={field.key}>
+                  <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">{field.label}</span>
+                  <TextInput
+                    min="0"
+                    step="0.01"
+                    type="number"
+                    value={formData[field.key] ?? ""}
+                    onChange={(event) => handleFieldChange(field.key, event.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
+          </FormSection>
+
+          <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+            <span className="text-xs font-black uppercase text-amiste-gray/50">Resumo em tempo real</span>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {group.fields.map((field) => (
+                <div className="rounded-md bg-white p-3" key={`summary-${field.key}`}>
+                  <span className="text-xs font-black uppercase text-amiste-gray/50">{field.label}</span>
+                  <strong className="mt-1 block text-sm font-black text-amiste-black">
+                    {new Intl.NumberFormat("pt-BR", { currency: "BRL", style: "currency" }).format(Number(formData[field.key] || 0))}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {errorMessage ? (
+            <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+              {errorMessage}
+            </div>
+          ) : null}
+
           <footer className="flex justify-end gap-3 pt-3">
             <Button variant="secondary" onClick={() => setEditingItem(null)}>
               Cancelar

@@ -3,25 +3,17 @@ import Button from "../atoms/Button.jsx";
 import SelectInput from "../atoms/SelectInput.jsx";
 import TextArea from "../atoms/TextArea.jsx";
 import TextInput from "../atoms/TextInput.jsx";
+import FormSection from "../molecules/FormSection.jsx";
 import Modal from "../molecules/Modal.jsx";
 import DocumentLivePreviewPanel from "./DocumentLivePreviewPanel.jsx";
 import { buildSelectOptionsFromGroup } from "../../services/optionService.js";
-
-function getDefaultValue(field) {
-  if (field.defaultValue !== undefined) {
-    return field.defaultValue;
-  }
-
-  if (field.type === "number" || field.type === "currency") {
-    return "";
-  }
-
-  if (field.type === "checkbox") {
-    return false;
-  }
-
-  return "";
-}
+import {
+  applySmartAutofill,
+  buildInitialSmartFormData,
+  buildSmartFormInsights,
+  groupSmartFields,
+  normalizeSmartPayload,
+} from "../../services/smartFormService.js";
 
 function buildOptions(field, snapshot) {
   if (field.type === "inventoryItem") {
@@ -51,24 +43,122 @@ function buildOptions(field, snapshot) {
   return field.options || [];
 }
 
-function normalizePayload(fields, formData) {
-  return fields.reduce((payload, field) => {
-    if (field.readOnly) {
-      return payload;
-    }
+function resolveInputType(field) {
+  if (field.type === "date") {
+    return "date";
+  }
 
-    const value = formData[field.name];
+  if (field.type === "currency" || field.type === "number") {
+    return "number";
+  }
 
-    if (field.type === "checkbox") {
-      payload[field.name] = Boolean(value);
-      return payload;
-    }
+  return field.type || "text";
+}
 
-    payload[field.name] =
-      field.type === "number" || field.type === "currency" ? Number(value || 0) : value;
+function SmartInsightPanel({ insights, previewRecord, smartSummary }) {
+  if (!smartSummary && !insights.length) {
+    return null;
+  }
 
-    return payload;
-  }, {});
+  return (
+    <aside className="space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+      {/* --- SECAO: INTELIGENCIA DO FORMULARIO --- */}
+      <div>
+        <span className="text-xs font-black uppercase text-amiste-gray/50">Automacoes e validacoes</span>
+        <h3 className="mt-1 font-display text-lg font-black text-amiste-black">Resumo inteligente</h3>
+      </div>
+
+      {smartSummary ? (
+        <div className="rounded-md border border-zinc-200 bg-white p-3 text-sm font-semibold leading-6 text-amiste-gray">
+          {smartSummary(previewRecord)}
+        </div>
+      ) : null}
+
+      {insights.slice(0, 8).map((insight) => (
+        <div
+          className={`rounded-md border p-3 ${
+            insight.tone === "red"
+              ? "border-amiste-red/25 bg-amiste-red/10 text-amiste-red"
+              : "border-zinc-200 bg-white text-amiste-gray"
+          }`}
+          key={insight.id}
+        >
+          <strong className="block text-xs font-black uppercase">{insight.title}</strong>
+          <span className="mt-1 block text-sm font-semibold leading-5">{insight.text}</span>
+        </div>
+      ))}
+    </aside>
+  );
+}
+
+function FieldControl({ field, formData, snapshot, onChange }) {
+  const options = buildOptions(field, snapshot);
+  const isTextarea = field.type === "textarea";
+  const isCheckbox = field.type === "checkbox";
+  const isSelect = field.type === "select" || field.source || field.optionGroup || field.type === "inventoryItem";
+  const disabled = Boolean(field.disabled || field.readOnly);
+
+  if (isCheckbox) {
+    return (
+      <button
+        className="flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray transition hover:border-amiste-red disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled}
+        type="button"
+        onClick={() => onChange(field.name, !formData[field.name])}
+      >
+        <span>{formData[field.name] ? "Sim" : "Nao"}</span>
+        <span className={formData[field.name] ? "text-amiste-green" : "text-amiste-red"}>
+          {formData[field.name] ? field.trueLabel || "Ativo" : field.falseLabel || "Inativo"}
+        </span>
+      </button>
+    );
+  }
+
+  if (isTextarea) {
+    return (
+      <TextArea
+        disabled={disabled}
+        maxLength={field.maxLength}
+        placeholder={field.placeholder}
+        value={formData[field.name] || ""}
+        onChange={(event) => onChange(field.name, event.target.value)}
+      />
+    );
+  }
+
+  if (isSelect) {
+    return (
+      <SelectInput
+        disabled={disabled}
+        required={field.required}
+        value={formData[field.name] || ""}
+        onChange={(event) => onChange(field.name, event.target.value)}
+      >
+        <option value="">Selecione</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </SelectInput>
+    );
+  }
+
+  return (
+    <TextInput
+      disabled={disabled}
+      max={field.max}
+      maxLength={field.maxLength}
+      min={field.min}
+      placeholder={field.placeholder}
+      readOnly={field.readOnly}
+      required={field.required}
+      step={field.step || (field.type === "currency" ? "0.01" : undefined)}
+      type={resolveInputType(field)}
+      value={formData[field.name] || ""}
+      onChange={(event) => onChange(field.name, event.target.value)}
+    />
+  );
 }
 
 export default function EntityFormModal({
@@ -78,6 +168,7 @@ export default function EntityFormModal({
   open,
   editingRecord,
   livePreviewDocumentType,
+  smartSummary,
   snapshot,
   validate,
   onClose,
@@ -88,18 +179,23 @@ export default function EntityFormModal({
 
   const modalTitle = editingRecord ? `Editar ${title}` : title;
   const hasLivePreview = Boolean(livePreviewDocumentType);
+  const fieldGroups = useMemo(() => groupSmartFields(fields, formData, snapshot), [fields, formData, snapshot]);
+  const previewRecord = useMemo(() => {
+    return {
+      ...(editingRecord || {}),
+      ...normalizeSmartPayload(fields, formData, snapshot),
+    };
+  }, [editingRecord, fields, formData, snapshot]);
+  const insights = useMemo(
+    () => buildSmartFormInsights(fields, formData, snapshot),
+    [fields, formData, snapshot]
+  );
+  const hasSmartSidePanel = Boolean(smartSummary || insights.length);
 
-  const initialData = useMemo(() => {
-    return fields.reduce((data, field) => {
-      if (field.type === "inventoryItem" && editingRecord?.productCollection && editingRecord?.productId) {
-        data[field.name] = `${editingRecord.productCollection}:${editingRecord.productId}`;
-        return data;
-      }
-
-      data[field.name] = editingRecord?.[field.name] ?? getDefaultValue(field);
-      return data;
-    }, {});
-  }, [editingRecord, fields]);
+  const initialData = useMemo(
+    () => buildInitialSmartFormData(fields, editingRecord, snapshot),
+    [editingRecord, fields, snapshot]
+  );
 
   useEffect(() => {
     if (open) {
@@ -109,17 +205,23 @@ export default function EntityFormModal({
   }, [initialData, open]);
 
   function updateField(fieldName, value) {
-    setFormData((currentData) => ({
-      ...currentData,
-      [fieldName]: value,
-    }));
+    setFormData((currentData) => {
+      const nextData = {
+        ...currentData,
+        [fieldName]: value,
+      };
+
+      return applySmartAutofill(fields, nextData, snapshot, editingRecord, {
+        changedFieldName: fieldName,
+      });
+    });
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const payload = normalizePayload(fields, formData);
-    const validationMessage = validate?.(payload, snapshot);
+    const payload = normalizeSmartPayload(fields, formData, snapshot);
+    const validationMessage = validate?.(payload, snapshot, editingRecord);
 
     if (validationMessage) {
       setErrorMessage(validationMessage);
@@ -129,75 +231,27 @@ export default function EntityFormModal({
     await onSubmit(payload);
   }
 
-  const previewRecord = useMemo(() => {
-    return {
-      ...(editingRecord || {}),
-      ...normalizePayload(fields, formData),
-    };
-  }, [editingRecord, fields, formData]);
-
   const formContent = (
     <form className="space-y-5" onSubmit={handleSubmit}>
-      {/* --- SECAO: CAMPOS DO FORMULARIO --- */}
-      <div className="grid grid-cols-2 gap-4">
-        {fields.map((field) => {
-          const options = buildOptions(field, snapshot);
-          const isTextarea = field.type === "textarea";
-          const isCheckbox = field.type === "checkbox";
-          const isSelect =
-            field.type === "select" || field.source || field.optionGroup || field.type === "inventoryItem";
-
-          return (
-            <label className={field.full ? "col-span-2" : ""} key={field.name}>
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
-                {field.label}
-                {field.required ? <span className="text-amiste-red"> *</span> : null}
-              </span>
-              {isCheckbox ? (
-                <button
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray transition hover:border-amiste-red"
-                  type="button"
-                  onClick={() => updateField(field.name, !formData[field.name])}
-                >
-                  <span>{formData[field.name] ? "Sim" : "Nao"}</span>
-                  <span className={formData[field.name] ? "text-amiste-green" : "text-amiste-red"}>
-                    {formData[field.name] ? "Ativo" : "Inativo"}
-                  </span>
-                </button>
-              ) : isTextarea ? (
-                <TextArea
-                  maxLength={field.maxLength}
-                  placeholder={field.placeholder}
-                  value={formData[field.name] || ""}
-                  onChange={(event) => updateField(field.name, event.target.value)}
-                />
-              ) : isSelect ? (
-                <SelectInput
-                  required={field.required}
-                  value={formData[field.name] || ""}
-                  onChange={(event) => updateField(field.name, event.target.value)}
-                >
-                  <option value="">Selecione</option>
-                  {options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </SelectInput>
-              ) : (
-                <TextInput
-                  maxLength={field.maxLength}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                  type={field.type === "date" ? "date" : field.type === "currency" ? "number" : field.type || "text"}
-                  value={formData[field.name] || ""}
-                  onChange={(event) => updateField(field.name, event.target.value)}
-                />
-              )}
-            </label>
-          );
-        })}
-      </div>
+      {/* --- SECAO: CAMPOS AGRUPADOS DO FORMULARIO --- */}
+      {fieldGroups.map((group) => (
+        <FormSection eyebrow={group.eyebrow} key={group.id} title={group.title}>
+          {group.description ? (
+            <p className="-mt-2 text-sm font-semibold leading-6 text-amiste-gray/65">{group.description}</p>
+          ) : null}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {group.fields.map((field) => (
+              <label className={field.full ? "md:col-span-2" : ""} key={field.name}>
+                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
+                  {field.label}
+                  {field.required ? <span className="text-amiste-red"> *</span> : null}
+                </span>
+                <FieldControl field={field} formData={formData} snapshot={snapshot} onChange={updateField} />
+              </label>
+            ))}
+          </div>
+        </FormSection>
+      ))}
 
       {errorMessage ? (
         <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
@@ -217,8 +271,10 @@ export default function EntityFormModal({
     </form>
   );
 
+  const modalSize = hasLivePreview || hasSmartSidePanel ? "wide" : "default";
+
   return (
-    <Modal description={description} open={open} size={hasLivePreview ? "wide" : "default"} title={modalTitle} onClose={onClose}>
+    <Modal description={description} open={open} size={modalSize} title={modalTitle} onClose={onClose}>
       {hasLivePreview ? (
         <div className="grid max-h-[calc(88vh-132px)] grid-cols-1 gap-5 overflow-hidden xl:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)]">
           <div className="min-h-0 overflow-y-auto pr-1">{formContent}</div>
@@ -228,7 +284,14 @@ export default function EntityFormModal({
             snapshot={snapshot}
           />
         </div>
-      ) : formContent}
+      ) : hasSmartSidePanel ? (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          {formContent}
+          <SmartInsightPanel insights={insights} previewRecord={previewRecord} smartSummary={smartSummary} />
+        </div>
+      ) : (
+        formContent
+      )}
     </Modal>
   );
 }
