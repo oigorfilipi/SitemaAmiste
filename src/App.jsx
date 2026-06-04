@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import AppShell from "./layouts/AppShell.jsx";
 import { useCurrentUser } from "./hooks/useCurrentUser.js";
 import { useNavigation } from "./hooks/useNavigation.js";
@@ -118,14 +118,22 @@ export default function App() {
       onLogout={handleLogout}
       onToggleSidebar={() => setSidebarCollapsed((currentState) => !currentState)}
     >
-      <CurrentPage
-        accessLevel={activeAccessLevel}
-        previewUser={previewUserId ? activeUser : null}
-        quickAccess={filteredQuickAccess}
-        realUser={userContext.user}
-        user={activeUser}
-        onSelectPage={handleSelectPage}
-      />
+      <Suspense
+        fallback={(
+          <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-amiste-gray shadow-sm">
+            Carregando modulo...
+          </div>
+        )}
+      >
+        <CurrentPage
+          accessLevel={activeAccessLevel}
+          previewUser={previewUserId ? activeUser : null}
+          quickAccess={filteredQuickAccess}
+          realUser={userContext.user}
+          user={activeUser}
+          onSelectPage={handleSelectPage}
+        />
+      </Suspense>
     </AppShell>
   );
 }
