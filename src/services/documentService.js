@@ -36,6 +36,112 @@ function buildDocumentCode(prefix, id) {
   return id ? `${prefix}-${String(id).slice(-5).toUpperCase()}` : `${prefix}-PREVIA`;
 }
 
+function hasValue(value) {
+  return value !== undefined && value !== null && value !== "";
+}
+
+function normalizeYesNo(value, fallback = "-") {
+  if (!hasValue(value)) {
+    return fallback;
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Sim" : "Nao";
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (["sim", "true", "yes", "1"].includes(normalized)) {
+    return "Sim";
+  }
+
+  if (["nao", "não", "false", "no", "0"].includes(normalized)) {
+    return "Nao";
+  }
+
+  return String(value);
+}
+
+function formatTechnicalValue(value, { fallback = "-", suffix = "", yesNo = false } = {}) {
+  if (yesNo || typeof value === "boolean") {
+    return normalizeYesNo(value, fallback);
+  }
+
+  if (!hasValue(value)) {
+    return fallback;
+  }
+
+  const formattedValue = String(value).trim();
+
+  if (suffix && !formattedValue.toLowerCase().endsWith(suffix.toLowerCase())) {
+    return `${formattedValue}${suffix}`;
+  }
+
+  return formattedValue;
+}
+
+function appendTechnicalRow(rows, label, value, options = {}) {
+  rows.push({
+    label,
+    value: formatTechnicalValue(value, options),
+  });
+}
+
+function appendExistingTechnicalRow(rows, machine, key, label, options = {}) {
+  if (Object.prototype.hasOwnProperty.call(machine, key)) {
+    appendTechnicalRow(rows, label, machine[key], options);
+  }
+}
+
+export function buildMachineTechnicalRows(machine = {}) {
+  const rows = [];
+  const paymentSystem = normalizeYesNo(machine.paymentSystem);
+  const paymentSystemValue = paymentSystem === "Sim" && machine.paymentSystemName
+    ? `Sim - ${machine.paymentSystemName}`
+    : paymentSystem;
+
+  /* --- SESSAO: DADOS TECNICOS BASICOS --- */
+  appendTechnicalRow(rows, "Categoria", machine.category);
+  appendTechnicalRow(rows, "Voltagem", machine.voltage);
+  appendTechnicalRow(rows, "Amperagem", machine.amperage, { suffix: "A" });
+  appendTechnicalRow(rows, "Rede hidrica", machine.hydraulic, { yesNo: true });
+  appendTechnicalRow(rows, "Esgoto", machine.sewer, { yesNo: true });
+  appendTechnicalRow(rows, "Vapor", machine.steam, { yesNo: true });
+  appendTechnicalRow(rows, "Sistema de pagamento", paymentSystemValue);
+  appendExistingTechnicalRow(rows, machine, "power", "Potencia");
+  appendExistingTechnicalRow(rows, machine, "litreCapacity", "Litragem");
+  appendExistingTechnicalRow(rows, machine, "maxDrinkCount", "Bebidas suportadas");
+
+  /* --- SESSAO: DADOS ESPECIFICOS POR CATEGORIA --- */
+  if (machine.category === "Multibebidas") {
+    appendTechnicalRow(rows, "Reservatorios de insumo", machine.hasSupplyReservoirs, { fallback: "Nao", yesNo: true });
+    appendExistingTechnicalRow(rows, machine, "reservoirCount", "Qtd. reservatorios");
+    appendExistingTechnicalRow(rows, machine, "reservoirCapacity", "Capacidade reservatorio");
+    appendExistingTechnicalRow(rows, machine, "hasIntegratedGrinder", "Moinho integrado", { yesNo: true });
+    appendExistingTechnicalRow(rows, machine, "usesBeans", "Utiliza grao", { yesNo: true });
+    appendExistingTechnicalRow(rows, machine, "solubleOnly", "100% soluvel", { yesNo: true });
+  }
+
+  if (machine.category === "Profissional") {
+    appendExistingTechnicalRow(rows, machine, "groupCount", "Grupos");
+    appendTechnicalRow(rows, "Porta-filtro", machine.hasPortafilter, { fallback: "Nao", yesNo: true });
+    appendExistingTechnicalRow(rows, machine, "singlePortafilterCount", "Porta-filtros simples");
+    appendExistingTechnicalRow(rows, machine, "doublePortafilterCount", "Porta-filtros duplos");
+    appendExistingTechnicalRow(rows, machine, "extraSteamer", "Vaporizador extra", { yesNo: true });
+  }
+
+  if (machine.category === "Snacks") {
+    appendExistingTechnicalRow(rows, machine, "trayCount", "Bandejas");
+    appendExistingTechnicalRow(rows, machine, "springsPerTray", "Molas por bandeja");
+  }
+
+  if (machine.category === "Coado") {
+    appendExistingTechnicalRow(rows, machine, "filterType", "Filtro suportado");
+  }
+
+  return rows;
+}
+
 function downloadBlob(filename, content, type) {
   if (typeof window === "undefined") {
     return;
@@ -77,6 +183,7 @@ export function buildProposalDocument(record, snapshot) {
     machineConfig,
     machineImageUrl: machine.imageDataUrl || machine.imageUrl || "",
     machineModelName: machineConfig.name || machine.name || "Modelo selecionado",
+    machineTechnicalRows: buildMachineTechnicalRows(machine),
     modality,
     paymentLine,
     products: record.products || "",
@@ -192,6 +299,11 @@ function renderProposalPaper(model) {
         </section>
 
         <section class="grid three">${renderHtmlRows(model.rows.slice(0, 6))}</section>
+
+        <section class="technical-section">
+          <span>Dados tecnicos da maquina</span>
+          <div class="technical-grid">${renderHtmlRows(model.machineTechnicalRows)}</div>
+        </section>
 
         <section class="block">
           <span>Observacoes gerais</span>
@@ -323,30 +435,37 @@ export function buildDocumentHtml(documentType, record, snapshot) {
     * { box-sizing: border-box; }
     body { background: #e4e4e7; color: #111; font-family: Arial, sans-serif; margin: 0; padding: 24px; }
     .paper { background: #fff; box-shadow: 0 12px 36px rgba(15, 23, 42, .18); height: 297mm; margin: 0 auto; overflow: hidden; position: relative; width: 210mm; }
-    .brand-header, .brand-footer { align-items: center; background: #A82020; color: #FAFAFA; display: flex; justify-content: space-between; padding: 22px 28px; }
+    .brand-header, .brand-footer { align-items: center; background: #A82020; color: #FAFAFA; display: flex; justify-content: space-between; padding: 18px 24px; }
     .brand-header span, .sheet-header span { display: block; font-size: 11px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; opacity: .78; }
-    .brand-header h1, .sheet-header h1 { font-size: 30px; margin: 6px 0 0; }
-    .proposal-content, .sheet-content { padding: 26px 28px; }
-    .hero-grid { display: grid; gap: 22px; grid-template-columns: 255px 1fr; }
-    .machine-photo { align-items: center; background: #f4f4f5; border: 1px solid #d4d4d8; display: flex; height: 230px; justify-content: center; overflow: hidden; text-align: center; }
+    .brand-header h1, .sheet-header h1 { font-size: 28px; margin: 5px 0 0; }
+    .proposal-content, .sheet-content { padding: 20px 24px; }
+    .proposal-content { padding-bottom: 104px; }
+    .hero-grid { display: grid; gap: 18px; grid-template-columns: 230px 1fr; }
+    .machine-photo { align-items: center; background: #f4f4f5; border: 1px solid #d4d4d8; display: flex; height: 188px; justify-content: center; overflow: hidden; text-align: center; }
     .machine-photo img { height: 100%; object-fit: cover; width: 100%; }
-    .machine-photo strong { display: block; font-size: 24px; }
+    .machine-photo strong { display: block; font-size: 22px; }
     .machine-photo span { color: #71717a; display: block; font-size: 12px; font-weight: 900; margin-top: 8px; text-transform: uppercase; }
     .proposal-copy span, .block span { color: #A82020; display: block; font-size: 11px; font-weight: 900; text-transform: uppercase; }
-    .proposal-copy h2 { font-size: 32px; margin: 6px 0 12px; }
-    .proposal-copy p, .block p, .box p { color: #3f3f46; font-size: 13px; line-height: 1.55; margin: 0; }
-    .proposal-copy small { color: #52525b; display: block; font-weight: 700; margin-top: 12px; }
-    .grid { display: grid; gap: 12px; margin-top: 18px; }
+    .technical-section span { color: #A82020; display: block; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .proposal-copy h2 { font-size: 28px; margin: 5px 0 8px; }
+    .proposal-copy p, .block p, .box p { color: #3f3f46; font-size: 12px; line-height: 1.42; margin: 0; }
+    .proposal-copy small { color: #52525b; display: block; font-size: 11px; font-weight: 700; margin-top: 9px; }
+    .grid { display: grid; gap: 10px; margin-top: 12px; }
     .grid.three { grid-template-columns: repeat(3, 1fr); }
     .grid.two { grid-template-columns: repeat(2, 1fr); }
     .info-row { border-bottom: 1px solid #e4e4e7; padding: 7px 0; }
     .info-row span { color: #71717a; display: block; font-size: 10px; font-weight: 900; text-transform: uppercase; }
     .info-row strong { display: block; font-size: 13px; margin-top: 4px; }
-    .block, .box { border: 1px solid #d4d4d8; margin-top: 16px; padding: 12px; }
+    .technical-section { border: 1px solid #d4d4d8; margin-top: 12px; padding: 10px 12px; }
+    .technical-grid { display: grid; gap: 6px 12px; grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
+    .technical-grid .info-row { padding: 4px 0; }
+    .technical-grid .info-row span { font-size: 8px; }
+    .technical-grid .info-row strong { font-size: 11px; margin-top: 2px; }
+    .block, .box { border: 1px solid #d4d4d8; margin-top: 12px; padding: 10px 12px; }
     .brand-footer { bottom: 0; left: 0; position: absolute; right: 0; }
     .brand-footer span { display: block; font-size: 11px; font-weight: 900; text-transform: uppercase; }
-    .brand-footer strong { display: block; font-size: 34px; margin-top: 4px; }
-    .brand-footer p { font-size: 18px; font-weight: 900; margin: 0; }
+    .brand-footer strong { display: block; font-size: 32px; margin-top: 3px; }
+    .brand-footer p { font-size: 17px; font-weight: 900; margin: 0; }
     .sheet-header { align-items: center; background: #111; color: #FAFAFA; display: flex; justify-content: space-between; padding: 18px 26px; }
     .sheet-header strong { color: #22c55e; }
     .box { margin-top: 10px; padding: 9px 11px; }

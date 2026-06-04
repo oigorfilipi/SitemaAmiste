@@ -3,6 +3,7 @@ import Button from "../atoms/Button.jsx";
 import SelectInput from "../atoms/SelectInput.jsx";
 import TextArea from "../atoms/TextArea.jsx";
 import TextInput from "../atoms/TextInput.jsx";
+import DocumentInfoRow from "../molecules/DocumentInfoRow.jsx";
 import FormField from "../molecules/FormField.jsx";
 import FormSection from "../molecules/FormSection.jsx";
 import Modal from "../molecules/Modal.jsx";
@@ -20,7 +21,7 @@ import {
   findRecord,
   formatCurrency,
 } from "../../services/documentEditorService.js";
-import { downloadDocumentPdf } from "../../services/documentService.js";
+import { buildMachineTechnicalRows, downloadDocumentPdf } from "../../services/documentService.js";
 
 const FORM_ID = "proposal-editor-form";
 
@@ -38,6 +39,10 @@ export default function ProposalEditorModal({ editingRecord, open, snapshot, onC
     [editingRecord?.id, form.clientId, snapshot]
   );
   const productRows = useMemo(() => buildProposalProductRows(snapshot, form), [form, snapshot]);
+  const selectedMachineTechnicalRows = useMemo(
+    () => buildMachineTechnicalRows(selectedMachine || {}),
+    [selectedMachine]
+  );
   const values = calculateProposalValues(form);
   const previewRecord = useMemo(
     () => ({
@@ -228,6 +233,20 @@ export default function ProposalEditorModal({ editingRecord, open, snapshot, onC
                   onChange={(event) => updateField("videoUrl", event.target.value)}
                 />
               </FormField>
+
+              {selectedMachine ? (
+                <div className="lg:col-span-2 rounded-md border border-zinc-200 bg-white p-3">
+                  {/* --- SESSAO: LEITURA TECNICA AUTOMATICA --- */}
+                  <span className="text-xs font-black uppercase text-amiste-gray/55">
+                    Dados tecnicos carregados do catalogo
+                  </span>
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 lg:grid-cols-4">
+                    {selectedMachineTechnicalRows.map((row) => (
+                      <DocumentInfoRow compact key={row.label} label={row.label} value={row.value} />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </FormSection>
 
