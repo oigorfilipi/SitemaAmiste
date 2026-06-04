@@ -1,8 +1,12 @@
+import { useState } from "react";
 import Button from "../atoms/Button.jsx";
 import TextInput from "../atoms/TextInput.jsx";
+import { assertInlineImageFile } from "../../services/imageUploadValidationService.js";
 import { PROFILE_FORM_FIELDS } from "../../services/profileService.js";
 
 function readFileAsDataUrl(file) {
+  assertInlineImageFile(file);
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -27,6 +31,8 @@ export default function ProfileFormPanel({
   onChange,
   onSubmit,
 }) {
+  const [photoError, setPhotoError] = useState("");
+
   async function handlePhotoChange(event) {
     const file = event.target.files?.[0];
 
@@ -34,7 +40,13 @@ export default function ProfileFormPanel({
       return;
     }
 
-    onChange("profilePhotoDataUrl", await readFileAsDataUrl(file));
+    try {
+      onChange("profilePhotoDataUrl", await readFileAsDataUrl(file));
+      setPhotoError("");
+    } catch (error) {
+      setPhotoError(error.message || "Nao foi possivel carregar a foto.");
+      event.target.value = "";
+    }
   }
 
   const activeSessions = formData.activeSessions || profile?.activeSessions || [];
@@ -104,6 +116,11 @@ export default function ProfileFormPanel({
                   onChange={handlePhotoChange}
                 />
               </label>
+              {photoError ? (
+                <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-3 py-2 text-xs font-bold text-amiste-red md:col-span-2">
+                  {photoError}
+                </div>
+              ) : null}
               {getFieldsBySection("photo").filter((field) => !["profilePhotoUrl", "profilePhotoDataUrl"].includes(field.name)).map((field) => (
                 <label key={field.name}>
                   <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">{field.label}</span>

@@ -2,8 +2,11 @@ import { useState } from "react";
 import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
+import { assertInlineImageFile } from "../../services/imageUploadValidationService.js";
 
 function readFileAsDataUrl(file) {
+  assertInlineImageFile(file);
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -28,8 +31,13 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
       return;
     }
 
-    setProfilePhotoDataUrl(await readFileAsDataUrl(file));
-    setError("");
+    try {
+      setProfilePhotoDataUrl(await readFileAsDataUrl(file));
+      setError("");
+    } catch (photoError) {
+      setError(photoError.message || "Nao foi possivel carregar a foto.");
+      event.target.value = "";
+    }
   }
 
   async function handleSubmit(event) {

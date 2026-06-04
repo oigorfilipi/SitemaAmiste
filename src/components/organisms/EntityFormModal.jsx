@@ -8,6 +8,7 @@ import Modal from "../molecules/Modal.jsx";
 import DocumentLivePreviewPanel from "./DocumentLivePreviewPanel.jsx";
 import { getLabelFile, saveLabelFile } from "../../services/labelFileStorageService.js";
 import { formatFileSize, resolveFileFormat } from "../../services/labelService.js";
+import { assertInlineImageFile } from "../../services/imageUploadValidationService.js";
 import { buildSelectOptionsFromGroup } from "../../services/optionService.js";
 import {
   applySmartAutofill,
@@ -58,6 +59,8 @@ function resolveInputType(field) {
 }
 
 function readFileAsDataUrl(file) {
+  assertInlineImageFile(file);
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -68,6 +71,7 @@ function readFileAsDataUrl(file) {
 }
 
 function ImageUploadControl({ field, formData, onChange }) {
+  const [uploadError, setUploadError] = useState("");
   const previewUrl = formData[field.name] || formData[field.fallbackUrlField] || "";
 
   async function handleFileChange(event) {
@@ -77,7 +81,13 @@ function ImageUploadControl({ field, formData, onChange }) {
       return;
     }
 
-    onChange(field.name, await readFileAsDataUrl(file));
+    try {
+      onChange(field.name, await readFileAsDataUrl(file));
+      setUploadError("");
+    } catch (error) {
+      setUploadError(error.message || "Nao foi possivel carregar a imagem.");
+      event.target.value = "";
+    }
   }
 
   return (
@@ -97,6 +107,11 @@ function ImageUploadControl({ field, formData, onChange }) {
         type="file"
         onChange={handleFileChange}
       />
+      {uploadError ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-3 py-2 text-xs font-bold text-amiste-red">
+          {uploadError}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -191,6 +206,7 @@ function FileUploadControl({ field, formData, onChange }) {
 }
 
 function VariantListControl({ field, formData, onChange }) {
+  const [uploadError, setUploadError] = useState("");
   const variants = Array.isArray(formData[field.name]) ? formData[field.name] : [];
 
   function updateVariant(index, key, value) {
@@ -206,7 +222,12 @@ function VariantListControl({ field, formData, onChange }) {
       return;
     }
 
-    updateVariant(index, "photoDataUrl", await readFileAsDataUrl(file));
+    try {
+      updateVariant(index, "photoDataUrl", await readFileAsDataUrl(file));
+      setUploadError("");
+    } catch (error) {
+      setUploadError(error.message || "Nao foi possivel carregar a imagem.");
+    }
   }
 
   function addVariant() {
@@ -264,6 +285,11 @@ function VariantListControl({ field, formData, onChange }) {
       <Button className="w-full" icon="plus" variant="secondary" onClick={addVariant}>
         Adicionar versao
       </Button>
+      {uploadError ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-3 py-2 text-xs font-bold text-amiste-red">
+          {uploadError}
+        </div>
+      ) : null}
     </div>
   );
 }
