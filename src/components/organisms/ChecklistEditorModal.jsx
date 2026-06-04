@@ -207,7 +207,11 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
       return;
     }
 
-    await onSubmit(buildChecklistPayload(form, snapshot, editingRecord || {}));
+    try {
+      await onSubmit(buildChecklistPayload(form, snapshot, editingRecord || {}));
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar o checklist.");
+    }
   }
 
   const headerActions = (

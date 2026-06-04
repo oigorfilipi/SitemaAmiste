@@ -72,14 +72,19 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
     setErrorMessage("");
     const targetId = options.targetId || editingRecord?.id;
 
-    if (targetId) {
-      await updateRecord(targetId, payload);
-    } else {
-      await createRecord(payload);
-    }
+    try {
+      if (targetId) {
+        await updateRecord(targetId, payload);
+      } else {
+        await createRecord(payload);
+      }
 
-    setModalOpen(false);
-    setEditingRecord(null);
+      setModalOpen(false);
+      setEditingRecord(null);
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar o registro.");
+      throw error;
+    }
   }
 
   async function handleDelete(record) {

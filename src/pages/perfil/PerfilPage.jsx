@@ -53,6 +53,9 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
       return;
     }
 
+    setErrorMessage("");
+    setMessage("");
+
     if (formData.securityNewPassword && formData.securityNewPassword !== formData.securityConfirmPassword) {
       setErrorMessage("As senhas nao conferem.");
       return;
@@ -60,13 +63,17 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
 
     const payload = normalizeProfilePayload(formData, profile);
 
-    await updateRecord(profile.id, payload, {
-      action: "Editou",
-      details: "Dados pessoais atualizados pela tela de perfil.",
-      module: "Perfil",
-      title: payload.displayName,
-    });
-    setMessage("Perfil atualizado com sucesso.");
+    try {
+      await updateRecord(profile.id, payload, {
+        action: "Editou",
+        details: "Dados pessoais atualizados pela tela de perfil.",
+        module: "Perfil",
+        title: payload.displayName,
+      });
+      setMessage("Perfil atualizado com sucesso.");
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel atualizar o perfil.");
+    }
   }
 
   return (

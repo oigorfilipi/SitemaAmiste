@@ -502,7 +502,11 @@ export default function EntityFormModal({
       return;
     }
 
-    await onSubmit(payload);
+    try {
+      await onSubmit(payload);
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar o registro.");
+    }
   }
 
   const formContent = (

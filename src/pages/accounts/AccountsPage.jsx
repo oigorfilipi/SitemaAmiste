@@ -31,6 +31,7 @@ export default function AccountsPage({ user }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [permissionVersion, setPermissionVersion] = useState(0);
   const { records, createRecord, updateRecord } = useCollection("accounts");
   const canManageAccounts = user?.role === "DEV" || user?.role === "CEO";
@@ -68,11 +69,13 @@ export default function AccountsPage({ user }) {
   }
 
   function openCreateModal() {
+    setErrorMessage("");
     setEditingRecord(null);
     setModalOpen(true);
   }
 
   function openEditModal(account) {
+    setErrorMessage("");
     setEditingRecord(records.find((record) => record.id === account.id) || account);
     setModalOpen(true);
   }
@@ -80,21 +83,32 @@ export default function AccountsPage({ user }) {
   async function handleSubmit(payload) {
     const normalizedPayload = normalizeAccountPayload(payload, editingRecord);
 
-    if (editingRecord) {
-      await updateRecord(editingRecord.id, normalizedPayload);
-    } else {
-      await createRecord(normalizedPayload);
-    }
+    try {
+      if (editingRecord) {
+        await updateRecord(editingRecord.id, normalizedPayload);
+      } else {
+        await createRecord(normalizedPayload);
+      }
 
-    setModalOpen(false);
-    setEditingRecord(null);
+      setModalOpen(false);
+      setEditingRecord(null);
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar o colaborador.");
+      throw error;
+    }
   }
 
   async function toggleStatus(account) {
-    await updateRecord(account.id, {
-      ...account,
-      status: account.status === "ativo" ? "desativado" : "ativo",
-    });
+    setErrorMessage("");
+
+    try {
+      await updateRecord(account.id, {
+        ...account,
+        status: account.status === "ativo" ? "desativado" : "ativo",
+      });
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel alterar o status do colaborador.");
+    }
   }
 
   function handlePermissionChange(role, resourceId, access) {
@@ -118,6 +132,12 @@ export default function AccountsPage({ user }) {
 
       {/* --- SECAO: INDICADORES DE EQUIPE --- */}
       <MetricsGrid metrics={metrics} />
+
+      {errorMessage ? (
+        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          {errorMessage}
+        </div>
+      ) : null}
 
       {/* --- SECAO: ABAS DE CONTAS --- */}
       <EntityGroupTabs activeGroup={activeTab} groups={ACCOUNT_TABS} onSelectGroup={setActiveTab} />

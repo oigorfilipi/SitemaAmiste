@@ -104,7 +104,11 @@ export default function ServiceSheetEditorModal({ editingRecord, open, snapshot,
       return;
     }
 
-    await onSubmit(buildServiceSheetPayload({ ...form, status }));
+    try {
+      await onSubmit(buildServiceSheetPayload({ ...form, status }));
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar a ficha.");
+    }
   }
 
   async function handleSubmit(event) {

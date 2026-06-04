@@ -59,14 +59,19 @@ export default function RelatedRecordsHub({
       [hub.parentKey]: parentRecord.id,
     };
 
-    if (editingRecord) {
-      await updateRecord(editingRecord.id, nextPayload);
-    } else {
-      await createRecord(nextPayload);
-    }
+    try {
+      if (editingRecord) {
+        await updateRecord(editingRecord.id, nextPayload);
+      } else {
+        await createRecord(nextPayload);
+      }
 
-    setFormOpen(false);
-    setEditingRecord(null);
+      setFormOpen(false);
+      setEditingRecord(null);
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar o registro vinculado.");
+      throw error;
+    }
   }
 
   async function handleDelete(record) {

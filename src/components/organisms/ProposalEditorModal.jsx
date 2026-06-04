@@ -126,7 +126,11 @@ export default function ProposalEditorModal({ editingRecord, open, snapshot, onC
       return;
     }
 
-    await onSubmit(buildProposalPayload(form, snapshot), { targetId });
+    try {
+      await onSubmit(buildProposalPayload(form, snapshot), { targetId });
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel salvar a proposta.");
+    }
   }
 
   function handleDownloadPdf() {
