@@ -54,6 +54,44 @@ function findById(snapshot, collection, id) {
   return snapshot[collection]?.find((record) => record.id === id) || null;
 }
 
+function getSelectedQuantity(selection) {
+  if (!selection?.selected) {
+    return 0;
+  }
+
+  return Math.max(1, asNumber(selection.quantity) || 1);
+}
+
+function findDuplicateFilledValue(items, fieldName) {
+  const filledValues = items
+    .map((item) => String(item[fieldName] || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  return filledValues.find((value, index) => filledValues.indexOf(value) !== index) || "";
+}
+
+function validateEditorInventorySelection(selectionMap = {}, snapshot, collectionName, label, shouldCheckStock) {
+  for (const [recordId, selection] of Object.entries(selectionMap)) {
+    const quantity = getSelectedQuantity(selection);
+
+    if (!quantity) {
+      continue;
+    }
+
+    const record = findById(snapshot, collectionName, recordId);
+
+    if (!record) {
+      return `${label} selecionado nao existe mais no cadastro. Revise a selecao.`;
+    }
+
+    if (shouldCheckStock && quantity > asNumber(record.stock)) {
+      return `Estoque insuficiente: ${record.name} possui ${asNumber(record.stock)} unidade(s) disponiveis.`;
+    }
+  }
+
+  return "";
+}
+
 function readOptions(snapshot, groupName, fallbackNames = []) {
   const dynamicOptions = (snapshot.options || [])
     .filter((option) => option.group === groupName)
@@ -302,8 +340,17 @@ export function buildChecklistPayload(form, snapshot, editingRecord = {}) {
 }
 
 export function validateChecklistEditorForm(form, snapshot) {
+  const selectedClient = findById(snapshot, "clients", form.clientId);
+  const selectedMachine = findById(snapshot, "machines", form.machineId);
+  const machineQuantity = asNumber(form.machineQuantity ?? 1);
+  const isFinalized = form.status === "finalizado";
+
   if (form.serviceScope === "Cliente" && !form.clientId) {
     return "Selecione o cliente.";
+  }
+
+  if (form.clientId && !selectedClient) {
+    return "Cliente selecionado nao encontrado. Selecione um cliente valido.";
   }
 
   if (form.serviceScope === "Evento" && !form.eventName?.trim()) {
@@ -322,9 +369,50 @@ export function validateChecklistEditorForm(form, snapshot) {
     return "Selecione o modelo da maquina.";
   }
 
+  if (!selectedMachine) {
+    return "Maquina selecionada nao encontrada. Selecione uma maquina valida.";
+  }
+
+  if (machineQuantity <= 0) {
+    return "Informe uma quantidade de maquinas maior que zero.";
+  }
+
+  if (isFinalized && machineQuantity > asNumber(selectedMachine.stock)) {
+    return `Estoque insuficiente: ${selectedMachine.name} possui ${asNumber(selectedMachine.stock)} unidade(s) disponiveis.`;
+  }
+
+  if (isFinalized) {
+    const units = buildMachineUnits(machineQuantity, form.machineUnits);
+    const missingUnit = units.find((unit) => !unit.serialNumber?.trim() || !unit.assetTag?.trim());
+
+    if (missingUnit) {
+      return "Preencha numero de serie e patrimonio de todas as maquinas antes de finalizar.";
+    }
+
+    if (findDuplicateFilledValue(units, "serialNumber")) {
+      return "Nao repita numero de serie nas maquinas do checklist.";
+    }
+
+    if (findDuplicateFilledValue(units, "assetTag")) {
+      return "Nao repita patrimonio nas maquinas do checklist.";
+    }
+  }
+
+  const suppliesError = validateEditorInventorySelection(form.supplies, snapshot, "supplies", "Insumo", isFinalized);
+
+  if (suppliesError) {
+    return suppliesError;
+  }
+
+  const accessoriesError = validateEditorInventorySelection(form.accessories, snapshot, "accessories", "Acessorio", isFinalized);
+
+  if (accessoriesError) {
+    return accessoriesError;
+  }
+
   const compatibility = evaluateEditorCompatibility(form, snapshot);
 
-  if (form.status === "finalizado" && !compatibility.compatible) {
+  if (isFinalized && !compatibility.compatible) {
     return `Falsa equivalencia: ${compatibility.issues.join(" ")}`;
   }
 

@@ -15,6 +15,38 @@ function asCurrencyNumber(value) {
   return Number(value || 0);
 }
 
+function asQuantity(value, fallback = 1) {
+  const numericValue = Number(value ?? fallback);
+
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function findRecord(database, collectionName, id) {
+  return database[collectionName]?.find((record) => record.id === id) || null;
+}
+
+function validateSelectedInventoryStock(database, collectionName, selectionMap = {}, label) {
+  for (const [recordId, selection] of Object.entries(selectionMap)) {
+    const quantity = getSelectedQuantity(selection);
+
+    if (!quantity) {
+      continue;
+    }
+
+    const record = findRecord(database, collectionName, recordId);
+
+    if (!record) {
+      return `${label} selecionado nao existe mais no cadastro. Revise a selecao.`;
+    }
+
+    if (quantity > Number(record.stock || 0)) {
+      return `Estoque insuficiente: ${record.name} possui ${Number(record.stock || 0)} unidade(s) disponiveis.`;
+    }
+  }
+
+  return "";
+}
+
 function adjustStock(database, collectionName, id, quantityDelta) {
   if (!collectionName || !id || !database[collectionName]) {
     return database;
@@ -40,11 +72,53 @@ function getSelectedQuantity(selection) {
     return 0;
   }
 
-  return Math.max(1, Number(selection.quantity || 1));
+  return Math.max(1, Number(selection.quantity ?? 1));
+}
+
+function validateSalePayload(database, payload) {
+  const [productCollection, productId] = String(payload.inventoryItem || "").split(":");
+  const quantity = asQuantity(payload.quantity);
+  const unitValue = asCurrencyNumber(payload.unitValue);
+
+  if (!payload.clientId) {
+    return "Selecione o cliente da venda.";
+  }
+
+  if (!findRecord(database, "clients", payload.clientId)) {
+    return "Cliente selecionado nao encontrado. Selecione um cliente valido.";
+  }
+
+  if (!payload.date) {
+    return "Informe a data da venda.";
+  }
+
+  if (!["supplies", "accessories"].includes(productCollection)) {
+    return "Selecione um item de estoque valido.";
+  }
+
+  const product = findRecord(database, productCollection, productId);
+
+  if (!product) {
+    return "Selecione um produto valido.";
+  }
+
+  if (quantity <= 0) {
+    return "Informe uma quantidade maior que zero.";
+  }
+
+  if (quantity > Number(product.stock || 0)) {
+    return `Estoque insuficiente: ${product.name} possui ${Number(product.stock || 0)} unidade(s) disponiveis.`;
+  }
+
+  if (unitValue <= 0) {
+    return "Informe um valor unitario maior que zero.";
+  }
+
+  return "";
 }
 
 function adjustChecklistInventory(database, checklist, quantityDirection = -1) {
-  adjustStock(database, "machines", checklist.machineId, quantityDirection * Number(checklist.quantity || checklist.machineQuantity || 1));
+  adjustStock(database, "machines", checklist.machineId, quantityDirection * Number(checklist.quantity ?? checklist.machineQuantity ?? 1));
 
   Object.entries(checklist.supplies || {}).forEach(([supplyId, selection]) => {
     const quantity = getSelectedQuantity(selection);
@@ -73,6 +147,50 @@ function hasChecklistReceivable(database, checklist) {
   return (database.receivables || []).some((receivable) => receivable.origin === origin);
 }
 
+function validateChecklistCompletionPayload(database, checklist) {
+  if (checklist.status !== "finalizado") {
+    return "";
+  }
+
+  const machineQuantity = asQuantity(checklist.quantity ?? checklist.machineQuantity);
+
+  if (!checklist.clientId && checklist.serviceScope !== "Evento") {
+    return "Selecione o cliente do checklist.";
+  }
+
+  if (checklist.clientId && !findRecord(database, "clients", checklist.clientId)) {
+    return "Cliente selecionado nao encontrado. Selecione um cliente valido.";
+  }
+
+  const machine = findRecord(database, "machines", checklist.machineId);
+
+  if (!machine) {
+    return "Maquina selecionada nao encontrada. Selecione uma maquina valida.";
+  }
+
+  if (machineQuantity <= 0) {
+    return "Informe uma quantidade de maquinas maior que zero.";
+  }
+
+  if (machineQuantity > Number(machine.stock || 0)) {
+    return `Estoque insuficiente: ${machine.name} possui ${Number(machine.stock || 0)} unidade(s) disponiveis.`;
+  }
+
+  const suppliesError = validateSelectedInventoryStock(database, "supplies", checklist.supplies, "Insumo");
+
+  if (suppliesError) {
+    return suppliesError;
+  }
+
+  const accessoriesError = validateSelectedInventoryStock(database, "accessories", checklist.accessories, "Acessorio");
+
+  if (accessoriesError) {
+    return accessoriesError;
+  }
+
+  return "";
+}
+
 async function persistStockCollection(database, collectionName) {
   if (!collectionName || !Array.isArray(database?.[collectionName])) {
     return;
@@ -88,8 +206,15 @@ async function persistChecklistInventory(database) {
 }
 
 async function createSale(payload) {
+  const database = getDatabaseSnapshot();
+  const validationMessage = validateSalePayload(database, payload);
+
+  if (validationMessage) {
+    throw new Error(validationMessage);
+  }
+
   const [productCollection, productId] = String(payload.inventoryItem || "").split(":");
-  const quantity = Number(payload.quantity || 1);
+  const quantity = asQuantity(payload.quantity);
   const unitValue = asCurrencyNumber(payload.unitValue);
   const totalValue = quantity * unitValue;
 
@@ -102,9 +227,9 @@ async function createSale(payload) {
     totalValue,
   });
 
-  const database = getDatabaseSnapshot();
-  adjustStock(database, productCollection, productId, -quantity);
-  await persistStockCollection(database, productCollection);
+  const nextDatabase = getDatabaseSnapshot();
+  adjustStock(nextDatabase, productCollection, productId, -quantity);
+  await persistStockCollection(nextDatabase, productCollection);
 
   if (payload.generateCharge) {
     await createRecord("receivables", {
@@ -123,6 +248,15 @@ async function createSale(payload) {
 async function createChecklist(payload) {
   const shouldSyncCompletion = payload.status === "finalizado";
   const syncDate = new Date().toISOString();
+
+  if (shouldSyncCompletion) {
+    const validationMessage = validateChecklistCompletionPayload(getDatabaseSnapshot(), payload);
+
+    if (validationMessage) {
+      throw new Error(validationMessage);
+    }
+  }
+
   const checklist = await createRecord("checklists", shouldSyncCompletion
     ? {
       ...payload,
@@ -160,6 +294,18 @@ async function updateChecklist(id, payload, historyConfig) {
   const finalizingNow = payload.status === "finalizado" && existingChecklist?.status !== "finalizado";
   const shouldSyncInventory = finalizingNow && !existingChecklist?.inventorySyncedAt;
   const syncDate = new Date().toISOString();
+
+  if (shouldSyncInventory) {
+    const validationMessage = validateChecklistCompletionPayload(database, {
+      ...(existingChecklist || {}),
+      ...payload,
+    });
+
+    if (validationMessage) {
+      throw new Error(validationMessage);
+    }
+  }
+
   const updatedChecklist = await updateRecord("checklists", id, shouldSyncInventory
     ? {
       ...payload,

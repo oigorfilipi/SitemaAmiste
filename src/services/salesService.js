@@ -34,6 +34,10 @@ function resolveClient(snapshot, clientId) {
   return snapshot.clients?.find((client) => client.id === clientId)?.name || "-";
 }
 
+function findClient(snapshot, clientId) {
+  return snapshot.clients?.find((client) => client.id === clientId) || null;
+}
+
 function resolveProduct(snapshot, collectionName, productId) {
   return snapshot[collectionName]?.find((item) => item.id === productId) || null;
 }
@@ -103,6 +107,18 @@ export function validateSaleForm(formData, snapshot) {
 
   if (!formData.clientId) {
     return "Selecione o cliente da venda.";
+  }
+
+  if (!findClient(snapshot, formData.clientId)) {
+    return "Cliente selecionado nao encontrado. Selecione um cliente valido.";
+  }
+
+  if (!formData.date) {
+    return "Informe a data da venda.";
+  }
+
+  if (!["supplies", "accessories"].includes(sale.collectionName)) {
+    return "Selecione um item de estoque valido.";
   }
 
   if (!sale.product) {

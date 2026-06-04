@@ -7,6 +7,7 @@ import {
   validateSupplyPayload,
 } from "../../services/formValidationService.js";
 import { OPTION_GROUP_CHOICES } from "../../services/optionService.js";
+import { validateSaleForm } from "../../services/salesService.js";
 
 const statusOptions = [
   { label: "Ativo", value: "ativo" },
@@ -576,6 +577,7 @@ export const moduleConfigs = {
     layout: "table",
     formTitle: "Nova Venda",
     formDescription: "Ao salvar, o estoque virtual do item vendido e baixado automaticamente.",
+    validate: validateSaleForm,
     columns: [
       { key: "date", label: "Data" },
       { key: "clientId", label: "Cliente", source: "clients" },

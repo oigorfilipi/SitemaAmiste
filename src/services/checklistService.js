@@ -1,4 +1,4 @@
-import { createEntity, updateEntity } from "./erpService.js";
+import { updateEntity } from "./erpService.js";
 import { exportRecordsToCsv } from "./exportService.js";
 
 export const CHECKLIST_FILTERS = [
@@ -41,12 +41,38 @@ function resolveMachine(snapshot, machineId) {
   return snapshot.machines?.find((machine) => machine.id === machineId) || null;
 }
 
-function resolveNextStockStatus(machine, nextStock) {
-  if (nextStock <= asNumber(machine.minStock)) {
-    return "pedir";
+function resolveRecord(snapshot, collectionName, id) {
+  return snapshot[collectionName]?.find((record) => record.id === id) || null;
+}
+
+function getSelectedQuantity(selection) {
+  if (!selection?.selected) {
+    return 0;
   }
 
-  return machine.status === "pedir" ? "ativo" : machine.status;
+  return Math.max(1, asNumber(selection.quantity) || 1);
+}
+
+function validateSelectedInventory(selectionMap = {}, snapshot, collectionName, label, shouldCheckStock) {
+  for (const [recordId, selection] of Object.entries(selectionMap)) {
+    const quantity = getSelectedQuantity(selection);
+
+    if (!quantity) {
+      continue;
+    }
+
+    const record = resolveRecord(snapshot, collectionName, recordId);
+
+    if (!record) {
+      return `${label} selecionado nao existe mais no cadastro. Revise a selecao.`;
+    }
+
+    if (shouldCheckStock && quantity > asNumber(record.stock)) {
+      return `Estoque insuficiente: ${record.name} possui ${asNumber(record.stock)} unidade(s) disponiveis.`;
+    }
+  }
+
+  return "";
 }
 
 export function evaluateChecklistCompatibility(record, snapshot) {
@@ -87,9 +113,55 @@ export function evaluateChecklistCompatibility(record, snapshot) {
 }
 
 export function validateChecklistPayload(payload, snapshot) {
+  const requestedQuantity = asNumber(payload.quantity ?? payload.machineQuantity ?? 1);
+  const machineQuantity = Math.max(1, requestedQuantity);
+  const isFinalized = payload.status === "finalizado";
+
+  if (!payload.clientId && payload.serviceScope !== "Evento") {
+    return "Selecione o cliente do checklist.";
+  }
+
+  if (payload.clientId && !resolveRecord(snapshot, "clients", payload.clientId)) {
+    return "Cliente selecionado nao encontrado. Selecione um cliente valido.";
+  }
+
+  if (!payload.machineId) {
+    return "Selecione a maquina do checklist.";
+  }
+
+  const machine = resolveMachine(snapshot, payload.machineId);
+
+  if (!machine) {
+    return "Maquina selecionada nao encontrada. Selecione uma maquina valida.";
+  }
+
+  if (requestedQuantity <= 0) {
+    return "Informe uma quantidade de maquinas maior que zero.";
+  }
+
+  if (isFinalized && machineQuantity > asNumber(machine.stock)) {
+    return `Estoque insuficiente: ${machine.name} possui ${asNumber(machine.stock)} unidade(s) disponiveis.`;
+  }
+
+  if (asNumber(payload.value) < 0) {
+    return "Valor total do checklist nao pode ser negativo.";
+  }
+
+  const suppliesError = validateSelectedInventory(payload.supplies, snapshot, "supplies", "Insumo", isFinalized);
+
+  if (suppliesError) {
+    return suppliesError;
+  }
+
+  const accessoriesError = validateSelectedInventory(payload.accessories, snapshot, "accessories", "Acessorio", isFinalized);
+
+  if (accessoriesError) {
+    return accessoriesError;
+  }
+
   const compatibility = evaluateChecklistCompatibility(payload, snapshot);
 
-  if (payload.status === "finalizado" && !compatibility.compatible) {
+  if (isFinalized && !compatibility.compatible) {
     return `Falsa equivalencia: ${compatibility.issues.join(" ")}`;
   }
 
@@ -170,23 +242,21 @@ export function buildChecklistMetrics(rows) {
 }
 
 export async function finalizeChecklist(row, snapshot) {
-  const compatibility = evaluateChecklistCompatibility(row, snapshot);
+  const validationMessage = validateChecklistPayload({ ...row, status: "finalizado" }, snapshot);
 
-  if (!compatibility.compatible) {
-    throw new Error(`Falsa equivalencia: ${compatibility.issues.join(" ")}`);
+  if (validationMessage) {
+    throw new Error(validationMessage);
   }
 
   if (row.status === "finalizado") {
     return row;
   }
 
-  const machine = compatibility.machine;
-  const nextStock = Math.max(0, asNumber(machine.stock) - asNumber(row.quantity || 1));
-
-  await updateEntity(
+  return updateEntity(
     "checklists",
     row.id,
     {
+      ...row,
       status: "finalizado",
     },
     {
@@ -196,42 +266,6 @@ export async function finalizeChecklist(row, snapshot) {
       title: row.code,
     }
   );
-
-  await updateEntity(
-    "machines",
-    machine.id,
-    {
-      stock: nextStock,
-      status: resolveNextStockStatus(machine, nextStock),
-    },
-    {
-      action: "Baixa Checklist",
-      details: `${row.code}: ${machine.name} | Estoque ${machine.stock} -> ${nextStock}`,
-      module: "Estoque",
-      title: machine.name,
-    }
-  );
-
-  if (asNumber(row.value) > 0) {
-    const origin = `Checklist ${row.code}`;
-    const receivableExists = snapshot.receivables?.some((receivable) => receivable.origin === origin);
-
-    if (!receivableExists) {
-      await createEntity("receivables", {
-        origin,
-        clientId: row.clientId,
-        dueDate: row.date,
-        value: asNumber(row.value),
-        status: "pendente",
-        notes: "Cobranca gerada automaticamente pela finalizacao do checklist.",
-      });
-    }
-  }
-
-  return {
-    ...row,
-    status: "finalizado",
-  };
 }
 
 export function exportChecklistRows(rows, snapshot) {
