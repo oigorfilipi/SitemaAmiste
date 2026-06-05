@@ -74,6 +74,7 @@ export const ACCOUNT_FORM_FIELDS = [
 export const PAGE_LABELS = {
   "action:create": "Acao: Criar registros",
   "action:delete": "Acao: Excluir registros",
+  "action:download": "Acao: Baixar e exportar",
   "action:print": "Acao: Imprimir",
   "action:rbac.edit": "Acao: Editar Matriz RBAC",
   "action:update": "Acao: Editar registros",

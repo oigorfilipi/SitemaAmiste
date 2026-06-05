@@ -11,6 +11,7 @@ const DEFAULT_GROUP_GUIDANCE = {
   description: "Lista reutilizavel para campos de selecao e organizacao interna do ERP.",
   usage: "Aparece apenas nos formularios que usam este grupo como fonte de opcoes.",
 };
+const HIDDEN_OPTION_GROUPS = new Set(["Categorias de Maquinas"]);
 
 const OPTION_GROUP_GUIDANCE = {
   "Bebidas da Maquina": {
@@ -170,7 +171,7 @@ function uniqueGroups(options) {
   return Array.from(new Set([
     ...OPTION_GROUPS,
     ...options.map((option) => option.group).filter(Boolean),
-  ]));
+  ])).filter((group) => !HIDDEN_OPTION_GROUPS.has(group));
 }
 
 export function buildOptionGroups(options) {
