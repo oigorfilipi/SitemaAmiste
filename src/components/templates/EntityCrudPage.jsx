@@ -84,6 +84,18 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
     setErrorMessage("");
     const targetId = options.targetId || editingRecord?.id;
 
+    if (targetId && !canUpdate) {
+      const error = new Error("Voce nao tem permissao para alterar este registro.");
+      setErrorMessage(error.message);
+      throw error;
+    }
+
+    if (!targetId && !canCreate) {
+      const error = new Error("Voce nao tem permissao para criar este registro.");
+      setErrorMessage(error.message);
+      throw error;
+    }
+
     try {
       if (targetId) {
         await updateRecord(targetId, payload);
@@ -222,6 +234,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
 
       {config.collection === "proposals" ? (
         <ProposalEditorModal
+          canDownload={canDownload}
           editingRecord={editingRecord}
           open={modalOpen}
           snapshot={snapshot}
@@ -230,6 +243,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
         />
       ) : config.collection === "serviceSheets" ? (
         <ServiceSheetEditorModal
+          canDownload={canDownload}
           editingRecord={editingRecord}
           open={modalOpen}
           snapshot={snapshot}

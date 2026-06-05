@@ -54,6 +54,19 @@ export default function RelatedRecordsHub({
 
   async function handleSubmit(payload) {
     setErrorMessage("");
+
+    if (editingRecord && !canUpdate) {
+      const error = new Error("Voce nao tem permissao para alterar este registro vinculado.");
+      setErrorMessage(error.message);
+      throw error;
+    }
+
+    if (!editingRecord && !canCreate) {
+      const error = new Error("Voce nao tem permissao para criar este registro vinculado.");
+      setErrorMessage(error.message);
+      throw error;
+    }
+
     const nextPayload = {
       ...payload,
       [hub.parentKey]: parentRecord.id,
