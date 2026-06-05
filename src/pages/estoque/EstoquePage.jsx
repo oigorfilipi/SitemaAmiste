@@ -208,7 +208,7 @@ function InventoryHistoryModal({ groupId, open, selectedDate, snapshot, onChange
   );
 }
 
-export default function EstoquePage({ user }) {
+export default function EstoquePage({ accessLevel = "OC", user }) {
   const [activeGroup, setActiveGroup] = useState("supplies");
   const [countRows, setCountRows] = useState([]);
   const [countNotes, setCountNotes] = useState("");
@@ -228,12 +228,13 @@ export default function EstoquePage({ user }) {
   const metrics = useMemo(() => buildInventoryMetrics(snapshot, activeGroup), [activeGroup, snapshot]);
   const latestCount = useMemo(() => getLatestInventoryCount(snapshot, activeGroup), [activeGroup, snapshot]);
   const activeGroupAccess = getScopedCollectionAccess(user?.role, "inventory", activeGroup);
-  const canMutate = activeGroupAccess === "AC";
+  const canMutate = accessLevel === "AC" && activeGroupAccess === "AC";
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
   const canCreate = canMutate && rolePermissions["action:create"] === "AC";
   const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
   const canDownload = rolePermissions["action:download"] !== "OC";
+  const canUpload = rolePermissions["action:upload"] !== "OC";
 
   function resetCountModal() {
     setCountNotes("");
@@ -349,6 +350,12 @@ export default function EstoquePage({ user }) {
     const file = event.target.files?.[0];
 
     if (!file) {
+      return;
+    }
+
+    if (!canCreate || !canUpload) {
+      setModalError("Voce nao tem permissao para importar arquivos de contagem.");
+      event.target.value = "";
       return;
     }
 
@@ -516,10 +523,16 @@ export default function EstoquePage({ user }) {
               <p className="mt-1 text-sm font-semibold text-amiste-gray/60">Campos esperados: Nome do Item, Quantidade.</p>
               <input
                 accept=".csv,.xlsx"
-                className="mt-4 block h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white"
+                className="mt-4 block h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={!canUpload}
                 type="file"
                 onChange={handleFileImport}
               />
+              {!canUpload ? (
+                <p className="mt-2 text-xs font-bold text-amiste-red">
+                  Upload de arquivos bloqueado para este perfil.
+                </p>
+              ) : null}
             </section>
             <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
               <h3 className="font-display text-base font-black text-amiste-black">Importacao por Texto</h3>

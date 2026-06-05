@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import EntityGroupTabs from "../../components/molecules/EntityGroupTabs.jsx";
+import TableEmptyState from "../../components/molecules/TableEmptyState.jsx";
 import CatalogHubPage from "../../components/templates/CatalogHubPage.jsx";
 import { getRolePermissions } from "../../services/permissionService.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
@@ -20,14 +21,28 @@ export default function MachinesPage({ accessLevel, user }) {
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab(visibleTabs[0]?.id || "catalog");
+      setActiveTab(visibleTabs[0]?.id || "");
     }
   }, [activeTab, visibleTabs]);
 
+  const activeVisibleTab = visibleTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : visibleTabs[0]?.id || "";
+
+  if (!visibleTabs.length) {
+    return (
+      <TableEmptyState
+        description="Todas as abas internas de Maquinas estao ocultas para este perfil."
+        icon="shield"
+        title="Acesso negado"
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <EntityGroupTabs activeGroup={activeTab} groups={visibleTabs} onSelectGroup={setActiveTab} />
-      {activeTab === "repairs" ? (
+      <EntityGroupTabs activeGroup={activeVisibleTab} groups={visibleTabs} onSelectGroup={setActiveTab} />
+      {activeVisibleTab === "repairs" ? (
         <ServiceOrdersPage accessLevel={accessLevel} user={user} />
       ) : (
         <CatalogHubPage accessLevel={accessLevel} collectionName="machines" config={moduleConfigs.machines} user={user} />

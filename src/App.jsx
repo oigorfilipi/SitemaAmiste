@@ -58,14 +58,16 @@ export default function App() {
     () => filterQuickAccessByRole(navigation.quickAccess, activeRole),
     [activeRole, navigation.quickAccess]
   );
-  const CurrentPage = useMemo(() => pageRegistry[activePage] || pageRegistry.home, [activePage]);
-  const activeAccessLevel = getPageAccess(activeRole, activePage);
+  const activePageAllowed = canAccessPage(activeRole, activePage);
+  const safeActivePage = activePageAllowed ? activePage : "home";
+  const CurrentPage = useMemo(() => pageRegistry[safeActivePage] || pageRegistry.home, [safeActivePage]);
+  const activeAccessLevel = getPageAccess(activeRole, safeActivePage);
 
   useEffect(() => {
-    if (!canAccessPage(activeRole, activePage)) {
+    if (!activePageAllowed) {
       setActivePage("home");
     }
-  }, [activePage, activeRole]);
+  }, [activePageAllowed]);
 
   useEffect(() => {
     if (previewUserId && !previewableSidebarUsers.some((sidebarUser) => sidebarUser.id === previewUserId)) {
@@ -137,7 +139,7 @@ export default function App() {
 
   return (
     <AppShell
-      activePage={activePage}
+      activePage={safeActivePage}
       activeAccessLevel={activeAccessLevel}
       collapsed={sidebarCollapsed}
       navigation={filteredNavigation}

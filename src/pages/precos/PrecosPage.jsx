@@ -20,7 +20,7 @@ import {
 } from "../../services/pricingService.js";
 import { getRolePermissions, getScopedCollectionAccess } from "../../services/permissionService.js";
 
-export default function PrecosPage({ user }) {
+export default function PrecosPage({ accessLevel = "OC", user }) {
   const [activeGroup, setActiveGroup] = useState("machines");
   const [editingItem, setEditingItem] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -30,7 +30,7 @@ export default function PrecosPage({ user }) {
   const records = useMemo(() => buildPricingRows(snapshot, activeGroup), [activeGroup, snapshot]);
   const metrics = useMemo(() => buildPricingMetrics(snapshot, activeGroup), [activeGroup, snapshot]);
   const activeGroupAccess = getScopedCollectionAccess(user?.role, "pricing", activeGroup);
-  const canMutate = activeGroupAccess === "AC";
+  const canMutate = accessLevel === "AC" && activeGroupAccess === "AC";
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
   const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canDownload = rolePermissions["action:download"] !== "OC";

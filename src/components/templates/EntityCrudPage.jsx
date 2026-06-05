@@ -236,6 +236,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       {config.collection === "proposals" ? (
         <ProposalEditorModal
           canDownload={canDownload}
+          canPrint={canPrint}
           editingRecord={editingRecord}
           open={modalOpen}
           snapshot={snapshot}
@@ -245,6 +246,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       ) : config.collection === "serviceSheets" ? (
         <ServiceSheetEditorModal
           canDownload={canDownload}
+          canPrint={canPrint}
           editingRecord={editingRecord}
           open={modalOpen}
           snapshot={snapshot}

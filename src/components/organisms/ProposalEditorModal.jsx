@@ -25,7 +25,15 @@ import { buildMachineTechnicalRows, downloadDocumentPdf } from "../../services/d
 
 const FORM_ID = "proposal-editor-form";
 
-export default function ProposalEditorModal({ canDownload = true, editingRecord, open, snapshot, onClose, onSubmit }) {
+export default function ProposalEditorModal({
+  canDownload = true,
+  canPrint = true,
+  editingRecord,
+  open,
+  snapshot,
+  onClose,
+  onSubmit,
+}) {
   const [errorMessage, setErrorMessage] = useState("");
   const [form, setForm] = useState(buildProposalInitialForm(editingRecord || {}));
   const [targetId, setTargetId] = useState("");
@@ -134,7 +142,7 @@ export default function ProposalEditorModal({ canDownload = true, editingRecord,
   }
 
   function handleDownloadPdf() {
-    if (!canDownload) {
+    if (!canDownload || !canPrint) {
       return;
     }
 
@@ -146,7 +154,7 @@ export default function ProposalEditorModal({ canDownload = true, editingRecord,
       <Button form={FORM_ID} icon="fileText" type="submit">
         {saveLabel}
       </Button>
-      <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleDownloadPdf}>
+      <Button disabled={!canDownload || !canPrint} icon="download" variant="secondary" onClick={handleDownloadPdf}>
         Baixar PDF
       </Button>
     </>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
+import TableEmptyState from "../../components/molecules/TableEmptyState.jsx";
 import LabelFilePreviewPanel from "../../components/organisms/LabelFilePreviewPanel.jsx";
 import LabelRepositoryGrid from "../../components/organisms/LabelRepositoryGrid.jsx";
 import LabelUploadModal from "../../components/organisms/LabelUploadModal.jsx";
@@ -28,12 +29,14 @@ export default function EtiquetasPage({ accessLevel, user }) {
   const { records, createRecord, deleteRecord } = useCollection("labels");
   const { snapshot } = useErpSnapshot();
   const config = moduleConfigs.labels;
-  const canMutate = accessLevel === "AC";
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const labelFilesAccess = rolePermissions["module:labels.files"] || accessLevel;
+  const canUseLabelFiles = labelFilesAccess !== "OC";
+  const canMutate = accessLevel === "AC" && labelFilesAccess === "AC";
   const canUpload = canMutate && ["AC", "UP"].includes(rolePermissions["action:upload"]);
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
-  const canDownload = rolePermissions["action:download"] !== "OC";
-  const canPrint = rolePermissions["action:print"] !== "OC";
+  const canDownload = canUseLabelFiles && rolePermissions["action:download"] !== "OC";
+  const canPrint = canUseLabelFiles && rolePermissions["action:print"] !== "OC";
 
   const labels = useMemo(() => buildLabelRows(records), [records]);
   const filteredLabels = useMemo(() => {
@@ -66,6 +69,16 @@ export default function EtiquetasPage({ accessLevel, user }) {
       setSelectedId(filteredLabels[0].id);
     }
   }, [filteredLabels, selectedId]);
+
+  if (!canUseLabelFiles) {
+    return (
+      <TableEmptyState
+        description="O modulo de arquivos de etiquetas esta oculto para este perfil."
+        icon="shield"
+        title="Acesso negado"
+      />
+    );
+  }
 
   async function handleUpload(uploadData) {
     if (!canUpload) {

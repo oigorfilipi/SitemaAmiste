@@ -33,7 +33,15 @@ function ToggleCheck({ checked, label, onChange }) {
   );
 }
 
-export default function ServiceSheetEditorModal({ canDownload = true, editingRecord, open, snapshot, onClose, onSubmit }) {
+export default function ServiceSheetEditorModal({
+  canDownload = true,
+  canPrint = true,
+  editingRecord,
+  open,
+  snapshot,
+  onClose,
+  onSubmit,
+}) {
   const [errorMessage, setErrorMessage] = useState("");
   const [form, setForm] = useState(buildServiceSheetInitialForm(editingRecord || {}));
   const checklistOptions = useMemo(
@@ -117,7 +125,7 @@ export default function ServiceSheetEditorModal({ canDownload = true, editingRec
   }
 
   function handleDownloadPdf() {
-    if (!canDownload) {
+    if (!canDownload || !canPrint) {
       return;
     }
 
@@ -132,7 +140,7 @@ export default function ServiceSheetEditorModal({ canDownload = true, editingRec
       <Button form={FORM_ID} icon="fileText" type="submit">
         Salvar Ficha
       </Button>
-      <Button disabled={!canDownload} icon="printer" variant="secondary" onClick={handleDownloadPdf}>
+      <Button disabled={!canDownload || !canPrint} icon="printer" variant="secondary" onClick={handleDownloadPdf}>
         Baixar/Imprimir PDF
       </Button>
     </>

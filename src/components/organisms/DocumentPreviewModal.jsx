@@ -24,7 +24,7 @@ export default function DocumentPreviewModal({
   const model = buildDocumentModel(documentType, record, snapshot);
 
   function handleDownload() {
-    if (!canDownload) {
+    if (!canDownload || !canPrint) {
       return;
     }
 
@@ -55,7 +55,7 @@ export default function DocumentPreviewModal({
         )}
 
         <div className="flex justify-end gap-3">
-          <Button disabled={!canDownload} icon="download" onClick={handleDownload}>
+          <Button disabled={!canDownload || !canPrint} icon="download" onClick={handleDownload}>
             Baixar PDF
           </Button>
           <Button disabled={!canPrint} icon="fileText" variant="secondary" onClick={handlePrint}>

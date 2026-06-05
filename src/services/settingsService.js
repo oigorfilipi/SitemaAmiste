@@ -5,6 +5,7 @@ import {
   replaceLocalDatabase,
   resetLocalDatabase,
 } from "./local/localDatabase.js";
+import { clearNotificationReads } from "./notificationReadService.js";
 
 const BACKUP_VERSION = "amiste-local-v1";
 
@@ -175,10 +176,12 @@ export async function restoreBackupFromText(text) {
   }
 
   await replaceLocalDatabase(parsedBackup.database);
+  clearNotificationReads();
   return { ok: true, generatedAt: parsedBackup.generatedAt };
 }
 
 export async function resetSettingsDatabase() {
   await resetLocalDatabase();
+  clearNotificationReads();
   return { ok: true };
 }

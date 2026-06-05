@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildNotificationScope,
+  clearNotificationReads,
   getUnreadAlerts,
   markAlertsAsViewed,
 } from "../notificationReadService.js";
@@ -53,5 +54,14 @@ describe("notificationReadService", () => {
 
     expect(getUnreadAlerts(ALERTS, firstScope)).toHaveLength(0);
     expect(getUnreadAlerts(ALERTS, secondScope)).toHaveLength(2);
+  });
+
+  it("clears persisted read state when local data is reset or restored", () => {
+    const scope = buildNotificationScope({ id: "usr_ven", role: "VEN" });
+
+    markAlertsAsViewed(ALERTS, scope);
+    clearNotificationReads();
+
+    expect(getUnreadAlerts(ALERTS, scope)).toHaveLength(2);
   });
 });

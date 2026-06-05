@@ -35,16 +35,24 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const [permissionVersion, setPermissionVersion] = useState(0);
   const { records, createRecord, updateRecord } = useCollection("accounts");
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [permissionVersion, user?.role]);
+  const rbacModuleAccess = rolePermissions["module:accounts.rbac"] || "OC";
   const canManageAccounts = accessLevel === "AC" && rolePermissions["action:user.protectedEdit"] === "AC";
   const canCreate = canManageAccounts && rolePermissions["action:create"] === "AC";
   const canUpdate = canManageAccounts && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canUpload = rolePermissions["action:upload"] !== "OC";
-  const canEditPermissions = rolePermissions["action:rbac.edit"] === "AC";
+  const canEditPermissions = accessLevel === "AC" && rbacModuleAccess === "AC" && rolePermissions["action:rbac.edit"] === "AC";
   const rows = useMemo(() => buildAccountRows(records), [records]);
   const metrics = useMemo(() => buildAccountMetrics(rows), [rows]);
+  const accountTabs = useMemo(
+    () => ACCOUNT_TABS.filter((tab) => tab.id !== "matriz" || rbacModuleAccess !== "OC"),
+    [rbacModuleAccess]
+  );
+  const activeVisibleTab = accountTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : accountTabs[0]?.id || "ativas";
   const visibleAccounts = useMemo(
-    () => filterAccountRows(rows, activeTab, searchTerm),
-    [activeTab, rows, searchTerm]
+    () => filterAccountRows(rows, activeVisibleTab, searchTerm),
+    [activeVisibleTab, rows, searchTerm]
   );
   const roleMatrix = useMemo(() => buildRoleMatrix(), [permissionVersion]);
   const roleSummary = useMemo(() => buildRoleSummary(activeRole), [activeRole, permissionVersion]);
@@ -61,6 +69,12 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
       window.removeEventListener("amiste-permissions-change", refreshPermissionVersion);
     };
   }, []);
+
+  useEffect(() => {
+    if (!accountTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(accountTabs[0]?.id || "ativas");
+    }
+  }, [accountTabs, activeTab]);
 
   if (!canManageAccounts) {
     return (
@@ -83,7 +97,8 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   }
 
   function openEditModal(account) {
-    if (!canUpdate) {
+    if (!canUpdate || !canManageAccountTarget(account)) {
+      setErrorMessage("Somente DEV pode alterar contas do perfil DEV.");
       return;
     }
 
@@ -99,6 +114,11 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
 
     const normalizedPayload = normalizeAccountPayload(payload, editingRecord);
+
+    if (!canManageAccountPayload(normalizedPayload)) {
+      setErrorMessage("Somente DEV pode criar ou atribuir o perfil DEV.");
+      return;
+    }
 
     try {
       if (editingRecord) {
@@ -116,7 +136,8 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   }
 
   async function toggleStatus(account) {
-    if (!canUpdate) {
+    if (!canUpdate || !canManageAccountTarget(account)) {
+      setErrorMessage("Somente DEV pode alterar contas do perfil DEV.");
       return;
     }
 
@@ -141,6 +162,18 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     setPermissionVersion((currentVersion) => currentVersion + 1);
   }
 
+  function canManageAccountTarget(account) {
+    return account?.role !== "DEV" || user?.role === "DEV";
+  }
+
+  function canManageAccountPayload(payload) {
+    if (editingRecord?.role === "DEV" && user?.role !== "DEV") {
+      return false;
+    }
+
+    return payload?.role !== "DEV" || user?.role === "DEV";
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -161,9 +194,9 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
       ) : null}
 
       {/* --- SECAO: ABAS DE CONTAS --- */}
-      <EntityGroupTabs activeGroup={activeTab} groups={ACCOUNT_TABS} onSelectGroup={setActiveTab} />
+      <EntityGroupTabs activeGroup={activeVisibleTab} groups={accountTabs} onSelectGroup={setActiveTab} />
 
-      {activeTab !== "matriz" ? (
+      {activeVisibleTab !== "matriz" ? (
         <>
           <div className="flex items-center justify-between gap-4">
             <TextInput
@@ -182,6 +215,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
 
           <AccountRosterTable
             accounts={visibleAccounts}
+            canManageAccount={canManageAccountTarget}
             canToggleStatus={canUpdate}
             canUpdate={canUpdate}
             onEdit={openEditModal}

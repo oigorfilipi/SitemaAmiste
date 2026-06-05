@@ -22,6 +22,12 @@ function writeNotificationReads(reads) {
   }
 }
 
+export function clearNotificationReads() {
+  if (canUseLocalStorage()) {
+    window.localStorage.removeItem(NOTIFICATION_READS_KEY);
+  }
+}
+
 function buildAlertReadKey(alert = {}) {
   return [
     alert.id,
