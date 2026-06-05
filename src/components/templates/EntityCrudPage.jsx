@@ -40,6 +40,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
   const canDownload = rolePermissions["action:download"] !== "OC";
+  const canUpload = rolePermissions["action:upload"] !== "OC";
   const canPrint = rolePermissions["action:print"] !== "OC";
   const visibleExtraActions = useMemo(() => {
     return (config.extraActions || [])
@@ -252,6 +253,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
         />
       ) : (
         <EntityFormModal
+          canUpload={canUpload}
           description={config.formDescription}
           editingRecord={editingRecord}
           fields={config.fields}
@@ -280,6 +282,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
           canDelete={hubCanDelete}
           canMutate={hubCanMutate}
           canUpdate={hubCanUpdate}
+          canUpload={canUpload}
           hub={activeHub}
           open={Boolean(hubParentRecord)}
           parentRecord={hubParentRecord}

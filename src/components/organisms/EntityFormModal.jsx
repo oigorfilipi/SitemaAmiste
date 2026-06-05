@@ -70,11 +70,15 @@ function readFileAsDataUrl(file) {
   });
 }
 
-function ImageUploadControl({ field, formData, onChange }) {
+function ImageUploadControl({ disabled = false, field, formData, onChange }) {
   const [uploadError, setUploadError] = useState("");
   const previewUrl = formData[field.name] || formData[field.fallbackUrlField] || "";
 
   async function handleFileChange(event) {
+    if (disabled) {
+      return;
+    }
+
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -103,7 +107,8 @@ function ImageUploadControl({ field, formData, onChange }) {
       )}
       <input
         accept="image/*"
-        className="block h-11 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10"
+        className="block h-11 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10 disabled:opacity-50"
+        disabled={disabled}
         type="file"
         onChange={handleFileChange}
       />
@@ -116,7 +121,7 @@ function ImageUploadControl({ field, formData, onChange }) {
   );
 }
 
-function FileUploadControl({ field, formData, onChange }) {
+function FileUploadControl({ disabled = false, field, formData, onChange }) {
   const fileValue = typeof formData[field.name] === "object" && formData[field.name]
     ? formData[field.name]
     : {};
@@ -155,6 +160,10 @@ function FileUploadControl({ field, formData, onChange }) {
   }, [fileValue.fileStorageKey]);
 
   async function handleFileChange(event) {
+    if (disabled) {
+      return;
+    }
+
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -197,7 +206,8 @@ function FileUploadControl({ field, formData, onChange }) {
       )}
       <input
         accept={field.accept || "*/*"}
-        className="block h-11 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10"
+        className="block h-11 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10 disabled:opacity-50"
+        disabled={disabled}
         type="file"
         onChange={handleFileChange}
       />
@@ -205,7 +215,7 @@ function FileUploadControl({ field, formData, onChange }) {
   );
 }
 
-function VariantListControl({ field, formData, onChange }) {
+function VariantListControl({ canUpload = true, field, formData, onChange }) {
   const [uploadError, setUploadError] = useState("");
   const variants = Array.isArray(formData[field.name]) ? formData[field.name] : [];
 
@@ -218,7 +228,7 @@ function VariantListControl({ field, formData, onChange }) {
   }
 
   async function updateVariantImage(index, file) {
-    if (!file) {
+    if (!canUpload || !file) {
       return;
     }
 
@@ -270,7 +280,8 @@ function VariantListControl({ field, formData, onChange }) {
               <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Foto propria</span>
               <input
                 accept="image/*"
-                className="block h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white"
+                className="block h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white disabled:opacity-50"
+                disabled={!canUpload}
                 type="file"
                 onChange={(event) => updateVariantImage(index, event.target.files?.[0])}
               />
@@ -373,7 +384,7 @@ function SmartInsightPanel({ insights, previewRecord, smartSummary }) {
   );
 }
 
-function FieldControl({ field, formData, snapshot, onChange }) {
+function FieldControl({ canUpload, field, formData, snapshot, onChange }) {
   const options = buildOptions(field, snapshot);
   const isTextarea = field.type === "textarea";
   const isCheckbox = field.type === "checkbox";
@@ -381,15 +392,15 @@ function FieldControl({ field, formData, snapshot, onChange }) {
   const disabled = Boolean(field.disabled || field.readOnly);
 
   if (field.type === "imageUpload") {
-    return <ImageUploadControl field={field} formData={formData} onChange={onChange} />;
+    return <ImageUploadControl disabled={disabled || !canUpload} field={field} formData={formData} onChange={onChange} />;
   }
 
   if (field.type === "fileUpload") {
-    return <FileUploadControl field={field} formData={formData} onChange={onChange} />;
+    return <FileUploadControl disabled={disabled || !canUpload} field={field} formData={formData} onChange={onChange} />;
   }
 
   if (field.type === "variantList") {
-    return <VariantListControl field={field} formData={formData} onChange={onChange} />;
+    return <VariantListControl canUpload={!disabled && canUpload} field={field} formData={formData} onChange={onChange} />;
   }
 
   if (field.type === "dynamicTextList") {
@@ -470,6 +481,7 @@ export default function EntityFormModal({
   snapshot,
   validate,
   asideContent,
+  canUpload = true,
   size,
   onClose,
   onSubmit,
@@ -550,7 +562,13 @@ export default function EntityFormModal({
                   {field.label}
                   {field.required ? <span className="text-amiste-red"> *</span> : null}
                 </span>
-                <FieldControl field={field} formData={formData} snapshot={snapshot} onChange={updateField} />
+                <FieldControl
+                  canUpload={canUpload}
+                  field={field}
+                  formData={formData}
+                  snapshot={snapshot}
+                  onChange={updateField}
+                />
               </label>
             ))}
           </div>

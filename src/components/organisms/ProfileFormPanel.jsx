@@ -22,6 +22,7 @@ function getFieldsBySection(sectionId) {
 
 export default function ProfileFormPanel({
   canMutate,
+  canUpload = true,
   errorMessage,
   formData,
   isDirty,
@@ -34,6 +35,10 @@ export default function ProfileFormPanel({
   const [photoError, setPhotoError] = useState("");
 
   async function handlePhotoChange(event) {
+    if (!canUpload) {
+      return;
+    }
+
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -111,7 +116,7 @@ export default function ProfileFormPanel({
                 <input
                   accept="image/*"
                   className="block h-10 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white disabled:opacity-50"
-                  disabled={!canMutate}
+                  disabled={!canMutate || !canUpload}
                   type="file"
                   onChange={handlePhotoChange}
                 />

@@ -38,6 +38,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const canManageAccounts = accessLevel === "AC" && rolePermissions["action:user.protectedEdit"] === "AC";
   const canCreate = canManageAccounts && rolePermissions["action:create"] === "AC";
   const canUpdate = canManageAccounts && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canUpload = rolePermissions["action:upload"] !== "OC";
   const canEditPermissions = rolePermissions["action:rbac.edit"] === "AC";
   const rows = useMemo(() => buildAccountRows(records), [records]);
   const metrics = useMemo(() => buildAccountMetrics(rows), [rows]);
@@ -219,6 +220,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
       )}
 
       <EntityFormModal
+        canUpload={canUpload}
         description="Dados de colaborador, perfil e status da conta."
         editingRecord={editingRecord}
         fields={ACCOUNT_FORM_FIELDS}

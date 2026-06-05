@@ -14,6 +14,7 @@ export default function RelatedRecordsHub({
   canDelete = true,
   canMutate,
   canUpdate = true,
+  canUpload = true,
   onClose,
 }) {
   const [formOpen, setFormOpen] = useState(false);
@@ -145,6 +146,7 @@ export default function RelatedRecordsHub({
         ) : null}
 
         <EntityFormModal
+          canUpload={canUpload}
           description={hub.formDescription}
           editingRecord={editingRecord}
           fields={resolvedFields}

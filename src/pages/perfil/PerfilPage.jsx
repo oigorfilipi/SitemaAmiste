@@ -22,6 +22,7 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
   const isPreviewing = Boolean(previewUser);
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
   const canUpdate = accessLevel === "AC" && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canUpload = rolePermissions["action:upload"] !== "OC";
   const canMutate = canUpdate && !isPreviewing && Boolean(profile?.id);
   const initialFormData = useMemo(() => buildProfileFormData(profile), [profile]);
   const metrics = useMemo(() => buildProfileMetrics(profile), [profile]);
@@ -101,6 +102,7 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
           <ProfileIdentityPanel profile={profile} />
           <ProfileFormPanel
             canMutate={canMutate}
+            canUpload={canUpload}
             errorMessage={errorMessage}
             formData={formData}
             isDirty={isDirty}
