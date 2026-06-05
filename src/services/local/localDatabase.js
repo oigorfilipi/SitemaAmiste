@@ -1,4 +1,8 @@
 import { erpSeed } from "../../mocks/erpSeed.mock.js";
+import {
+  buildLabelFileStorageKey,
+  saveLabelFile,
+} from "../labelFileStorageService.js";
 
 const STORAGE_KEY = "amiste_erp_local_database_v1";
 const AUTH_SESSION_KEY = "amiste_erp_auth_session_v1";
@@ -85,6 +89,53 @@ function normalizeLabels(labels = []) {
 
 function hasInlineLabelFiles(database) {
   return (database?.labels || []).some((label) => Boolean(label.fileDataUrl));
+}
+
+function dataUrlToBlob(dataUrl = "", fallbackType = "application/octet-stream") {
+  if (typeof window === "undefined" || !dataUrl.includes(",")) {
+    return null;
+  }
+
+  const [header, encodedData] = dataUrl.split(",");
+  const mimeType = header.match(/data:(.*?);base64/)?.[1] || fallbackType;
+  const binary = window.atob(encodedData);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+
+  return new Blob([bytes], { type: mimeType });
+}
+
+function migrateInlineLabelFiles(database) {
+  const legacyLabels = (database?.labels || [])
+    .filter((label) => label.id && label.fileDataUrl && !label.fileStorageKey)
+    .map((label) => ({
+      blob: dataUrlToBlob(label.fileDataUrl, label.mimeType),
+      id: label.id,
+      storageKey: buildLabelFileStorageKey(label.id),
+    }))
+    .filter((label) => label.blob);
+
+  if (!legacyLabels.length) {
+    return;
+  }
+
+  Promise.all(legacyLabels.map(async (label) => {
+    await saveLabelFile(label.storageKey, label.blob);
+    return label;
+  })).then((migratedLabels) => {
+    const migratedById = new Map(migratedLabels.map((label) => [label.id, label.storageKey]));
+    const storedDatabase = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "{}");
+
+    writeLocalDatabase({
+      ...storedDatabase,
+      labels: (storedDatabase.labels || []).map((label) =>
+        migratedById.has(label.id)
+          ? { ...label, fileStorageKey: migratedById.get(label.id), storageStatus: "arquivo-legado-migrado" }
+          : label
+      ),
+    }, { emitChange: true });
+  }).catch(() => {
+    // Se a migracao falhar, o metadado legado segue marcado para revisao manual.
+  });
 }
 
 function estimateTextBytes(text = "") {
@@ -199,9 +250,15 @@ export function getDatabaseSnapshot() {
 
   try {
     const parsedDatabase = JSON.parse(storedDatabase);
+    const hasLegacyInlineLabels = hasInlineLabelFiles(parsedDatabase);
+
+    if (hasLegacyInlineLabels) {
+      migrateInlineLabelFiles(parsedDatabase);
+    }
+
     const normalizedDatabase = normalizeDatabase(parsedDatabase);
 
-    if (hasInlineLabelFiles(parsedDatabase)) {
+    if (hasLegacyInlineLabels) {
       try {
         writeLocalDatabase(normalizedDatabase);
       } catch {

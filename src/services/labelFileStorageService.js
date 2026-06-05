@@ -54,7 +54,7 @@ export async function saveLabelFile(storageKey, file) {
   const record = {
     blob: file,
     id: storageKey,
-    name: file.name,
+    name: file.name || storageKey,
     savedAt: new Date().toISOString(),
     size: file.size,
     type: file.type || "application/octet-stream",
@@ -82,4 +82,13 @@ export async function deleteLabelFile(storageKey) {
   }
 
   await runStoreAction("readwrite", (store) => store.delete(storageKey));
+}
+
+export async function clearLabelFiles() {
+  try {
+    await runStoreAction("readwrite", (store) => store.clear());
+    return true;
+  } catch {
+    return false;
+  }
 }

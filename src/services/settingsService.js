@@ -5,6 +5,11 @@ import {
   replaceLocalDatabase,
   resetLocalDatabase,
 } from "./local/localDatabase.js";
+import {
+  clearLabelFiles,
+  getLabelFile,
+  saveLabelFile,
+} from "./labelFileStorageService.js";
 import { clearNotificationReads } from "./notificationReadService.js";
 
 const BACKUP_VERSION = "amiste-local-v1";
@@ -39,6 +44,93 @@ function countRecords(snapshot, collectionName) {
   return Array.isArray(snapshot[collectionName]) ? snapshot[collectionName].length : 0;
 }
 
+function blobToDataUrl(blob) {
+  if (!blob || typeof FileReader === "undefined") {
+    return Promise.resolve("");
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(new Error("Nao foi possivel preparar arquivo de etiqueta para backup.")));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function dataUrlToBlob(dataUrl = "", fallbackType = "application/octet-stream") {
+  if (typeof window === "undefined" || !dataUrl.includes(",")) {
+    return null;
+  }
+
+  const [header, encodedData] = dataUrl.split(",");
+  const mimeType = header.match(/data:(.*?);base64/)?.[1] || fallbackType;
+  const binary = window.atob(encodedData);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+
+  return new Blob([bytes], { type: mimeType });
+}
+
+async function buildLabelFileBackups(snapshot) {
+  const labels = Array.isArray(snapshot?.labels) ? snapshot.labels : [];
+  const files = [];
+
+  for (const label of labels) {
+    if (!label.fileStorageKey) {
+      continue;
+    }
+
+    const blob = await getLabelFile(label.fileStorageKey);
+    const dataUrl = await blobToDataUrl(blob);
+
+    if (dataUrl) {
+      files.push({
+        dataUrl,
+        name: label.originalFileName || label.name || label.fileStorageKey,
+        size: blob.size || label.fileSize || 0,
+        storageKey: label.fileStorageKey,
+        type: blob.type || label.mimeType || "application/octet-stream",
+      });
+    }
+  }
+
+  return files;
+}
+
+async function restoreLabelFileBackups(files = []) {
+  if (!Array.isArray(files) || !files.length) {
+    return 0;
+  }
+
+  let restoredFiles = 0;
+
+  for (const file of files) {
+    if (!file?.storageKey || !file?.dataUrl) {
+      continue;
+    }
+
+    const blob = dataUrlToBlob(file.dataUrl, file.type);
+
+    if (!blob) {
+      continue;
+    }
+
+    try {
+      await saveLabelFile(file.storageKey, new File([blob], file.name || file.storageKey, { type: blob.type }));
+      restoredFiles += 1;
+    } catch {
+      try {
+        await saveLabelFile(file.storageKey, blob);
+        restoredFiles += 1;
+      } catch {
+        // Mantemos o restore do banco principal mesmo se um anexo local falhar.
+      }
+    }
+  }
+
+  return restoredFiles;
+}
+
 export function buildDataSourceCards() {
   return [
     {
@@ -46,7 +138,7 @@ export function buildDataSourceCards() {
       title: "Dados locais",
       status: DATA_SOURCE === "local" ? "ativo" : "pendente",
       statusLabel: DATA_SOURCE === "local" ? "Ativo" : "Disponivel",
-      detail: "JSON e arrays mockados com persistencia em localStorage.",
+      detail: "Persistencia local em JSON com armazenamento no navegador.",
       items: ["CRUD modular", "Historico local", "Backup manual"],
     },
   ];
@@ -115,20 +207,21 @@ export function formatCollectionUpdate(timestamp) {
   return timestamp ? formatDateTime(new Date(timestamp)) : "-";
 }
 
-export function buildBackupPayload(snapshot = getDatabaseSnapshot()) {
+export async function buildBackupPayload(snapshot = getDatabaseSnapshot()) {
   const { storageKey } = getLocalDatabaseInfo();
 
   return {
-    version: BACKUP_VERSION,
-    generatedAt: new Date().toISOString(),
-    storageKey,
     database: snapshot,
+    generatedAt: new Date().toISOString(),
+    labelFiles: await buildLabelFileBackups(snapshot),
+    storageKey,
+    version: BACKUP_VERSION,
   };
 }
 
-export function downloadBackup(snapshot) {
+export async function downloadBackup(snapshot) {
   const dateLabel = new Date().toISOString().slice(0, 10);
-  downloadJson(`amiste-erp-backup-${dateLabel}.json`, buildBackupPayload(snapshot));
+  downloadJson(`amiste-erp-backup-${dateLabel}.json`, await buildBackupPayload(snapshot));
 }
 
 export function parseBackupText(text) {
@@ -162,7 +255,11 @@ export function parseBackupText(text) {
       };
     }
 
-    return { database, generatedAt: parsedPayload.generatedAt || "" };
+    return {
+      database,
+      generatedAt: parsedPayload.generatedAt || "",
+      labelFiles: Array.isArray(parsedPayload.labelFiles) ? parsedPayload.labelFiles : [],
+    };
   } catch {
     return { error: "JSON invalido. Confira se o arquivo foi colado inteiro." };
   }
@@ -175,12 +272,16 @@ export async function restoreBackupFromText(text) {
     return parsedBackup;
   }
 
+  await clearLabelFiles();
   await replaceLocalDatabase(parsedBackup.database);
+  const restoredLabelFiles = await restoreLabelFileBackups(parsedBackup.labelFiles);
   clearNotificationReads();
-  return { ok: true, generatedAt: parsedBackup.generatedAt };
+
+  return { ok: true, generatedAt: parsedBackup.generatedAt, restoredLabelFiles };
 }
 
 export async function resetSettingsDatabase() {
+  await clearLabelFiles();
   await resetLocalDatabase();
   clearNotificationReads();
   return { ok: true };

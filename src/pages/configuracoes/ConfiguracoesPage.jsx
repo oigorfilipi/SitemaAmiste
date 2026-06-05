@@ -28,13 +28,17 @@ function DeveloperSettingsContent({ user }) {
   const metrics = useMemo(() => buildSettingsMetrics(snapshot), [snapshot]);
   const collectionRows = useMemo(() => buildCollectionRows(snapshot), [snapshot]);
 
-  function handleDownloadBackup() {
+  async function handleDownloadBackup() {
     if (!canDownload) {
       return;
     }
 
-    downloadBackup(snapshot);
-    setMessage({ type: "success", text: "Backup JSON gerado com os dados locais atuais." });
+    try {
+      await downloadBackup(snapshot);
+      setMessage({ type: "success", text: "Backup JSON gerado com dados locais e arquivos de etiquetas disponiveis." });
+    } catch (error) {
+      setMessage({ type: "error", text: error.message || "Nao foi possivel gerar o backup local." });
+    }
   }
 
   async function handleRestoreBackup() {
@@ -50,7 +54,12 @@ function DeveloperSettingsContent({ user }) {
     }
 
     setBackupText("");
-    setMessage({ type: "success", text: "Backup restaurado e snapshot local sincronizado." });
+    setMessage({
+      type: "success",
+      text: result.restoredLabelFiles
+        ? `Backup restaurado com ${result.restoredLabelFiles} arquivo(s) de etiqueta.`
+        : "Backup restaurado e snapshot local sincronizado.",
+    });
     await refresh();
   }
 
