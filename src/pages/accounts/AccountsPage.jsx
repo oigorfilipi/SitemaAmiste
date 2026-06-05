@@ -23,9 +23,9 @@ import {
   normalizeAccountPayload,
   validateAccountPayload,
 } from "../../services/accountService.js";
-import { ROLE_PERMISSIONS, updateRolePermission } from "../../services/permissionService.js";
+import { ROLE_PERMISSIONS, getRolePermissions, updateRolePermission } from "../../services/permissionService.js";
 
-export default function AccountsPage({ user }) {
+export default function AccountsPage({ accessLevel = "OC", user }) {
   const [activeTab, setActiveTab] = useState("ativas");
   const [activeRole, setActiveRole] = useState("DEV");
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,8 +34,11 @@ export default function AccountsPage({ user }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [permissionVersion, setPermissionVersion] = useState(0);
   const { records, createRecord, updateRecord } = useCollection("accounts");
-  const canManageAccounts = user?.role === "DEV" || user?.role === "CEO";
-  const canEditPermissions = user?.role === "DEV";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [permissionVersion, user?.role]);
+  const canManageAccounts = accessLevel === "AC" && rolePermissions["action:user.protectedEdit"] === "AC";
+  const canCreate = canManageAccounts && rolePermissions["action:create"] === "AC";
+  const canUpdate = canManageAccounts && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canEditPermissions = rolePermissions["action:rbac.edit"] === "AC";
   const rows = useMemo(() => buildAccountRows(records), [records]);
   const metrics = useMemo(() => buildAccountMetrics(rows), [rows]);
   const visibleAccounts = useMemo(
@@ -69,18 +72,31 @@ export default function AccountsPage({ user }) {
   }
 
   function openCreateModal() {
+    if (!canCreate) {
+      return;
+    }
+
     setErrorMessage("");
     setEditingRecord(null);
     setModalOpen(true);
   }
 
   function openEditModal(account) {
+    if (!canUpdate) {
+      return;
+    }
+
     setErrorMessage("");
     setEditingRecord(records.find((record) => record.id === account.id) || account);
     setModalOpen(true);
   }
 
   async function handleSubmit(payload) {
+    if ((editingRecord && !canUpdate) || (!editingRecord && !canCreate)) {
+      setErrorMessage("Voce nao tem permissao para salvar colaboradores.");
+      return;
+    }
+
     const normalizedPayload = normalizeAccountPayload(payload, editingRecord);
 
     try {
@@ -99,6 +115,10 @@ export default function AccountsPage({ user }) {
   }
 
   async function toggleStatus(account) {
+    if (!canUpdate) {
+      return;
+    }
+
     setErrorMessage("");
 
     try {
@@ -124,7 +144,7 @@ export default function AccountsPage({ user }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="userPlus"
-        actionLabel="Cadastrar Colaborador"
+        actionLabel={canCreate ? "Cadastrar Colaborador" : ""}
         description="Controle de acessos, permissoes e colaboradores da plataforma."
         title="Gestao de Contas"
         onAction={openCreateModal}
@@ -152,13 +172,17 @@ export default function AccountsPage({ user }) {
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
-            <Button icon="userPlus" onClick={openCreateModal}>
-              Cadastrar
-            </Button>
+            {canCreate ? (
+              <Button icon="userPlus" onClick={openCreateModal}>
+                Cadastrar
+              </Button>
+            ) : null}
           </div>
 
           <AccountRosterTable
             accounts={visibleAccounts}
+            canToggleStatus={canUpdate}
+            canUpdate={canUpdate}
             onEdit={openEditModal}
             onToggleStatus={toggleStatus}
           />

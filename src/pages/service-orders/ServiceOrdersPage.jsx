@@ -15,6 +15,7 @@ import {
   getRepairOrderSla,
   summarizeRepairOrders,
 } from "../../services/repairOrderService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 import { cn } from "../../utils/cn.js";
 
 const PRIORITY_LABELS = {
@@ -377,6 +378,9 @@ export default function ServiceOrdersPage({ accessLevel, user }) {
   const { records, createRecord, updateRecord } = useCollection("repairOrders");
   const { snapshot } = useErpSnapshot();
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canCreate = canMutate && rolePermissions["action:create"] === "AC";
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
 
   const summary = useMemo(() => summarizeRepairOrders(records), [records]);
   const metrics = useMemo(() => buildMetrics(summary), [summary]);
@@ -400,12 +404,16 @@ export default function ServiceOrdersPage({ accessLevel, user }) {
   }, [records]);
 
   async function handleCreateOrder(payload) {
+    if (!canCreate) {
+      return;
+    }
+
     await createRecord(buildInitialRepairOrderPayload(payload, getActorName(user)));
     setFormOpen(false);
   }
 
   async function handleMoveOrder(order, direction) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -416,10 +424,14 @@ export default function ServiceOrdersPage({ accessLevel, user }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="plus"
-        actionLabel={canMutate ? "Nova Entrada" : ""}
+        actionLabel={canCreate ? "Nova Entrada" : ""}
         description="Fila tecnica de consertos com controle de etapa, SLA de 3 dias e historico de movimentacoes."
         title="Consertos SLA"
-        onAction={() => setFormOpen(true)}
+        onAction={() => {
+          if (canCreate) {
+            setFormOpen(true);
+          }
+        }}
       />
 
       {/* --- SECAO: INDICADORES DE SLA --- */}
@@ -450,7 +462,7 @@ export default function ServiceOrdersPage({ accessLevel, user }) {
                 {stageOrders.length ? (
                   stageOrders.map((order) => (
                     <RepairOrderCard
-                      canMutate={canMutate}
+                      canMutate={canUpdate}
                       key={order.id}
                       order={order}
                       snapshot={snapshot}

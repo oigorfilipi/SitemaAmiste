@@ -6,6 +6,8 @@ import TableEmptyState from "../molecules/TableEmptyState.jsx";
 
 export default function AccountRosterTable({
   accounts,
+  canToggleStatus = false,
+  canUpdate = false,
   onEdit,
   onToggleStatus,
 }) {
@@ -55,16 +57,20 @@ export default function AccountRosterTable({
                 {account.accessFullCount} modulos
               </span>
               <div className="flex justify-end gap-2">
-                <IconButton icon="pencil" label={`Editar ${account.displayName}`} onClick={() => onEdit(account)} />
-                <Button
-                  aria-label={account.status === "ativo" ? `Desativar ${account.displayName}` : `Reativar ${account.displayName}`}
-                  className="h-8 px-3 text-xs"
-                  icon={account.status === "ativo" ? "archive" : "refresh"}
-                  variant={account.status === "ativo" ? "secondary" : "success"}
-                  onClick={() => onToggleStatus(account)}
-                >
-                  {account.status === "ativo" ? "Desativar" : "Reativar"}
-                </Button>
+                {canUpdate ? (
+                  <IconButton icon="pencil" label={`Editar ${account.displayName}`} onClick={() => onEdit(account)} />
+                ) : null}
+                {canToggleStatus ? (
+                  <Button
+                    aria-label={account.status === "ativo" ? `Desativar ${account.displayName}` : `Reativar ${account.displayName}`}
+                    className="h-8 px-3 text-xs"
+                    icon={account.status === "ativo" ? "archive" : "refresh"}
+                    variant={account.status === "ativo" ? "secondary" : "success"}
+                    onClick={() => onToggleStatus(account)}
+                  >
+                    {account.status === "ativo" ? "Desativar" : "Reativar"}
+                  </Button>
+                ) : null}
               </div>
             </div>
           ))}
