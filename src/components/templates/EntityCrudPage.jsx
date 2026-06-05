@@ -39,9 +39,21 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   const canCreate = canMutate && rolePermissions["action:create"] === "AC";
   const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
+  const canDownload = rolePermissions["action:download"] !== "OC";
+  const canPrint = rolePermissions["action:print"] !== "OC";
   const visibleExtraActions = useMemo(() => {
-    return (config.extraActions || []).filter((action) => !action.permissionId || rolePermissions[action.permissionId] !== "OC");
+    return (config.extraActions || [])
+      .map((action) => ({
+        ...action,
+        accessLevel: action.permissionId ? rolePermissions[action.permissionId] || "OC" : "AC",
+      }))
+      .filter((action) => action.accessLevel !== "OC");
   }, [config.extraActions, rolePermissions]);
+  const activeHubAccessLevel = activeHub?.accessLevel || "AC";
+  const hubCanMutate = canMutate && activeHubAccessLevel === "AC";
+  const hubCanCreate = hubCanMutate && rolePermissions["action:create"] === "AC";
+  const hubCanUpdate = hubCanMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const hubCanDelete = hubCanMutate && rolePermissions["action:delete"] === "AC";
 
   const filteredRecords = useMemo(
     () => records.filter((record) => recordMatchesSearch(record, searchTerm)),
@@ -111,7 +123,10 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
     }
 
     if (action.type === "hub") {
-      setActiveHub(action.hub);
+      setActiveHub({
+        ...action.hub,
+        accessLevel: action.accessLevel,
+      });
       setHubParentRecord(record);
       return;
     }
@@ -125,6 +140,10 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   }
 
   function handleExport() {
+    if (!canDownload) {
+      return;
+    }
+
     exportRecordsToCsv({
       columns: buildExportColumnsFromConfig(config),
       filename: config.title,
@@ -160,7 +179,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
               {config.actionLabel}
             </Button>
           ) : null}
-          <Button icon="download" variant="secondary" onClick={handleExport}>
+          <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleExport}>
             Exportar
           </Button>
         </div>
@@ -243,10 +262,10 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
 
       {activeHub ? (
         <RelatedRecordsHub
-          canCreate={canCreate}
-          canDelete={canDelete}
-          canMutate={canMutate}
-          canUpdate={canUpdate}
+          canCreate={hubCanCreate}
+          canDelete={hubCanDelete}
+          canMutate={hubCanMutate}
+          canUpdate={hubCanUpdate}
           hub={activeHub}
           open={Boolean(hubParentRecord)}
           parentRecord={hubParentRecord}
@@ -259,6 +278,8 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       ) : null}
 
       <DocumentPreviewModal
+        canDownload={canDownload}
+        canPrint={canPrint}
         documentType={documentPreview?.documentType}
         open={Boolean(documentPreview)}
         record={documentPreview?.record}

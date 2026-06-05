@@ -33,6 +33,17 @@ export default function App() {
 
     return userContext.sidebarUsers.find((user) => user.id === previewUserId) || userContext.user;
   }, [previewUserId, userContext.sidebarUsers, userContext.user]);
+  const previewableSidebarUsers = useMemo(() => {
+    if (userContext.user?.role === "DEV") {
+      return userContext.sidebarUsers;
+    }
+
+    if (userContext.user?.role === "CEO") {
+      return userContext.sidebarUsers.filter((sidebarUser) => sidebarUser.role !== "DEV");
+    }
+
+    return [];
+  }, [userContext.sidebarUsers, userContext.user]);
 
   const activeRole = activeUser?.role || "VEN";
   const filteredNavigation = useMemo(
@@ -56,6 +67,12 @@ export default function App() {
     }
   }, [activePage, activeRole]);
 
+  useEffect(() => {
+    if (previewUserId && !previewableSidebarUsers.some((sidebarUser) => sidebarUser.id === previewUserId)) {
+      setPreviewUserId("");
+    }
+  }, [previewUserId, previewableSidebarUsers]);
+
   /* --- SECAO: ESTADO DE NAVEGACAO ---
    * Esta troca simples mantem o projeto leve no inicio. Quando entrar React Router,
    * o registro de paginas pode virar uma tabela de rotas sem alterar a sidebar.
@@ -70,7 +87,24 @@ export default function App() {
   }
 
   function handlePreviewUser(userId) {
-    setPreviewUserId(userId === userContext.user?.id ? "" : userId);
+    const realUser = userContext.user;
+    const targetUser = userContext.sidebarUsers.find((sidebarUser) => sidebarUser.id === userId);
+
+    if (!realUser || !targetUser || userId === realUser.id) {
+      setPreviewUserId("");
+      return;
+    }
+
+    if (realUser.role !== "DEV" && realUser.role !== "CEO") {
+      return;
+    }
+
+    if (realUser.role === "CEO" && targetUser.role === "DEV") {
+      setPreviewUserId("");
+      return;
+    }
+
+    setPreviewUserId(userId);
   }
 
   async function handleLogout() {
@@ -109,7 +143,7 @@ export default function App() {
       navigation={filteredNavigation}
       previewUser={previewUserId ? activeUser : null}
       shortcuts={filteredShortcuts}
-      sidebarUsers={userContext.sidebarUsers}
+      sidebarUsers={previewableSidebarUsers}
       user={activeUser}
       realUser={userContext.user}
       onExitPreview={() => setPreviewUserId("")}

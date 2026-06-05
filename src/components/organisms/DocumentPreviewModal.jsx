@@ -7,7 +7,15 @@ import {
   downloadDocumentPdf,
 } from "../../services/documentService.js";
 
-export default function DocumentPreviewModal({ open, record, documentType, snapshot, onClose }) {
+export default function DocumentPreviewModal({
+  canDownload = true,
+  canPrint = true,
+  open,
+  record,
+  documentType,
+  snapshot,
+  onClose,
+}) {
   if (!record) {
     return null;
   }
@@ -16,7 +24,19 @@ export default function DocumentPreviewModal({ open, record, documentType, snaps
   const model = buildDocumentModel(documentType, record, snapshot);
 
   function handleDownload() {
+    if (!canDownload) {
+      return;
+    }
+
     downloadDocumentPdf(documentType, record, snapshot);
+  }
+
+  function handlePrint() {
+    if (!canPrint) {
+      return;
+    }
+
+    window.print();
   }
 
   return (
@@ -35,10 +55,10 @@ export default function DocumentPreviewModal({ open, record, documentType, snaps
         )}
 
         <div className="flex justify-end gap-3">
-          <Button icon="download" onClick={handleDownload}>
+          <Button disabled={!canDownload} icon="download" onClick={handleDownload}>
             Baixar PDF
           </Button>
-          <Button icon="fileText" variant="secondary" onClick={() => window.print()}>
+          <Button disabled={!canPrint} icon="fileText" variant="secondary" onClick={handlePrint}>
             Imprimir
           </Button>
         </div>

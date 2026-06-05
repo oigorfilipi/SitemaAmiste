@@ -66,7 +66,7 @@ function PreviewFrame({ isLoading, label, previewUrl }) {
   );
 }
 
-export default function LabelFilePreviewPanel({ label, onDownload, onPrint }) {
+export default function LabelFilePreviewPanel({ canDownload = true, canPrint = true, label, onDownload, onPrint }) {
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
 
@@ -133,10 +133,27 @@ export default function LabelFilePreviewPanel({ label, onDownload, onPrint }) {
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Button disabled={!label.hasFile} icon="download" variant="secondary" onClick={() => onDownload(label)}>
+          <Button
+            disabled={!canDownload || !label.hasFile}
+            icon="download"
+            variant="secondary"
+            onClick={() => {
+              if (canDownload) {
+                onDownload(label);
+              }
+            }}
+          >
             Baixar
           </Button>
-          <Button disabled={!label.canPrint} icon="printer" onClick={() => onPrint(label)}>
+          <Button
+            disabled={!canPrint || !label.canPrint}
+            icon="printer"
+            onClick={() => {
+              if (canPrint) {
+                onPrint(label);
+              }
+            }}
+          >
             Imprimir
           </Button>
         </div>

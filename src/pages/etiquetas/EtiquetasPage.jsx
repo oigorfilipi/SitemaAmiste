@@ -32,7 +32,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
   const canUpload = canMutate && ["AC", "UP"].includes(rolePermissions["action:upload"]);
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
-  const canDownload = rolePermissions["action:upload"] !== "OC";
+  const canDownload = rolePermissions["action:download"] !== "OC";
   const canPrint = rolePermissions["action:print"] !== "OC";
 
   const labels = useMemo(() => buildLabelRows(records), [records]);
@@ -100,6 +100,10 @@ export default function EtiquetasPage({ accessLevel, user }) {
   }
 
   function handleExport() {
+    if (!canDownload) {
+      return;
+    }
+
     exportLabels(filteredLabels, snapshot);
   }
 
@@ -126,7 +130,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
-        <Button icon="download" variant="secondary" onClick={handleExport}>
+        <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleExport}>
           Exportar
         </Button>
       </div>
@@ -155,6 +159,8 @@ export default function EtiquetasPage({ accessLevel, user }) {
           onPrint={printLabelFile}
         />
         <LabelFilePreviewPanel
+          canDownload={canDownload}
+          canPrint={canPrint}
           label={selectedLabel}
           onDownload={downloadLabelFile}
           onPrint={printLabelFile}
