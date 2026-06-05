@@ -149,7 +149,6 @@ export default function EtiquetasPage({ accessLevel, user }) {
         <LabelRepositoryGrid
           canDelete={canDelete}
           canDownload={canDownload}
-          canMutate={canMutate}
           canPrint={canPrint}
           labels={filteredLabels}
           selectedId={selectedLabel?.id || ""}

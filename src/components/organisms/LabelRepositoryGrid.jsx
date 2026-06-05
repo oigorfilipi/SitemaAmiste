@@ -6,7 +6,6 @@ import { cn } from "../../utils/cn.js";
 export default function LabelRepositoryGrid({
   canDelete,
   canDownload = true,
-  canMutate,
   canPrint = true,
   labels,
   selectedId,

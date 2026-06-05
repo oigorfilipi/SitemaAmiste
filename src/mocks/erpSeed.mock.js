@@ -627,8 +627,6 @@ export const erpSeed = {
     { id: "opt_brand_insta", group: "Marcas de Maquinas", name: "Insta", value: "Insta" },
     { id: "opt_brand_saeco", group: "Marcas de Maquinas", name: "Saeco", value: "Saeco" },
     { id: "opt_brand_kalerm", group: "Marcas de Maquinas", name: "Kalerm", value: "Kalerm" },
-    { id: "opt_cat_graos", group: "Categorias de Maquinas", name: "Graos", value: "Graos" },
-    { id: "opt_cat_multi", group: "Categorias de Maquinas", name: "Multibebidas", value: "Multibebidas" },
     { id: "opt_voltage_110", group: "Voltagens", name: "110v", value: "110v" },
     { id: "opt_voltage_220", group: "Voltagens", name: "220v", value: "220v" },
     { id: "opt_voltage_bivolt", group: "Voltagens", name: "Bivolt", value: "Bivolt" },
