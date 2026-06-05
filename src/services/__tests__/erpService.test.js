@@ -3,8 +3,23 @@ import { createEntity, deleteEntity, updateEntity } from "../erpService.js";
 import { finalizeChecklist } from "../checklistService.js";
 import { getDatabaseSnapshot, resetLocalDatabase } from "../local/localDatabase.js";
 
+function buildSaleOriginVariants(saleId) {
+  const numericSuffix = String(saleId || "").match(/(\d+)$/)?.[1];
+
+  return [
+    numericSuffix ? `Venda #${numericSuffix}` : "",
+    `Venda ${String(saleId || "").slice(-5).toUpperCase()}`,
+  ].filter(Boolean);
+}
+
 function findReceivableByOrigin(origin) {
   return getDatabaseSnapshot().receivables.find((receivable) => receivable.origin === origin);
+}
+
+function findReceivableBySaleId(saleId) {
+  const origins = buildSaleOriginVariants(saleId);
+
+  return getDatabaseSnapshot().receivables.find((receivable) => origins.includes(receivable.origin));
 }
 
 function buildCompatibleChecklist(machine, client) {
@@ -50,7 +65,7 @@ describe("erpService sales synchronization", () => {
     });
 
     expect(getDatabaseSnapshot().supplies.find((item) => item.id === product.id).stock).toBe(stockBefore - 2);
-    expect(findReceivableByOrigin(`Venda ${sale.id.slice(-5).toUpperCase()}`)).toMatchObject({
+    expect(findReceivableBySaleId(sale.id)).toMatchObject({
       clientId: client.id,
       status: "pendente",
       value: sale.totalValue,
@@ -60,14 +75,14 @@ describe("erpService sales synchronization", () => {
 
     expect(updatedSale.totalValue).toBe(Number(product.price || 10) * 3);
     expect(getDatabaseSnapshot().supplies.find((item) => item.id === product.id).stock).toBe(stockBefore - 3);
-    expect(findReceivableByOrigin(`Venda ${sale.id.slice(-5).toUpperCase()}`)).toMatchObject({
+    expect(findReceivableBySaleId(sale.id)).toMatchObject({
       value: updatedSale.totalValue,
     });
 
     await deleteEntity("sales", sale.id);
 
     expect(getDatabaseSnapshot().supplies.find((item) => item.id === product.id).stock).toBe(stockBefore);
-    expect(findReceivableByOrigin(`Venda ${sale.id.slice(-5).toUpperCase()}`)).toBeUndefined();
+    expect(findReceivableBySaleId(sale.id)).toBeUndefined();
   });
 });
 

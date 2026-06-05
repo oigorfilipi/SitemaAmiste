@@ -11,6 +11,7 @@ import {
   completeProposalWorkflow,
   signServiceSheetWorkflow,
 } from "../../services/documentWorkflowService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
 
 const PORTFOLIO_TABS = [
@@ -27,9 +28,11 @@ export default function PortfoliosPage({ accessLevel, user }) {
   const metrics = useMemo(() => buildDocumentMetrics(snapshot), [snapshot]);
   const workflow = useMemo(() => buildDocumentWorkflow(snapshot), [snapshot]);
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
 
   async function handleCompleteProposal(proposal) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -42,7 +45,7 @@ export default function PortfoliosPage({ accessLevel, user }) {
   }
 
   async function handleSignSheet(sheet) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -66,7 +69,7 @@ export default function PortfoliosPage({ accessLevel, user }) {
       {/* --- SECAO: INDICADORES DOCUMENTAIS --- */}
       <MetricsGrid metrics={metrics} />
       <DocumentWorkflowPanel
-        canMutate={canMutate}
+        canMutate={canUpdate}
         loadingId={loadingId}
         message={workflowMessage}
         workflow={workflow}
