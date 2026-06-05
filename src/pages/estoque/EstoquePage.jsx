@@ -30,7 +30,7 @@ import {
   saveInventoryAuditCount,
   updateInventoryCountItem,
 } from "../../services/inventoryService.js";
-import { getScopedCollectionAccess } from "../../services/permissionService.js";
+import { getRolePermissions, getScopedCollectionAccess } from "../../services/permissionService.js";
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -229,6 +229,11 @@ export default function EstoquePage({ user }) {
   const latestCount = useMemo(() => getLatestInventoryCount(snapshot, activeGroup), [activeGroup, snapshot]);
   const activeGroupAccess = getScopedCollectionAccess(user?.role, "inventory", activeGroup);
   const canMutate = activeGroupAccess === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canCreate = canMutate && rolePermissions["action:create"] === "AC";
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
+  const canDownload = rolePermissions["action:download"] !== "OC";
 
   function resetCountModal() {
     setCountNotes("");
@@ -240,7 +245,7 @@ export default function EstoquePage({ user }) {
   }
 
   function openNewCount() {
-    if (!canMutate) {
+    if (!canCreate) {
       return;
     }
 
@@ -262,6 +267,10 @@ export default function EstoquePage({ user }) {
   }
 
   function openEditPhysicalItem(item) {
+    if (!canUpdate) {
+      return;
+    }
+
     if (!latestCount) {
       setModalError("Crie uma nova contagem fisica antes de editar o consolidado.");
       return;
@@ -313,6 +322,10 @@ export default function EstoquePage({ user }) {
   }
 
   function handleExportInventory() {
+    if (!canDownload) {
+      return;
+    }
+
     exportInventoryRows({
       groupId: activeGroup,
       rows: realtimeRecords,
@@ -366,6 +379,11 @@ export default function EstoquePage({ user }) {
   }
 
   async function submitCount(status) {
+    if (!canCreate) {
+      setModalError("Voce nao tem permissao para salvar contagens.");
+      return;
+    }
+
     setModalError("");
 
     try {
@@ -386,7 +404,7 @@ export default function EstoquePage({ user }) {
   async function savePhysicalCorrection(event) {
     event.preventDefault();
 
-    if (!latestCount || !editingItem) {
+    if (!canUpdate || !latestCount || !editingItem) {
       return;
     }
 
@@ -403,7 +421,7 @@ export default function EstoquePage({ user }) {
   }
 
   async function deletePhysicalItem(item) {
-    if (!latestCount) {
+    if (!canDelete || !latestCount) {
       return;
     }
 
@@ -426,7 +444,7 @@ export default function EstoquePage({ user }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="download"
-        actionLabel="Exportar Estoque"
+        actionLabel={canDownload ? "Exportar Estoque" : ""}
         description="Auditoria fisica, atualizacao de quantidades e historico de inventario."
         title="Contagem de Estoque"
         onAction={handleExportInventory}
@@ -440,7 +458,7 @@ export default function EstoquePage({ user }) {
         <Button icon="history" variant="secondary" onClick={() => setHistoryOpen(true)}>
           Historico de Contagem
         </Button>
-        {canMutate ? (
+        {canCreate ? (
           <Button icon="checkSquare" onClick={openNewCount}>
             Nova Contagem
           </Button>
@@ -458,7 +476,9 @@ export default function EstoquePage({ user }) {
             <p className="mt-1 text-sm italic text-amiste-gray/60">Ultima contagem oficial, sem alteracao automatica.</p>
           </div>
           <InventoryAuditTable
-            canMutate={canMutate}
+            canAdjust={canUpdate}
+            canDelete={canDelete}
+            canMutate={canUpdate || canDelete}
             groupId={activeGroup}
             mode="physical"
             records={physicalRecords}

@@ -16,9 +16,10 @@ import {
   filterOptionGroups,
   validateOptionPayload,
 } from "../../services/optionCenterService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
 
-export default function OpcoesPage({ accessLevel }) {
+export default function OpcoesPage({ accessLevel, user }) {
   const [activeGroup, setActiveGroup] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,6 +29,11 @@ export default function OpcoesPage({ accessLevel }) {
   const config = moduleConfigs.options;
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("options");
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canCreate = canMutate && rolePermissions["action:create"] === "AC";
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
+  const canDownload = rolePermissions["action:download"] !== "OC";
   const groups = useMemo(() => buildOptionGroups(records), [records]);
   const filteredGroups = useMemo(() => filterOptionGroups(groups, searchTerm), [groups, searchTerm]);
   const selectedGroup = groups.find((group) => group.id === activeGroup) || filteredGroups[0] || null;
@@ -43,7 +49,7 @@ export default function OpcoesPage({ accessLevel }) {
   }, [activeGroup, filteredGroups]);
 
   function openCreateModal(groupId = activeGroup) {
-    if (!canMutate) {
+    if (!canCreate) {
       return;
     }
 
@@ -55,7 +61,7 @@ export default function OpcoesPage({ accessLevel }) {
   }
 
   function openEditModal(option) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -67,6 +73,11 @@ export default function OpcoesPage({ accessLevel }) {
   }
 
   async function handleSubmit(payload) {
+    if ((editingRecord && !canUpdate) || (!editingRecord && !canCreate)) {
+      setErrorMessage("Voce nao tem permissao para salvar esta opcao.");
+      return;
+    }
+
     setErrorMessage("");
     const validationMessage = validateOptionPayload(payload, records, editingRecord);
 
@@ -90,7 +101,7 @@ export default function OpcoesPage({ accessLevel }) {
   }
 
   async function handleDelete(option) {
-    if (!canMutate) {
+    if (!canDelete) {
       return;
     }
 
@@ -109,6 +120,10 @@ export default function OpcoesPage({ accessLevel }) {
   }
 
   function handleExport() {
+    if (!canDownload) {
+      return;
+    }
+
     exportOptions(selectedGroup?.options || records, selectedGroup ? `opcoes-${selectedGroup.label}` : "opcoes-do-sistema");
   }
 
@@ -116,7 +131,7 @@ export default function OpcoesPage({ accessLevel }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="plus"
-        actionLabel={canMutate ? config.actionLabel : ""}
+        actionLabel={canCreate ? config.actionLabel : ""}
         description={config.description}
         title={config.title}
         onAction={() => openCreateModal(activeGroup)}
@@ -166,7 +181,7 @@ export default function OpcoesPage({ accessLevel }) {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
-        <Button icon="download" variant="secondary" onClick={handleExport}>
+        <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleExport}>
           Exportar
         </Button>
       </div>
@@ -179,7 +194,10 @@ export default function OpcoesPage({ accessLevel }) {
           onSelectGroup={setActiveGroup}
         />
         <OptionValuePanel
-          canMutate={canMutate}
+          canCreate={canCreate}
+          canDelete={canDelete}
+          canEdit={canUpdate}
+          canMutate={canUpdate || canDelete}
           group={selectedGroup}
           onCreate={openCreateModal}
           onDelete={handleDelete}

@@ -34,6 +34,8 @@ function MachineAssets({ assets = [] }) {
 }
 
 export default function InventoryAuditTable({
+  canAdjust = false,
+  canDelete = false,
   canMutate,
   groupId,
   mode = "realtime",
@@ -102,12 +104,16 @@ export default function InventoryAuditTable({
                       ) : null}
                       {canMutate ? (
                         <>
-                          <Button className="h-8 px-3 text-xs" icon="pencil" variant="secondary" onClick={() => onAdjust(item)}>
-                            Editar
-                          </Button>
-                          <Button className="h-8 px-3 text-xs" icon="trash" variant="secondary" onClick={() => onDelete(item)}>
-                            Excluir
-                          </Button>
+                          {canAdjust ? (
+                            <Button className="h-8 px-3 text-xs" icon="pencil" variant="secondary" onClick={() => onAdjust(item)}>
+                              Editar
+                            </Button>
+                          ) : null}
+                          {canDelete ? (
+                            <Button className="h-8 px-3 text-xs" icon="trash" variant="secondary" onClick={() => onDelete(item)}>
+                              Excluir
+                            </Button>
+                          ) : null}
                         </>
                       ) : null}
                     </div>

@@ -18,7 +18,7 @@ import {
   getPricingGroup,
   savePricingUpdate,
 } from "../../services/pricingService.js";
-import { getScopedCollectionAccess } from "../../services/permissionService.js";
+import { getRolePermissions, getScopedCollectionAccess } from "../../services/permissionService.js";
 
 export default function PrecosPage({ user }) {
   const [activeGroup, setActiveGroup] = useState("machines");
@@ -31,9 +31,12 @@ export default function PrecosPage({ user }) {
   const metrics = useMemo(() => buildPricingMetrics(snapshot, activeGroup), [activeGroup, snapshot]);
   const activeGroupAccess = getScopedCollectionAccess(user?.role, "pricing", activeGroup);
   const canMutate = activeGroupAccess === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDownload = rolePermissions["action:download"] !== "OC";
 
   function openEdit(item) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -50,6 +53,10 @@ export default function PrecosPage({ user }) {
   }
 
   function handleExportPricing() {
+    if (!canDownload) {
+      return;
+    }
+
     exportPricingRows({
       groupId: activeGroup,
       rows: records,
@@ -59,6 +66,12 @@ export default function PrecosPage({ user }) {
 
   async function savePrice(event) {
     event.preventDefault();
+
+    if (!canUpdate) {
+      setErrorMessage("Voce nao tem permissao para alterar precos.");
+      return;
+    }
+
     setErrorMessage("");
 
     try {
@@ -79,7 +92,7 @@ export default function PrecosPage({ user }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="download"
-        actionLabel="Exportar Tabela"
+        actionLabel={canDownload ? "Exportar Tabela" : ""}
         description="Gestao de tabelas de precos, descontos e promocoes."
         title="Precificacao"
         onAction={handleExportPricing}
@@ -93,8 +106,8 @@ export default function PrecosPage({ user }) {
 
       {/* --- SECAO: TABELA E ALERTAS --- */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <PricingTable canMutate={canMutate} records={records} onEdit={openEdit} />
-        <PricingAttentionPanel canMutate={canMutate} records={records} onEdit={openEdit} />
+        <PricingTable canMutate={canUpdate} records={records} onEdit={openEdit} />
+        <PricingAttentionPanel canMutate={canUpdate} records={records} onEdit={openEdit} />
       </div>
 
       <Modal

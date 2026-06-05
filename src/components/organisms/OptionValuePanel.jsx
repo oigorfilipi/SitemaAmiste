@@ -3,6 +3,9 @@ import IconButton from "../atoms/IconButton.jsx";
 import TableEmptyState from "../molecules/TableEmptyState.jsx";
 
 export default function OptionValuePanel({
+  canCreate = false,
+  canDelete = false,
+  canEdit = false,
   canMutate,
   group,
   onCreate,
@@ -36,7 +39,7 @@ export default function OptionValuePanel({
             <p className="mt-1 text-sm font-semibold text-amiste-gray">{group.usage}</p>
           </div>
         </div>
-        {canMutate ? (
+        {canCreate ? (
           <Button aria-label={`Adicionar opcao em ${group.label}`} icon="plus" onClick={() => onCreate(group.id)}>
             Adicionar
           </Button>
@@ -58,8 +61,12 @@ export default function OptionValuePanel({
               <div className="flex justify-end gap-2">
                 {canMutate ? (
                   <>
-                    <IconButton icon="pencil" label={`Editar ${option.name}`} onClick={() => onEdit(option)} />
-                    <IconButton icon="trash" label={`Excluir ${option.name}`} onClick={() => onDelete(option)} />
+                    {canEdit ? (
+                      <IconButton icon="pencil" label={`Editar ${option.name}`} onClick={() => onEdit(option)} />
+                    ) : null}
+                    {canDelete ? (
+                      <IconButton icon="trash" label={`Excluir ${option.name}`} onClick={() => onDelete(option)} />
+                    ) : null}
                   </>
                 ) : null}
               </div>

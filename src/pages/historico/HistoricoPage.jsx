@@ -16,14 +16,17 @@ import {
   exportAuditRows,
   filterAuditRows,
 } from "../../services/auditService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 
-export default function HistoricoPage() {
+export default function HistoricoPage({ user }) {
   const [activeModule, setActiveModule] = useState("all");
   const [actionFilter, setActionFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEntryId, setSelectedEntryId] = useState("");
   const { records } = useCollection("history");
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canDownload = rolePermissions["action:download"] !== "OC";
   const rows = useMemo(() => buildAuditRows(records), [records]);
   const moduleTabs = useMemo(() => buildAuditModuleTabs(rows), [rows]);
   const actionOptions = useMemo(() => buildAuditSelectOptions(rows, "action"), [rows]);
@@ -44,6 +47,10 @@ export default function HistoricoPage() {
   }, [filteredRows, selectedEntryId]);
 
   function handleExportLog() {
+    if (!canDownload) {
+      return;
+    }
+
     exportAuditRows(filteredRows);
   }
 
@@ -51,7 +58,7 @@ export default function HistoricoPage() {
     <div className="space-y-6">
       <PageHeader
         actionIcon="download"
-        actionLabel="Exportar Log"
+        actionLabel={canDownload ? "Exportar Log" : ""}
         description="Log de atividades, edicao e auditoria do sistema."
         title="Historico Geral"
         onAction={handleExportLog}
@@ -86,7 +93,7 @@ export default function HistoricoPage() {
                 </option>
               ))}
             </SelectInput>
-            <Button icon="download" variant="secondary" onClick={handleExportLog}>
+            <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleExportLog}>
               Exportar
             </Button>
           </div>
