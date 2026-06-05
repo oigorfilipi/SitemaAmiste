@@ -12,6 +12,8 @@ function formatCurrency(value) {
 }
 
 export default function ClientPortfolioTable({
+  canDelete = false,
+  canEdit = false,
   canMutate,
   rows,
   selectedClientId,
@@ -81,8 +83,12 @@ export default function ClientPortfolioTable({
                 </Button>
                 {canMutate ? (
                   <>
-                    <IconButton icon="pencil" label={`Editar ${client.name}`} onClick={() => onEdit(client)} />
-                    <IconButton icon="trash" label={`Excluir ${client.name}`} onClick={() => onDelete(client)} />
+                    {canEdit ? (
+                      <IconButton icon="pencil" label={`Editar ${client.name}`} onClick={() => onEdit(client)} />
+                    ) : null}
+                    {canDelete ? (
+                      <IconButton icon="trash" label={`Excluir ${client.name}`} onClick={() => onDelete(client)} />
+                    ) : null}
                   </>
                 ) : null}
               </div>

@@ -18,9 +18,10 @@ import {
   filterChecklistRows,
   finalizeChecklist,
 } from "../../services/checklistService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
 
-export default function ChecklistsPage({ accessLevel }) {
+export default function ChecklistsPage({ accessLevel, user }) {
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -31,6 +32,10 @@ export default function ChecklistsPage({ accessLevel }) {
   const { records, createRecord, updateRecord, refresh } = useCollection("checklists");
   const { snapshot, refresh: refreshSnapshot } = useErpSnapshot();
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canCreate = canMutate && rolePermissions["action:create"] === "AC";
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDownload = rolePermissions["action:download"] !== "OC";
   const rows = useMemo(() => buildChecklistRows(records, snapshot), [records, snapshot]);
   const filteredRows = useMemo(() => {
     const filteredByStatus = filterChecklistRows(rows, activeFilter);
@@ -50,7 +55,7 @@ export default function ChecklistsPage({ accessLevel }) {
   const metrics = useMemo(() => buildChecklistMetrics(rows), [rows]);
 
   function openCreateModal() {
-    if (!canMutate) {
+    if (!canCreate) {
       return;
     }
 
@@ -60,7 +65,7 @@ export default function ChecklistsPage({ accessLevel }) {
   }
 
   function openEditModal(row) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -70,6 +75,11 @@ export default function ChecklistsPage({ accessLevel }) {
   }
 
   async function handleSubmit(payload) {
+    if ((editingRecord && !canUpdate) || (!editingRecord && !canCreate)) {
+      setErrorMessage("Voce nao tem permissao para salvar este checklist.");
+      return;
+    }
+
     const wantsFinalize = payload.status === "finalizado";
 
     if (editingRecord) {
@@ -95,6 +105,11 @@ export default function ChecklistsPage({ accessLevel }) {
   }
 
   async function handleFinalize(row) {
+    if (!canUpdate) {
+      setErrorMessage("Voce nao tem permissao para finalizar este checklist.");
+      return;
+    }
+
     setErrorMessage("");
 
     try {
@@ -106,6 +121,10 @@ export default function ChecklistsPage({ accessLevel }) {
   }
 
   function handleExport() {
+    if (!canDownload) {
+      return;
+    }
+
     exportChecklistRows(filteredRows, snapshot);
   }
 
@@ -113,7 +132,7 @@ export default function ChecklistsPage({ accessLevel }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="plus"
-        actionLabel={canMutate ? config.actionLabel : ""}
+        actionLabel={canCreate ? config.actionLabel : ""}
         description={config.description}
         title={config.title}
         onAction={openCreateModal}
@@ -133,7 +152,7 @@ export default function ChecklistsPage({ accessLevel }) {
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
-          <Button icon="download" variant="secondary" onClick={handleExport}>
+          <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleExport}>
             Exportar
           </Button>
         </div>
@@ -148,13 +167,14 @@ export default function ChecklistsPage({ accessLevel }) {
       {/* --- SECAO: TABELA E RISCOS --- */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <ChecklistOperationsTable
-          canMutate={canMutate}
+          canFinalize={canUpdate}
+          canMutate={canUpdate}
           rows={filteredRows}
           onDetails={setDetailRecord}
           onEdit={openEditModal}
           onFinalize={handleFinalize}
         />
-        <ChecklistRiskPanel canMutate={canMutate} rows={rows} onFinalize={handleFinalize} />
+        <ChecklistRiskPanel canMutate={canUpdate} rows={rows} onFinalize={handleFinalize} />
       </div>
 
       <ChecklistEditorModal

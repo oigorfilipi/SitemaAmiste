@@ -14,9 +14,10 @@ import {
   exportClientRows,
   filterClientRows,
 } from "../../services/clientService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
 
-export default function ClientesPage({ accessLevel }) {
+export default function ClientesPage({ accessLevel, user }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -26,6 +27,11 @@ export default function ClientesPage({ accessLevel }) {
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("clients");
   const { snapshot } = useErpSnapshot();
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canCreate = canMutate && rolePermissions["action:create"] === "AC";
+  const canUpdate = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
+  const canDownload = rolePermissions["action:download"] !== "OC";
   const rows = useMemo(() => buildClientRows(records, snapshot), [records, snapshot]);
   const filteredRows = useMemo(() => filterClientRows(rows, searchTerm), [rows, searchTerm]);
   const selectedClient = rows.find((client) => client.id === selectedClientId) || filteredRows[0] || null;
@@ -38,7 +44,7 @@ export default function ClientesPage({ accessLevel }) {
   }, [filteredRows, selectedClientId]);
 
   function openCreateModal() {
-    if (!canMutate) {
+    if (!canCreate) {
       return;
     }
 
@@ -48,7 +54,7 @@ export default function ClientesPage({ accessLevel }) {
   }
 
   function openEditModal(client) {
-    if (!canMutate) {
+    if (!canUpdate) {
       return;
     }
 
@@ -58,6 +64,11 @@ export default function ClientesPage({ accessLevel }) {
   }
 
   async function handleSubmit(payload) {
+    if ((editingRecord && !canUpdate) || (!editingRecord && !canCreate)) {
+      setErrorMessage("Voce nao tem permissao para salvar este cliente.");
+      return;
+    }
+
     setErrorMessage("");
 
     if (editingRecord) {
@@ -72,7 +83,7 @@ export default function ClientesPage({ accessLevel }) {
   }
 
   async function handleDelete(client) {
-    if (!canMutate) {
+    if (!canDelete) {
       return;
     }
 
@@ -91,6 +102,10 @@ export default function ClientesPage({ accessLevel }) {
   }
 
   function handleExport() {
+    if (!canDownload) {
+      return;
+    }
+
     exportClientRows(filteredRows, snapshot);
   }
 
@@ -98,7 +113,7 @@ export default function ClientesPage({ accessLevel }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="plus"
-        actionLabel={canMutate ? config.actionLabel : ""}
+        actionLabel={canCreate ? config.actionLabel : ""}
         description={config.description}
         title={config.title}
         onAction={openCreateModal}
@@ -116,7 +131,7 @@ export default function ClientesPage({ accessLevel }) {
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
-        <Button icon="download" variant="secondary" onClick={handleExport}>
+        <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleExport}>
           Exportar
         </Button>
       </div>
@@ -130,7 +145,9 @@ export default function ClientesPage({ accessLevel }) {
       {/* --- SECAO: CARTEIRA E VISAO 360 --- */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <ClientPortfolioTable
-          canMutate={canMutate}
+          canDelete={canDelete}
+          canEdit={canUpdate}
+          canMutate={canUpdate || canDelete}
           rows={filteredRows}
           selectedClientId={selectedClient?.id}
           onDelete={handleDelete}

@@ -14,13 +14,17 @@ import {
   filterFinancialRows,
   settleFinancialRow,
 } from "../../services/financialService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 
-export default function FinanceiroPage({ accessLevel }) {
+export default function FinanceiroPage({ accessLevel, user }) {
   const [activeFilter, setActiveFilter] = useState("all");
   const { snapshot } = useErpSnapshot();
   const receivables = useCollection("receivables");
   const payables = useCollection("payables");
   const canMutate = accessLevel === "AC";
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canSettle = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDownload = rolePermissions["action:download"] !== "OC";
   const rows = useMemo(
     () => buildFinancialRows({
       payables: payables.records,
@@ -33,11 +37,19 @@ export default function FinanceiroPage({ accessLevel }) {
   const metrics = useMemo(() => buildFinancialMetrics(rows), [rows]);
 
   async function handleSettle(row) {
+    if (!canSettle) {
+      return;
+    }
+
     await settleFinancialRow(row);
     await Promise.all([receivables.refresh(), payables.refresh()]);
   }
 
   function handleExportReport() {
+    if (!canDownload) {
+      return;
+    }
+
     exportFinancialRows(filteredRows, snapshot);
   }
 
@@ -45,7 +57,7 @@ export default function FinanceiroPage({ accessLevel }) {
     <div className="space-y-6">
       <PageHeader
         actionIcon="download"
-        actionLabel="Gerar Relatorio"
+        actionLabel={canDownload ? "Gerar Relatorio" : ""}
         description="Gestao de fluxo de caixa, receitas recorrentes, despesas e relatorios avancados."
         title="Financeiro"
         onAction={handleExportReport}
@@ -59,8 +71,8 @@ export default function FinanceiroPage({ accessLevel }) {
 
       {/* --- SECAO: CONTAS A RECEBER E PAGAR --- */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <FinancialLedgerTable canMutate={canMutate} rows={filteredRows} onSettle={handleSettle} />
-        <FinancialAgingPanel canMutate={canMutate} rows={rows} onSettle={handleSettle} />
+        <FinancialLedgerTable canMutate={canSettle} rows={filteredRows} onSettle={handleSettle} />
+        <FinancialAgingPanel canMutate={canSettle} rows={rows} onSettle={handleSettle} />
       </div>
     </div>
   );

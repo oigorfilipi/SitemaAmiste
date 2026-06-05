@@ -11,6 +11,7 @@ function formatCurrency(value) {
 }
 
 export default function ChecklistOperationsTable({
+  canFinalize = false,
   canMutate,
   rows,
   onDetails,
@@ -70,7 +71,7 @@ export default function ChecklistOperationsTable({
                 {canMutate ? (
                   <IconButton icon="pencil" label={`Editar ${row.code}`} onClick={() => onEdit(row)} />
                 ) : null}
-                {canMutate && row.status !== "finalizado" ? (
+                {canFinalize && row.status !== "finalizado" ? (
                   <Button
                     aria-label={`Finalizar ${row.code}`}
                     className="h-8 px-3 text-xs"
