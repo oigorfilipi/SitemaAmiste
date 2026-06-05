@@ -2,6 +2,7 @@ import { erpSeed } from "../../mocks/erpSeed.mock.js";
 
 const STORAGE_KEY = "amiste_erp_local_database_v1";
 const AUTH_SESSION_KEY = "amiste_erp_auth_session_v1";
+const STORAGE_COMPACT_HISTORY_LIMIT = 40;
 
 const COLLECTION_LABELS = {
   accounts: "Contas",
@@ -86,6 +87,33 @@ function hasInlineLabelFiles(database) {
   return (database?.labels || []).some((label) => Boolean(label.fileDataUrl));
 }
 
+function estimateTextBytes(text = "") {
+  if (typeof Blob !== "undefined") {
+    return new Blob([text]).size;
+  }
+
+  return String(text).length * 2;
+}
+
+function isStorageQuotaError(error) {
+  const errorName = String(error?.name || "").toLowerCase();
+  const errorMessage = String(error?.message || "").toLowerCase();
+
+  return error?.code === 22 ||
+    error?.code === 1014 ||
+    errorName.includes("quota") ||
+    errorMessage.includes("quota") ||
+    errorMessage.includes("exceeded");
+}
+
+function buildStorageError(error) {
+  if (!isStorageQuotaError(error)) {
+    return error;
+  }
+
+  return new Error("Armazenamento local cheio. Gere um backup, remova imagens/arquivos pesados ou limpe registros antigos antes de salvar novamente.");
+}
+
 function normalizeDatabase(database) {
   return Object.keys(erpSeed).reduce((normalized, collectionName) => {
     const records = Array.isArray(database?.[collectionName])
@@ -103,6 +131,53 @@ function normalizeDatabase(database) {
   }, {});
 }
 
+function compactDatabaseForStorage(database) {
+  const compactedDatabase = normalizeDatabase(database);
+
+  /* --- SECAO: COMPACTACAO DE EMERGENCIA ---
+   * Em caso de quota, preservamos os dados operacionais e reduzimos apenas o
+   * historico antigo. Assim evitamos perda de cadastros enquanto mantemos
+   * rastreabilidade recente.
+   */
+  compactedDatabase.history = (compactedDatabase.history || []).slice(0, STORAGE_COMPACT_HISTORY_LIMIT);
+
+  return compactedDatabase;
+}
+
+function writeLocalDatabase(database, options = {}) {
+  const { allowCompact = true, emitChange = false } = options;
+  const normalizedDatabase = normalizeDatabase(database);
+  const encodedDatabase = JSON.stringify(normalizedDatabase);
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, encodedDatabase);
+
+    if (emitChange) {
+      emitDatabaseChange();
+    }
+
+    return normalizedDatabase;
+  } catch (error) {
+    if (!allowCompact || !isStorageQuotaError(error)) {
+      throw buildStorageError(error);
+    }
+  }
+
+  const compactedDatabase = compactDatabaseForStorage(normalizedDatabase);
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(compactedDatabase));
+
+    if (emitChange) {
+      emitDatabaseChange();
+    }
+
+    return compactedDatabase;
+  } catch (error) {
+    throw buildStorageError(error);
+  }
+}
+
 export function getDatabaseSnapshot() {
   if (!canUseLocalStorage()) {
     return clone(erpSeed);
@@ -112,7 +187,13 @@ export function getDatabaseSnapshot() {
 
   if (!storedDatabase) {
     const seededDatabase = clone(erpSeed);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seededDatabase));
+
+    try {
+      writeLocalDatabase(seededDatabase, { allowCompact: false });
+    } catch {
+      return seededDatabase;
+    }
+
     return seededDatabase;
   }
 
@@ -122,7 +203,7 @@ export function getDatabaseSnapshot() {
 
     if (hasInlineLabelFiles(parsedDatabase)) {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedDatabase));
+        writeLocalDatabase(normalizedDatabase);
       } catch {
         return normalizedDatabase;
       }
@@ -131,22 +212,31 @@ export function getDatabaseSnapshot() {
     return normalizedDatabase;
   } catch {
     const seededDatabase = clone(erpSeed);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seededDatabase));
+
+    try {
+      writeLocalDatabase(seededDatabase, { allowCompact: false });
+    } catch {
+      return seededDatabase;
+    }
+
     return seededDatabase;
   }
 }
 
 export function getLocalDatabaseInfo() {
+  const storedDatabase = canUseLocalStorage() ? window.localStorage.getItem(STORAGE_KEY) || "" : "";
+
   return {
     collectionNames: Object.keys(erpSeed),
+    storageBytes: estimateTextBytes(storedDatabase),
+    storageCompactHistoryLimit: STORAGE_COMPACT_HISTORY_LIMIT,
     storageKey: STORAGE_KEY,
   };
 }
 
 function saveDatabase(database) {
   if (canUseLocalStorage()) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeDatabase(database)));
-    emitDatabaseChange();
+    writeLocalDatabase(database, { emitChange: true });
   }
 }
 
@@ -354,8 +444,10 @@ export async function resetLocalDatabase() {
   const seededDatabase = clone(erpSeed);
 
   if (canUseLocalStorage()) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seededDatabase));
-    emitDatabaseChange();
+    writeLocalDatabase(seededDatabase, {
+      allowCompact: false,
+      emitChange: true,
+    });
   }
 
   return seededDatabase;
