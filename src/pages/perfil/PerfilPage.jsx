@@ -11,6 +11,7 @@ import {
   buildProfileMetrics,
   normalizeProfilePayload,
 } from "../../services/profileService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 
 export default function PerfilPage({ accessLevel, previewUser, user }) {
   const [formData, setFormData] = useState({});
@@ -19,7 +20,9 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
   const { records, updateRecord } = useCollection("accounts");
   const profile = records.find((account) => account.id === user?.id) || user;
   const isPreviewing = Boolean(previewUser);
-  const canMutate = accessLevel === "AC" && !isPreviewing && Boolean(profile?.id);
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canUpdate = accessLevel === "AC" && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canMutate = canUpdate && !isPreviewing && Boolean(profile?.id);
   const initialFormData = useMemo(() => buildProfileFormData(profile), [profile]);
   const metrics = useMemo(() => buildProfileMetrics(profile), [profile]);
   const accessRows = useMemo(() => buildProfileAccessRows(profile), [profile]);

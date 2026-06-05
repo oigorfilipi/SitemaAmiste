@@ -4,7 +4,9 @@ import { cn } from "../../utils/cn.js";
 
 export default function BackupRestorePanel({
   backupText,
-  canMutate,
+  canBackup = true,
+  canReset = false,
+  canRestore = false,
   message,
   onBackup,
   onChangeBackupText,
@@ -22,7 +24,7 @@ export default function BackupRestorePanel({
             Exportacao JSON da base local e restauracao controlada pelo service.
           </p>
         </div>
-        <Button icon="download" variant="secondary" onClick={onBackup}>
+        <Button disabled={!canBackup} icon="download" variant="secondary" onClick={onBackup}>
           Baixar backup
         </Button>
       </div>
@@ -31,6 +33,7 @@ export default function BackupRestorePanel({
       <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
         <TextArea
           className="min-h-44"
+          disabled={!canRestore}
           placeholder="Cole aqui o JSON exportado pelo backup do ERP"
           value={backupText}
           onChange={(event) => onChangeBackupText(event.target.value)}
@@ -42,7 +45,7 @@ export default function BackupRestorePanel({
           </p>
           <Button
             className="w-full"
-            disabled={!canMutate}
+            disabled={!canRestore}
             icon="refresh"
             variant="primary"
             onClick={onRestore}
@@ -51,14 +54,14 @@ export default function BackupRestorePanel({
           </Button>
           <Button
             className="w-full"
-            disabled={!canMutate}
+            disabled={!canReset}
             icon="trash"
             variant="warning"
             onClick={onReset}
           >
             Resetar base local
           </Button>
-          {!canMutate ? (
+          {!canRestore && !canReset ? (
             <span className="block text-xs font-bold text-amiste-red">
               Seu perfil atual permite apenas visualizacao.
             </span>

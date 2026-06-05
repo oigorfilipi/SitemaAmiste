@@ -14,23 +14,31 @@ import {
   resetSettingsDatabase,
   restoreBackupFromText,
 } from "../../services/settingsService.js";
+import { getRolePermissions } from "../../services/permissionService.js";
 
-function DeveloperSettingsContent() {
+function DeveloperSettingsContent({ user }) {
   const [backupText, setBackupText] = useState("");
   const [message, setMessage] = useState(null);
   const { snapshot, refresh } = useErpSnapshot();
-  const canMutate = true;
+  const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canDownload = rolePermissions["action:download"] !== "OC";
+  const canRestore = ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canReset = rolePermissions["action:delete"] === "AC";
   const sourceCards = useMemo(() => buildDataSourceCards(), []);
   const metrics = useMemo(() => buildSettingsMetrics(snapshot), [snapshot]);
   const collectionRows = useMemo(() => buildCollectionRows(snapshot), [snapshot]);
 
   function handleDownloadBackup() {
+    if (!canDownload) {
+      return;
+    }
+
     downloadBackup(snapshot);
     setMessage({ type: "success", text: "Backup JSON gerado com os dados locais atuais." });
   }
 
   async function handleRestoreBackup() {
-    if (!canMutate) {
+    if (!canRestore) {
       return;
     }
 
@@ -47,7 +55,7 @@ function DeveloperSettingsContent() {
   }
 
   async function handleResetDatabase() {
-    if (!canMutate) {
+    if (!canReset) {
       return;
     }
 
@@ -67,7 +75,7 @@ function DeveloperSettingsContent() {
     <div className="space-y-6">
       <PageHeader
         actionIcon="download"
-        actionLabel="Baixar Backup"
+        actionLabel={canDownload ? "Baixar Backup" : ""}
         description="Central tecnica para fonte de dados, backup local e saude das colecoes."
         title="Configuracoes"
         onAction={handleDownloadBackup}
@@ -80,7 +88,9 @@ function DeveloperSettingsContent() {
       <DataSourcePanel sources={sourceCards} />
       <BackupRestorePanel
         backupText={backupText}
-        canMutate={canMutate}
+        canBackup={canDownload}
+        canReset={canReset}
+        canRestore={canRestore}
         message={message}
         onBackup={handleDownloadBackup}
         onChangeBackupText={setBackupText}
@@ -105,5 +115,5 @@ export default function ConfiguracoesPage({ accessLevel, user }) {
     );
   }
 
-  return <DeveloperSettingsContent />;
+  return <DeveloperSettingsContent user={user} />;
 }
