@@ -11,7 +11,7 @@ const DEFAULT_GROUP_GUIDANCE = {
   description: "Lista reutilizavel para campos de selecao e organizacao interna do ERP.",
   usage: "Aparece apenas nos formularios que usam este grupo como fonte de opcoes.",
 };
-const HIDDEN_OPTION_GROUPS = new Set(["Categorias de Maquinas"]);
+const HIDDEN_OPTION_GROUPS = new Set(["Categorias de Maquinas", "Ferramentas e Itens", "Grupos de Opcoes"]);
 
 const OPTION_GROUP_GUIDANCE = {
   "Bebidas da Maquina": {

@@ -716,7 +716,6 @@ export const erpSeed = {
     { id: "opt_check_drink_chocolate", group: "Bebidas da Maquina", name: "Chocolate", value: "Chocolate" },
     { id: "opt_check_tag_coffee", group: "Tags de Insumos", name: "Cafe em Graos", value: "Cafe em Graos" },
     { id: "opt_check_tag_disposable", group: "Tags de Insumos", name: "Descartaveis", value: "Descartaveis" },
-    { id: "opt_tool_filter", group: "Ferramentas e Itens", name: "Filtro de agua", value: "Filtro de agua" },
   ],
   history: [
     {
@@ -724,10 +723,10 @@ export const erpSeed = {
       date: "2026-06-02T11:41:00.000Z",
       module: "Sistema",
       action: "Inicializou",
-      title: "Base local mockada criada",
+      title: "Base local criada",
       userName: "Sistema Local",
       role: "DEV",
-      details: "Seeds iniciais carregados para desenvolvimento.",
+      details: "Dados iniciais carregados para persistencia local.",
     },
   ],
 };
