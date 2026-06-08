@@ -7,7 +7,7 @@ export default function DocumentLivePreviewPanel({ documentType, record, snapsho
   const title = documentType === "proposal" ? "Preview da proposta" : "Preview da ficha";
 
   return (
-    <aside className="min-h-0 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+    <aside className="min-h-0 overflow-y-auto rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
       {/* --- SECAO: PREVIEW AO VIVO ---
        * O modelo abaixo recebe os dados ainda nao salvos do formulario. Assim,
        * qualquer campo alterado reflete imediatamente no documento lateral.
@@ -17,7 +17,7 @@ export default function DocumentLivePreviewPanel({ documentType, record, snapsho
         <h3 className="mt-1 font-display text-xl font-black text-amiste-black">{title}</h3>
       </div>
 
-      <div className="min-w-0 origin-top">
+      <div className="min-w-0 origin-top rounded-2xl bg-white/60 p-3">
         {documentType === "proposal" ? (
           <ProposalDocumentPreview model={model} />
         ) : (

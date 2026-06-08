@@ -29,10 +29,10 @@ export default function ChecklistOperationsTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <div className="min-w-[1080px]">
-          <div className="grid grid-cols-[100px_1fr_1fr_130px_125px_150px_135px_145px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+          <div className="grid grid-cols-[100px_1fr_1fr_130px_125px_150px_135px_168px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
             <span>N.</span>
             <span>Cliente</span>
             <span>Maquina</span>
@@ -45,7 +45,7 @@ export default function ChecklistOperationsTable({
 
           {rows.map((row) => (
             <div
-              className="grid grid-cols-[100px_1fr_1fr_130px_125px_150px_135px_145px] items-center gap-4 border-b border-zinc-100 px-4 py-4 last:border-b-0"
+              className="grid grid-cols-[100px_1fr_1fr_130px_125px_150px_135px_168px] items-center gap-4 border-b border-zinc-100 px-4 py-3.5 transition hover:bg-zinc-50/80 last:border-b-0"
               key={row.id}
             >
               <div>
@@ -66,7 +66,7 @@ export default function ChecklistOperationsTable({
                 status={row.compatible ? "concluido" : "quebra"}
               />
               <span className="text-sm font-black text-amiste-green">{formatCurrency(row.value)}</span>
-              <div className="flex justify-end gap-2">
+              <div className="flex min-h-9 justify-end gap-2">
                 <IconButton icon="fileText" label={`Detalhes ${row.code}`} onClick={() => onDetails(row)} />
                 {canMutate ? (
                   <IconButton icon="pencil" label={`Editar ${row.code}`} onClick={() => onEdit(row)} />
@@ -74,7 +74,7 @@ export default function ChecklistOperationsTable({
                 {canFinalize && row.status !== "finalizado" ? (
                   <Button
                     aria-label={`Finalizar ${row.code}`}
-                    className="h-8 px-3 text-xs"
+                    className="h-8 w-[98px] px-3 text-xs"
                     icon="checkSquare"
                     variant="success"
                     onClick={() => onFinalize(row)}
@@ -82,7 +82,9 @@ export default function ChecklistOperationsTable({
                     Finalizar
                   </Button>
                 ) : (
-                  <StatusPill status={row.status} />
+                  <span className="inline-flex w-[98px] justify-center">
+                    <StatusPill status={row.status} />
+                  </span>
                 )}
               </div>
             </div>

@@ -3,7 +3,7 @@ import DocumentInfoRow from "../molecules/DocumentInfoRow.jsx";
 function CheckMark({ checked, label }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-amiste-black">
-      <b className="grid size-4 place-items-center border border-amiste-black text-[10px]">{checked ? "X" : ""}</b>
+      <b className="grid size-4 place-items-center rounded border border-amiste-black text-[10px]">{checked ? "X" : ""}</b>
       {label}
     </span>
   );
@@ -11,7 +11,7 @@ function CheckMark({ checked, label }) {
 
 function SheetBox({ children, title }) {
   return (
-    <section className="border border-zinc-300 p-2">
+    <section className="rounded-xl border border-zinc-300 p-2">
       <h4 className="mb-2 text-[10px] font-black uppercase text-amiste-black">{title}</h4>
       {children}
     </section>
@@ -24,7 +24,7 @@ export default function ServiceSheetDocumentPreview({ model }) {
   const client = model.client || {};
 
   return (
-    <article className="mx-auto flex aspect-[210/297] w-full max-w-[794px] flex-col overflow-hidden border border-zinc-300 bg-white text-amiste-black shadow-xl">
+    <article className="mx-auto flex aspect-[210/297] w-full max-w-[794px] flex-col overflow-hidden rounded-xl border border-zinc-300 bg-white text-amiste-black shadow-amiste-soft">
       {/* --- SECAO: CABECALHO A4 --- */}
       <header className="flex items-center justify-between bg-amiste-black px-[4%] py-[2.5%] text-white">
         <div>

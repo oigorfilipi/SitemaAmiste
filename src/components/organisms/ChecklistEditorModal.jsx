@@ -28,7 +28,7 @@ const FORM_ID = "checklist-editor-form";
 function ToggleButton({ active, children, onClick }) {
   return (
     <button
-      className={`h-10 rounded-md border px-3 text-sm font-black transition ${active ? "border-amiste-red bg-amiste-red text-white" : "border-zinc-200 bg-white text-amiste-gray hover:border-amiste-red hover:text-amiste-red"}`}
+      className={`h-9 rounded-xl border px-3 text-[13px] font-black transition ${active ? "border-amiste-red bg-amiste-red text-white" : "border-zinc-200 bg-white text-amiste-gray hover:border-amiste-red hover:text-amiste-red"}`}
       type="button"
       onClick={onClick}
     >
@@ -48,7 +48,7 @@ function YesNoSelect({ value, onChange }) {
 
 function TechnicalReadout({ label, value }) {
   return (
-    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2">
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
       <span className="text-xs font-black uppercase text-amiste-gray/50">{label}</span>
       <strong className="mt-1 block text-sm font-black text-amiste-black">{value || "-"}</strong>
     </div>
@@ -57,7 +57,7 @@ function TechnicalReadout({ label, value }) {
 
 function SelectionQuantityRow({ checked, detail, name, quantity, unitLabel = "Qtd", onQuantityChange, onToggle }) {
   return (
-    <div className="grid grid-cols-[1fr_92px] items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-2">
+    <div className="grid grid-cols-[1fr_92px] items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-2">
       <button
         className="flex min-w-0 items-center gap-3 text-left"
         type="button"
@@ -289,7 +289,7 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <FormField required label="Nome do evento">
-                      <TextInput value={form.eventName} onChange={(event) => updateField("eventName", event.target.value)} />
+                      <TextInput placeholder="Ex: Feira Empresarial 2026" value={form.eventName} onChange={(event) => updateField("eventName", event.target.value)} />
                     </FormField>
                     <FormField label="Evento de cliente?">
                       <YesNoSelect value={form.eventLinkedToClient ? "Sim" : "Nao"} onChange={(value) => updateField("eventLinkedToClient", value === "Sim")} />
@@ -307,7 +307,7 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
                       </FormField>
                     ) : (
                       <FormField required label="Empresa ou cliente">
-                        <TextInput value={form.eventCompanyName} onChange={(event) => updateField("eventCompanyName", event.target.value)} />
+                        <TextInput placeholder="Ex: Cafe Central" value={form.eventCompanyName} onChange={(event) => updateField("eventCompanyName", event.target.value)} />
                       </FormField>
                     )}
                     <FormField label="Data e hora da instalacao">
@@ -351,14 +351,14 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
                 <TechnicalReadout label="Sistema pagamento" value={technical.paymentSystem} />
                 {technical.paymentSystem === "Sim" ? (
                   <FormField className="lg:col-span-2" label="Qual sistema?">
-                    <TextInput value={form.paymentSystemName} onChange={(event) => updateField("paymentSystemName", event.target.value)} />
+                    <TextInput placeholder="Ex: Nayax, fichas ou cartao" value={form.paymentSystemName} onChange={(event) => updateField("paymentSystemName", event.target.value)} />
                   </FormField>
                 ) : null}
               </div>
 
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {buildMachineUnits(form.machineQuantity, form.machineUnits).map((unit, index) => (
-                  <div className="grid grid-cols-2 gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-3" key={`machine-unit-${index + 1}`}>
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-3" key={`machine-unit-${index + 1}`}>
                     <strong className="col-span-2 text-xs font-black uppercase text-amiste-gray/60">
                       Maquina {index + 1}
                     </strong>
@@ -409,7 +409,7 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
                 <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Coisas necessarias</span>
                 <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                   {technical.hydraulic === "Nao" ? (
-                    <div className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-md border border-amiste-red/30 bg-amiste-red/5 p-2">
+                    <div className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-2xl border border-amiste-red/30 bg-amiste-red/5 p-2">
                       <FormField label="Galao de agua">
                         <YesNoSelect value={form.waterGallon} onChange={(value) => updateField("waterGallon", value)} />
                       </FormField>
@@ -456,7 +456,7 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
                   <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Insumos por categoria</span>
                   <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
                     {supplyGroups.map((group) => (
-                      <section className="rounded-md border border-zinc-200 bg-white p-3" key={group.category}>
+                      <section className="rounded-2xl border border-zinc-200 bg-white p-3" key={group.category}>
                         <div className="mb-2 flex items-center gap-2">
                           <span className="size-3 rounded-full bg-[#A82020]" />
                           <strong className="text-sm font-black text-amiste-black">{group.category}</strong>
@@ -523,7 +523,7 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
                 ) : null}
               </div>
 
-              <div className={`rounded-md border px-4 py-3 text-sm font-bold ${compatibility.compatible ? "border-amiste-green/25 bg-amiste-green/10 text-amiste-green" : "border-amiste-red/25 bg-amiste-red/10 text-amiste-red"}`}>
+              <div className={`rounded-2xl border px-4 py-3 text-sm font-bold ${compatibility.compatible ? "border-amiste-green/25 bg-amiste-green/10 text-amiste-green" : "border-amiste-red/25 bg-amiste-red/10 text-amiste-red"}`}>
                 {compatibility.compatible ? "Compatibilidade OK" : `Falsa Equivalencia: ${compatibility.issues.join(" ")}`}
               </div>
             </FormSection>
@@ -532,20 +532,20 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
             <FormSection eyebrow="6" title="Finalizacao">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <FormField label="Numero do contrato">
-                  <TextInput value={form.contractNumber} onChange={(event) => updateField("contractNumber", event.target.value)} />
+                  <TextInput placeholder="Ex: CTR-2026-001" value={form.contractNumber} onChange={(event) => updateField("contractNumber", event.target.value)} />
                 </FormField>
                 <FormField label="Cliente integrado">
                   <TextInput readOnly value={selectedClient?.name || "-"} />
                 </FormField>
               </div>
               <FormField label="Observacoes">
-                <TextArea className="min-h-36" value={form.notes} onChange={(event) => updateField("notes", event.target.value)} />
+                <TextArea className="min-h-36" placeholder="Inclua detalhes de acesso, estrutura local, pendencias ou combinados." value={form.notes} onChange={(event) => updateField("notes", event.target.value)} />
               </FormField>
             </FormSection>
           </div>
 
           {/* --- SECAO: VALORES TOTAIS --- */}
-          <aside className="sticky top-0 h-fit rounded-md bg-amiste-black p-5 text-white shadow-xl">
+          <aside className="sticky top-0 h-fit rounded-2xl bg-amiste-black p-5 text-white shadow-xl">
             <span className="text-xs font-black uppercase text-white/55">7. Valores totais</span>
             <h3 className="mt-1 font-display text-2xl font-black">Resumo financeiro</h3>
 
@@ -553,15 +553,15 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
               <TechnicalReadout label="Valor da maquina" value={formatChecklistCurrency(values.machineValue)} />
               <TechnicalReadout label="Valor dos insumos" value={formatChecklistCurrency(values.suppliesValue)} />
               <FormField label="Valor do servico">
-                <TextInput min="0" type="number" value={form.serviceValue} onChange={(event) => updateField("serviceValue", event.target.value)} />
+                <TextInput min="0" placeholder="R$ 0,00" type="number" value={form.serviceValue} onChange={(event) => updateField("serviceValue", event.target.value)} />
               </FormField>
               <TechnicalReadout label="Valor dos acessorios" value={formatChecklistCurrency(values.accessoriesValue)} />
               <FormField label="Valor dos extras">
-                <TextInput min="0" type="number" value={form.extraValueManual} onChange={(event) => updateField("extraValueManual", event.target.value)} />
+                <TextInput min="0" placeholder="R$ 0,00" type="number" value={form.extraValueManual} onChange={(event) => updateField("extraValueManual", event.target.value)} />
               </FormField>
             </div>
 
-            <div className="mt-5 rounded-md bg-white/10 p-4">
+            <div className="mt-5 rounded-2xl bg-white/10 p-4">
               <span className="text-xs font-black uppercase text-white/55">Valor total</span>
               <strong className="mt-2 block font-display text-4xl font-black text-amiste-green">
                 {formatChecklistCurrency(values.totalValue)}
@@ -569,7 +569,7 @@ export default function ChecklistEditorModal({ editingRecord, open, snapshot, on
             </div>
 
             {errorMessage ? (
-              <div className="mt-4 rounded-md border border-amiste-red/30 bg-amiste-red/15 px-4 py-3 text-sm font-bold text-red-100">
+              <div className="mt-4 rounded-2xl border border-amiste-red/30 bg-amiste-red/15 px-4 py-3 text-sm font-bold text-red-100">
                 {errorMessage}
               </div>
             ) : null}

@@ -4,7 +4,7 @@ export default function ProposalDocumentPreview({ model }) {
   const technicalRows = model.machineTechnicalRows || [];
 
   return (
-    <article className="mx-auto flex aspect-[210/297] w-full max-w-[794px] flex-col overflow-hidden border border-zinc-300 bg-white text-amiste-black shadow-xl">
+    <article className="mx-auto flex aspect-[210/297] w-full max-w-[794px] flex-col overflow-hidden rounded-xl border border-zinc-300 bg-white text-amiste-black shadow-amiste-soft">
       {/* --- SECAO: CABECALHO A4 --- */}
       <header className="flex items-center justify-between bg-[#A82020] px-[3.4%] py-[2.4%] text-[#FAFAFA]">
         <div>
@@ -16,7 +16,7 @@ export default function ProposalDocumentPreview({ model }) {
 
       <section className="flex flex-1 flex-col gap-[2%] p-[3.2%]">
         <div className="grid grid-cols-[0.86fr_1.14fr] gap-[3%]">
-          <div className="grid aspect-[4/3] place-items-center overflow-hidden border border-zinc-300 bg-zinc-100 text-center">
+          <div className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border border-zinc-300 bg-zinc-100 text-center">
             {model.machineImageUrl ? (
               <img alt={model.documentTitle} className="h-full w-full object-cover" src={model.machineImageUrl} />
             ) : (
@@ -51,7 +51,7 @@ export default function ProposalDocumentPreview({ model }) {
           ))}
         </div>
 
-        <section className="border border-zinc-300 p-2.5">
+        <section className="rounded-xl border border-zinc-300 p-2.5">
           <span className="text-xs font-black uppercase text-[#A82020]">Dados tecnicos da maquina</span>
           <div className="mt-1 grid grid-cols-4 gap-x-3 gap-y-1">
             {technicalRows.map((row) => (
@@ -60,7 +60,7 @@ export default function ProposalDocumentPreview({ model }) {
           </div>
         </section>
 
-        <section className="min-h-20 border border-zinc-300 p-2.5">
+        <section className="min-h-20 rounded-xl border border-zinc-300 p-2.5">
           <span className="text-xs font-black uppercase text-[#A82020]">Observacoes gerais</span>
           <p className="mt-1.5 line-clamp-[5] text-[13px] font-semibold leading-5 text-amiste-gray">
             {model.record.generalNotes || model.record.notes || "Sem observacoes adicionais."}

@@ -251,7 +251,7 @@ export default function ProposalEditorModal({
               </FormField>
 
               {selectedMachine ? (
-                <div className="lg:col-span-2 rounded-md border border-zinc-200 bg-white p-3">
+                <div className="rounded-2xl border border-zinc-200 bg-white p-3 lg:col-span-2">
                   {/* --- SESSAO: LEITURA TECNICA AUTOMATICA --- */}
                   <span className="text-xs font-black uppercase text-amiste-gray/55">
                     Dados tecnicos carregados do catalogo
@@ -284,6 +284,7 @@ export default function ProposalEditorModal({
                   <FormField label="Valor total">
                     <TextInput
                       min="0"
+                      placeholder="R$ 0,00"
                       type="number"
                       value={form.totalValue}
                       onChange={(event) => updateField("totalValue", event.target.value)}
@@ -300,6 +301,7 @@ export default function ProposalEditorModal({
                     <TextInput
                       max="48"
                       min="1"
+                      placeholder="Ex: 12"
                       type="number"
                       value={form.installments}
                       onChange={(event) => updateField("installments", event.target.value)}
@@ -312,6 +314,7 @@ export default function ProposalEditorModal({
                     <TextInput
                       disabled={form.modality === "Comodato" && !form.minimumConsumptionEnabled}
                       min="0"
+                      placeholder="R$ 0,00"
                       type="number"
                       value={form.chargeValue}
                       onChange={(event) => updateField("chargeValue", event.target.value)}
@@ -321,7 +324,7 @@ export default function ProposalEditorModal({
                   {form.modality === "Comodato" ? (
                     <>
                       <button
-                        className="flex h-10 items-center justify-between rounded-md border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray"
+                        className="flex h-9 items-center justify-between rounded-xl border border-zinc-200 bg-zinc-100 px-3 text-[13px] font-bold text-amiste-gray transition hover:border-amiste-red/40"
                         type="button"
                         onClick={() => updateField("minimumConsumptionEnabled", !form.minimumConsumptionEnabled)}
                       >
@@ -334,6 +337,7 @@ export default function ProposalEditorModal({
                         <FormField label="Valor minimo">
                           <TextInput
                             min="0"
+                            placeholder="R$ 0,00"
                             type="number"
                             value={form.minimumConsumptionValue}
                             onChange={(event) => updateField("minimumConsumptionValue", event.target.value)}
@@ -351,14 +355,14 @@ export default function ProposalEditorModal({
                 <span className="text-xs font-black uppercase text-amiste-gray/60">Modulo de insumos</span>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    className={`rounded-md border px-3 py-2 text-sm font-black ${form.supplyMode === "predetermined" ? "border-amiste-red bg-amiste-red text-white" : "border-zinc-200 bg-white text-amiste-gray"}`}
+                    className={`h-9 rounded-xl border px-3 text-[13px] font-black transition ${form.supplyMode === "predetermined" ? "border-amiste-red bg-amiste-red text-white" : "border-zinc-200 bg-white text-amiste-gray hover:border-amiste-red hover:text-amiste-red"}`}
                     type="button"
                     onClick={() => updateField("supplyMode", "predetermined")}
                   >
                     Produtos predeterminados
                   </button>
                   <button
-                    className={`rounded-md border px-3 py-2 text-sm font-black ${form.supplyMode === "free" ? "border-amiste-red bg-amiste-red text-white" : "border-zinc-200 bg-white text-amiste-gray"}`}
+                    className={`h-9 rounded-xl border px-3 text-[13px] font-black transition ${form.supplyMode === "free" ? "border-amiste-red bg-amiste-red text-white" : "border-zinc-200 bg-white text-amiste-gray hover:border-amiste-red hover:text-amiste-red"}`}
                     type="button"
                     onClick={() => updateField("supplyMode", "free")}
                   >
@@ -367,7 +371,7 @@ export default function ProposalEditorModal({
                 </div>
                 <div className="grid gap-2">
                   {productRows.map((row) => (
-                    <div className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-2" key={row.id}>
+                    <div className="grid grid-cols-[1fr_120px] items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-2" key={row.id}>
                       <div className="min-w-0">
                         <strong className="block truncate text-sm font-black text-amiste-black">{row.name}</strong>
                         <span className="text-xs font-semibold text-amiste-gray/60">Base {formatCurrency(row.baseValue)}</span>
@@ -388,6 +392,7 @@ export default function ProposalEditorModal({
             <FormField label="Texto da proposta">
               <TextArea
                 className="min-h-36"
+                placeholder="Texto comercial apresentado ao cliente no PDF."
                 value={form.proposalText}
                 onChange={(event) => updateField("proposalText", event.target.value)}
               />
@@ -404,7 +409,7 @@ export default function ProposalEditorModal({
 
           {/* --- SECAO: VALOR FINAL --- */}
           <FormSection eyebrow="4" title="Valor final">
-            <div className="rounded-md bg-amiste-black p-5 text-white">
+            <div className="rounded-2xl bg-amiste-black p-5 text-white">
               <span className="text-xs font-black uppercase text-white/55">Valor total da negociacao</span>
               <strong className="mt-2 block font-display text-4xl font-black text-amiste-green">
                 {formatCurrency(values.totalNegotiation)}
@@ -418,7 +423,7 @@ export default function ProposalEditorModal({
           </FormSection>
 
           {errorMessage ? (
-            <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+            <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
               {errorMessage}
             </div>
           ) : null}

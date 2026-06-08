@@ -24,7 +24,7 @@ const FORM_ID = "service-sheet-editor-form";
 function ToggleCheck({ checked, label, onChange }) {
   return (
     <button
-      className={`rounded-md border px-3 py-2 text-sm font-black ${checked ? "border-amiste-green bg-amiste-green text-white" : "border-zinc-200 bg-white text-amiste-gray"}`}
+      className={`h-9 rounded-xl border px-3 text-[13px] font-black transition ${checked ? "border-amiste-green bg-amiste-green text-white" : "border-zinc-200 bg-white text-amiste-gray hover:border-amiste-green hover:text-amiste-green"}`}
       type="button"
       onClick={() => onChange(!checked)}
     >
@@ -224,16 +224,17 @@ export default function ServiceSheetEditorModal({
               </FormField>
 
               <FormField label="Horario">
-                <TextInput value={form.time} onChange={(event) => updateField("time", event.target.value)} />
+                <TextInput placeholder="08:30" value={form.time} onChange={(event) => updateField("time", event.target.value)} />
               </FormField>
 
               <FormField label="Tecnico">
-                <TextInput value={form.technician} onChange={(event) => updateField("technician", event.target.value)} />
+                <TextInput placeholder="Ex: Joao Silva" value={form.technician} onChange={(event) => updateField("technician", event.target.value)} />
               </FormField>
 
               <FormField label="Valor locacao">
                 <TextInput
                   min="0"
+                  placeholder="R$ 0,00"
                   type="number"
                   value={form.rentalValue}
                   onChange={(event) => updateField("rentalValue", event.target.value)}
@@ -241,7 +242,7 @@ export default function ServiceSheetEditorModal({
               </FormField>
 
               <FormField label="Tipo de cobranca">
-                <TextInput value={form.chargeType} onChange={(event) => updateField("chargeType", event.target.value)} />
+                <TextInput placeholder="Ex: Aluguel mensal" value={form.chargeType} onChange={(event) => updateField("chargeType", event.target.value)} />
               </FormField>
 
               <FormField label="Meio de instalacao">
@@ -254,6 +255,7 @@ export default function ServiceSheetEditorModal({
 
               <FormField label="Leitura da maquina">
                 <TextInput
+                  placeholder="Ex: 12345"
                   value={form.machineReading}
                   onChange={(event) => updateField("machineReading", event.target.value)}
                 />
@@ -280,19 +282,19 @@ export default function ServiceSheetEditorModal({
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <FormField label="Pecas defeituosas">
-                <TextArea value={form.defectiveParts} onChange={(event) => updateField("defectiveParts", event.target.value)} />
+                <TextArea placeholder="Ex: Sem pecas defeituosas." value={form.defectiveParts} onChange={(event) => updateField("defectiveParts", event.target.value)} />
               </FormField>
 
               <FormField label="Observacoes e leitura">
-                <TextArea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} />
+                <TextArea placeholder="Ex: Maquina com risco na lateral." value={form.notes} onChange={(event) => updateField("notes", event.target.value)} />
               </FormField>
 
               <FormField label="Perifericos">
-                <TextArea value={form.peripherals} onChange={(event) => updateField("peripherals", event.target.value)} />
+                <TextArea placeholder="Liste perifericos deixados ou retirados." value={form.peripherals} onChange={(event) => updateField("peripherals", event.target.value)} />
               </FormField>
 
               <FormField label="Danos">
-                <TextArea value={form.damages} onChange={(event) => updateField("damages", event.target.value)} />
+                <TextArea placeholder="Descreva danos, avarias ou ausencia de danos." value={form.damages} onChange={(event) => updateField("damages", event.target.value)} />
               </FormField>
             </div>
           </FormSection>
@@ -307,6 +309,7 @@ export default function ServiceSheetEditorModal({
             <FormField label="Produtos / insumos deixados ou retirados">
               <TextArea
                 className="min-h-36"
+                placeholder="Ex: Cafe, copos, mexedores, filtros e demais itens."
                 value={form.products}
                 onChange={(event) => updateField("products", event.target.value)}
               />
@@ -314,7 +317,7 @@ export default function ServiceSheetEditorModal({
           </FormSection>
 
           {errorMessage ? (
-            <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+            <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
               {errorMessage}
             </div>
           ) : null}
