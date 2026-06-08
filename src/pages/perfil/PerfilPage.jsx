@@ -84,6 +84,7 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
     <div className="space-y-6">
       <PageHeader
         description="Area pessoal do colaborador, com dados de contato e leitura das permissoes aplicadas."
+        icon="user"
         title="Perfil"
       />
 
@@ -91,7 +92,7 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
       <MetricsGrid metrics={metrics} />
 
       {isPreviewing ? (
-        <div className="rounded-md border border-amiste-yellow/60 bg-amiste-yellow/20 px-4 py-3 text-sm font-bold text-amiste-black">
+        <div className="rounded-2xl border border-amiste-yellow/60 bg-amiste-yellow/20 px-4 py-3 text-sm font-bold text-amiste-black">
           Modo visualizacao ativo. Edicao do perfil desabilitada para preservar a simulacao de permissao.
         </div>
       ) : null}

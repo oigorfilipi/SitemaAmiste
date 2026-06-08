@@ -59,9 +59,10 @@ export default function DataTable({
   const hasActionColumn = canEdit || canDelete || extraActions.length > 0;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-      <table className="w-full border-collapse text-left">
-        <thead className="bg-zinc-50 text-xs font-black uppercase text-amiste-black">
+    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] border-collapse text-left">
+        <thead className="bg-zinc-50/90 text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
           <tr>
             {columns.map((column) => (
               <th className="px-4 py-3" key={column.key}>
@@ -71,16 +72,16 @@ export default function DataTable({
             {hasActionColumn ? <th className="w-40 px-4 py-3 text-right">Acoes</th> : null}
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-100 text-sm">
+        <tbody className="divide-y divide-zinc-100 text-[13px]">
           {records.map((record) => (
-            <tr className="transition hover:bg-amiste-red/5" key={record.id}>
+            <tr className="transition hover:bg-amiste-red/4" key={record.id}>
               {columns.map((column) => (
-                <td className="px-4 py-4 font-medium text-amiste-gray" key={column.key}>
+                <td className="px-4 py-3.5 font-semibold text-amiste-gray" key={column.key}>
                   {renderCell(record, column, snapshot)}
                 </td>
               ))}
               {hasActionColumn ? (
-                <td className="px-4 py-4">
+                <td className="px-4 py-3.5">
                   <div className="flex justify-end gap-2">
                     {extraActions.map((action) => (
                       <IconButton
@@ -99,8 +100,9 @@ export default function DataTable({
           ))}
         </tbody>
       </table>
+      </div>
       {!records.length ? (
-        <div className="grid min-h-40 place-items-center border-t border-zinc-100">
+        <div className="grid min-h-36 place-items-center border-t border-zinc-100">
           <Button icon="plus" variant="secondary">
             Nenhum registro encontrado
           </Button>

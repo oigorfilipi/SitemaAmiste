@@ -61,9 +61,9 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <FormSection eyebrow="Arquivo" title="Identificacao e vinculo">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <label>
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
                 Nome do arquivo/etiqueta <span className="text-amiste-red">*</span>
               </span>
               <TextInput
@@ -75,7 +75,7 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
             </label>
 
             <label>
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
                 Categoria ou vinculo <span className="text-amiste-red">*</span>
               </span>
               <SelectInput required value={category} onChange={(event) => setCategory(event.target.value)}>
@@ -89,12 +89,12 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
             </label>
 
             <label className="md:col-span-2">
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
                 Arquivo <span className="text-amiste-red">*</span>
               </span>
               <input
                 accept={LABEL_FILE_ACCEPT}
-                className="block h-11 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10"
+                className="block h-9 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10"
                 required
                 type="file"
                 onChange={(event) => setFile(event.target.files?.[0] || null)}
@@ -104,7 +104,7 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
         </FormSection>
 
         {file ? (
-          <section className="grid grid-cols-1 gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-3">
+          <section className="grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-3">
             <div>
               <span className="text-xs font-black uppercase text-amiste-gray/50">Arquivo</span>
               <strong className="mt-1 block truncate text-sm font-black text-amiste-black">{file.name}</strong>
@@ -122,7 +122,7 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
 
         <FormSection eyebrow="Uso" title="Organizacao interna">
           <label>
-            <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Observacoes</span>
+            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Observacoes</span>
             <TextArea
               placeholder="Uso, versao, impressora, papel ou observacao interna."
               value={description}
@@ -132,12 +132,12 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
         </FormSection>
 
         {errorMessage ? (
-          <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
             {errorMessage}
           </div>
         ) : null}
 
-        <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-5">
+        <footer className="flex min-h-14 justify-end gap-3 border-t border-zinc-100 pt-4">
           <Button variant="secondary" onClick={onClose}>
             Cancelar
           </Button>

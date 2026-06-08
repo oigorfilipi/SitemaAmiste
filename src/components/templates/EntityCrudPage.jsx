@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Button from "../atoms/Button.jsx";
 import TextInput from "../atoms/TextInput.jsx";
+import ConfirmDialog from "../molecules/ConfirmDialog.jsx";
 import PageHeader from "../molecules/PageHeader.jsx";
 import DataTable from "../organisms/DataTable.jsx";
 import DocumentPreviewModal from "../organisms/DocumentPreviewModal.jsx";
@@ -28,6 +29,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [detailRecord, setDetailRecord] = useState(null);
+  const [pendingDeleteRecord, setPendingDeleteRecord] = useState(null);
   const [activeHub, setActiveHub] = useState(null);
   const [hubParentRecord, setHubParentRecord] = useState(null);
   const [documentPreview, setDocumentPreview] = useState(null);
@@ -117,15 +119,20 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       return;
     }
 
-    setErrorMessage("");
-    const confirmed = window.confirm(`Excluir "${record.name || record.code || record.id}"?`);
+    setPendingDeleteRecord(record);
+  }
 
-    if (confirmed) {
-      try {
-        await deleteRecord(record.id);
-      } catch (error) {
-        setErrorMessage(error.message);
-      }
+  async function confirmDeleteRecord() {
+    if (!pendingDeleteRecord) {
+      return;
+    }
+
+    setErrorMessage("");
+    try {
+      await deleteRecord(pendingDeleteRecord.id);
+      setPendingDeleteRecord(null);
+    } catch (error) {
+      setErrorMessage(error.message);
     }
   }
 
@@ -173,6 +180,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
           actionIcon="plus"
           actionLabel={canCreate ? config.actionLabel : ""}
           description={config.description}
+          icon={config.icon}
           title={config.title}
           onAction={openCreateModal}
         />
@@ -304,6 +312,15 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
         record={documentPreview?.record}
         snapshot={snapshot}
         onClose={() => setDocumentPreview(null)}
+      />
+
+      <ConfirmDialog
+        confirmLabel="Excluir"
+        description={`Excluir "${pendingDeleteRecord?.name || pendingDeleteRecord?.code || pendingDeleteRecord?.id || "registro"}"? Esta acao remove o registro da base local.`}
+        open={Boolean(pendingDeleteRecord)}
+        title="Excluir registro"
+        onCancel={() => setPendingDeleteRecord(null)}
+        onConfirm={confirmDeleteRecord}
       />
     </div>
   );

@@ -134,6 +134,7 @@ export default function ChecklistsPage({ accessLevel, user }) {
         actionIcon="plus"
         actionLabel={canCreate ? config.actionLabel : ""}
         description={config.description}
+        icon={config.icon}
         title={config.title}
         onAction={openCreateModal}
       />

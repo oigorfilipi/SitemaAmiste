@@ -20,6 +20,17 @@ function getFieldsBySection(sectionId) {
   return PROFILE_FORM_FIELDS.filter((field) => field.section === sectionId);
 }
 
+function resolveProfilePlaceholder(fieldName) {
+  const placeholders = {
+    avatarInitials: "Ex: IF",
+    displayName: "Ex: Igor",
+    fullName: "Ex: Igor Filipi",
+    phone: "(11) 99999-9999",
+  };
+
+  return placeholders[fieldName] || "";
+}
+
 export default function ProfileFormPanel({
   canMutate,
   canUpload = true,
@@ -59,7 +70,7 @@ export default function ProfileFormPanel({
   const previewPhoto = formData.profilePhotoDataUrl || formData.profilePhotoUrl;
 
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div>
         <h2 className="font-display text-lg font-black text-amiste-black">Dados do perfil</h2>
         <p className="mt-1 text-sm font-semibold text-amiste-gray/60">
@@ -73,7 +84,7 @@ export default function ProfileFormPanel({
           {getFieldsBySection("editable").map((field) => (
             <div key={field.name}>
               <label
-                className="mb-2 block text-xs font-black uppercase text-amiste-gray/60"
+                className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60"
                 htmlFor={`profile-${field.name}`}
               >
                 {field.label}
@@ -83,6 +94,7 @@ export default function ProfileFormPanel({
                 disabled={!canMutate}
                 id={`profile-${field.name}`}
                 maxLength={field.maxLength}
+                placeholder={resolveProfilePlaceholder(field.name)}
                 required={field.required}
                 value={formData[field.name] || ""}
                 onChange={(event) => onChange(field.name, event.target.value)}
@@ -92,10 +104,10 @@ export default function ProfileFormPanel({
         </div>
 
         {/* --- SECAO: FOTO DE PERFIL --- */}
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <h3 className="font-display text-base font-black text-amiste-black">Foto de perfil</h3>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[120px_minmax(0,1fr)]">
-            <div className="grid size-28 place-items-center overflow-hidden rounded-md border border-zinc-200 bg-white">
+            <div className="grid size-28 place-items-center overflow-hidden rounded-3xl border border-zinc-200 bg-white">
               {previewPhoto ? (
                 <img alt="Foto de perfil" className="h-full w-full object-cover" src={previewPhoto} />
               ) : (
@@ -104,31 +116,32 @@ export default function ProfileFormPanel({
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">URL da foto</span>
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">URL da foto</span>
                 <TextInput
                   disabled={!canMutate}
+                  placeholder="https://..."
                   value={formData.profilePhotoUrl || ""}
                   onChange={(event) => onChange("profilePhotoUrl", event.target.value)}
                 />
               </label>
               <label>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Upload de foto</span>
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Upload de foto</span>
                 <input
                   accept="image/*"
-                  className="block h-10 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white disabled:opacity-50"
+                  className="block h-9 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white disabled:opacity-50"
                   disabled={!canMutate || !canUpload}
                   type="file"
                   onChange={handlePhotoChange}
                 />
               </label>
               {photoError ? (
-                <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-3 py-2 text-xs font-bold text-amiste-red md:col-span-2">
+                <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-3 py-2 text-xs font-bold text-amiste-red md:col-span-2">
                   {photoError}
                 </div>
               ) : null}
               {getFieldsBySection("photo").filter((field) => !["profilePhotoUrl", "profilePhotoDataUrl"].includes(field.name)).map((field) => (
                 <label key={field.name}>
-                  <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">{field.label}</span>
+                  <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">{field.label}</span>
                   <TextInput
                     disabled={!canMutate}
                     maxLength={field.maxLength}
@@ -142,12 +155,12 @@ export default function ProfileFormPanel({
         </div>
 
         {/* --- SECAO: INFORMACOES BLOQUEADAS --- */}
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <h3 className="font-display text-base font-black text-amiste-black">Informacoes bloqueadas</h3>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             {getFieldsBySection("locked").map((field) => (
               <label key={field.name}>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">{field.label}</span>
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">{field.label}</span>
                 <TextInput disabled type={field.type || "text"} value={formData[field.name] || ""} />
               </label>
             ))}
@@ -155,22 +168,24 @@ export default function ProfileFormPanel({
         </div>
 
         {/* --- SECAO: SEGURANCA --- */}
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
           <h3 className="font-display text-base font-black text-amiste-black">Seguranca</h3>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <label>
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Alterar senha</span>
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Alterar senha</span>
               <TextInput
                 disabled={!canMutate}
+                placeholder="Digite a nova senha"
                 type="password"
                 value={formData.securityNewPassword || ""}
                 onChange={(event) => onChange("securityNewPassword", event.target.value)}
               />
             </label>
             <label>
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Confirmar senha</span>
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Confirmar senha</span>
               <TextInput
                 disabled={!canMutate}
+                placeholder="Repita a nova senha"
                 type="password"
                 value={formData.securityConfirmPassword || ""}
                 onChange={(event) => onChange("securityConfirmPassword", event.target.value)}
@@ -178,7 +193,7 @@ export default function ProfileFormPanel({
             </label>
           </div>
           <button
-            className="mt-4 flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 bg-white px-3 text-sm font-bold text-amiste-gray disabled:opacity-50"
+            className="mt-4 flex h-9 w-full items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 text-[13px] font-bold text-amiste-gray transition hover:border-amiste-red/40 disabled:opacity-50"
             disabled={!canMutate}
             type="button"
             onClick={() => onChange("twoFactorEnabled", !formData.twoFactorEnabled)}
@@ -190,7 +205,7 @@ export default function ProfileFormPanel({
           </button>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="rounded-md border border-zinc-200 bg-white p-3">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-3">
               <div className="flex items-center justify-between gap-3">
                 <strong className="text-sm font-black text-amiste-black">Sessoes ativas</strong>
                 <button
@@ -204,7 +219,7 @@ export default function ProfileFormPanel({
               </div>
               <div className="mt-3 max-h-28 space-y-2 overflow-y-auto pr-1">
                 {activeSessions.length ? activeSessions.map((session) => (
-                  <div className="rounded-md bg-zinc-50 px-3 py-2 text-xs font-bold text-amiste-gray" key={session.id || session.createdAt}>
+                  <div className="rounded-xl bg-zinc-50 px-3 py-2 text-xs font-bold text-amiste-gray" key={session.id || session.createdAt}>
                     {session.device || "Sessao local"} | {session.createdAt || "-"}
                   </div>
                 )) : (
@@ -212,11 +227,11 @@ export default function ProfileFormPanel({
                 )}
               </div>
             </div>
-            <div className="rounded-md border border-zinc-200 bg-white p-3">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-3">
               <strong className="text-sm font-black text-amiste-black">Historico de acessos</strong>
               <div className="mt-3 max-h-28 space-y-2 overflow-y-auto pr-1">
                 {accessHistory.length ? accessHistory.map((entry) => (
-                  <div className="rounded-md bg-zinc-50 px-3 py-2 text-xs font-bold text-amiste-gray" key={`${entry.at}_${entry.label}`}>
+                  <div className="rounded-xl bg-zinc-50 px-3 py-2 text-xs font-bold text-amiste-gray" key={`${entry.at}_${entry.label}`}>
                     {entry.label} | {entry.at}
                   </div>
                 )) : (
@@ -228,13 +243,13 @@ export default function ProfileFormPanel({
         </div>
 
         {message ? (
-          <div className="rounded-md border border-amiste-green/20 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
+          <div className="rounded-2xl border border-amiste-green/20 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
             {message}
           </div>
         ) : null}
 
         {errorMessage ? (
-          <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
             {errorMessage}
           </div>
         ) : null}

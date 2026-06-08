@@ -113,12 +113,12 @@ export default function AppHeader({
   return (
     <header
       className={cn(
-        "fixed right-0 top-0 z-20 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/95 px-6 backdrop-blur transition-all duration-300",
-        collapsed ? "left-[76px]" : "left-[280px]"
+        "fixed right-0 top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-zinc-200 bg-white/95 px-5 backdrop-blur transition-all duration-300",
+        collapsed ? "left-[72px]" : "left-[264px]"
       )}
     >
       {/* --- SECAO: ATALHOS HORIZONTAIS --- */}
-      <nav className="flex h-full items-center gap-5">
+      <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto py-2">
         {shortcuts.map((item) => (
           <HeaderShortcut
             key={item.id}
@@ -130,10 +130,10 @@ export default function AppHeader({
       </nav>
 
       {/* --- SECAO: ACOES DO USUARIO --- */}
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2.5">
         <div className="relative">
           <TextInput
-            className="w-72"
+            className="w-56 xl:w-64 2xl:w-72"
             icon="search"
             placeholder="Buscar no sistema"
             value={searchTerm}
@@ -173,7 +173,7 @@ export default function AppHeader({
         ) : null}
         <button
           aria-label="Abrir perfil"
-          className="flex items-center gap-3 rounded-md border border-transparent px-2 py-1 transition hover:border-zinc-200 hover:bg-zinc-50"
+          className="flex items-center gap-3 rounded-2xl border border-transparent px-2 py-1 transition hover:border-zinc-200 hover:bg-zinc-50"
           type="button"
           onClick={() => onSelectPage("perfil")}
         >

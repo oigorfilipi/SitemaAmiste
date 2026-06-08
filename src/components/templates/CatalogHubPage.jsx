@@ -18,6 +18,7 @@ export default function CatalogHubPage({ accessLevel, collectionName, config, us
     <div className="space-y-6">
       <PageHeader
         description={config.description}
+        icon={config.icon}
         title={config.title}
       />
 

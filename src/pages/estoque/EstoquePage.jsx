@@ -4,6 +4,7 @@ import Button from "../../components/atoms/Button.jsx";
 import SelectInput from "../../components/atoms/SelectInput.jsx";
 import TextArea from "../../components/atoms/TextArea.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
+import ConfirmDialog from "../../components/molecules/ConfirmDialog.jsx";
 import EntityGroupTabs from "../../components/molecules/EntityGroupTabs.jsx";
 import Modal from "../../components/molecules/Modal.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
@@ -220,6 +221,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const [importWarnings, setImportWarnings] = useState([]);
   const [modalError, setModalError] = useState("");
   const [newCountOpen, setNewCountOpen] = useState(false);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState(null);
   const [selectedHistoryDate, setSelectedHistoryDate] = useState(todayInputValue());
   const { snapshot, refresh } = useErpSnapshot();
   const group = getInventoryGroup(activeGroup);
@@ -432,18 +434,21 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
       return;
     }
 
-    const confirmed = window.confirm(`Excluir "${item.name}" da ultima contagem fisica?`);
+    setPendingDeleteItem(item);
+  }
 
-    if (!confirmed) {
+  async function confirmDeletePhysicalItem() {
+    if (!pendingDeleteItem || !latestCount) {
       return;
     }
 
     await deleteInventoryCountItem({
       count: latestCount,
       groupId: activeGroup,
-      item,
+      item: pendingDeleteItem,
       user,
     });
+    setPendingDeleteItem(null);
     await refresh();
   }
 
@@ -453,6 +458,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
         actionIcon="download"
         actionLabel={canDownload ? "Exportar Estoque" : ""}
         description="Auditoria fisica, atualizacao de quantidades e historico de inventario."
+        icon="boxes"
         title="Contagem de Estoque"
         onAction={handleExportInventory}
       />
@@ -658,6 +664,14 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
         snapshot={snapshot}
         onChangeDate={setSelectedHistoryDate}
         onClose={() => setHistoryOpen(false)}
+      />
+      <ConfirmDialog
+        confirmLabel="Excluir da contagem"
+        description={`Excluir "${pendingDeleteItem?.name || "item"}" da ultima contagem fisica? O historico da auditoria sera atualizado.`}
+        open={Boolean(pendingDeleteItem)}
+        title="Excluir item da contagem"
+        onCancel={() => setPendingDeleteItem(null)}
+        onConfirm={confirmDeletePhysicalItem}
       />
     </div>
   );

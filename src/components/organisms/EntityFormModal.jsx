@@ -58,6 +58,45 @@ function resolveInputType(field) {
   return field.type || "text";
 }
 
+function resolveFieldPlaceholder(field) {
+  if (field.placeholder) {
+    return field.placeholder;
+  }
+
+  const label = String(field.label || field.name || "campo").toLowerCase();
+  const fieldType = field.type || "";
+
+  if (fieldType === "email" || label.includes("email")) return "nome@empresa.com";
+  if (fieldType === "url" || label.includes("url") || label.includes("link")) return "https://...";
+  if (fieldType === "currency" || label.includes("valor") || label.includes("preco") || label.includes("custo")) return "R$ 0,00";
+  if (fieldType === "date" || label.includes("data")) return "dd/mm/aaaa";
+  if (label.includes("horario") || label.includes("hora")) return "08:30";
+  if (label.includes("telefone") || label.includes("phone")) return "(11) 99999-9999";
+  if (label.includes("cnpj")) return "00.000.000/0000-00";
+  if (label.includes("cpf")) return "000.000.000-00";
+  if (label.includes("cep")) return "00000-000";
+  if (label.includes("sku") || label.includes("codigo")) return "Ex: AMI-001";
+  if (label.includes("endereco")) return "Rua, numero, bairro, cidade";
+  if (label.includes("nome")) return "Ex: Cafe Central";
+  if (label.includes("contato")) return "Ex: Ana Souza";
+  if (label.includes("maquina") || label.includes("modelo")) return "Ex: Lio 2C";
+  if (label.includes("serie")) return "Ex: SN-2026-001";
+  if (label.includes("patrimonio")) return "Ex: PAT-001";
+  if (label.includes("voltagem")) return "Ex: 220v";
+  if (label.includes("amperagem")) return "Ex: 20A";
+  if (label.includes("potencia")) return "Ex: 1500W";
+  if (label.includes("litragem")) return "Ex: 2L";
+  if (label.includes("quantidade") || label.includes("estoque")) return "0";
+  if (label.includes("fornecedor")) return "Ex: Fornecedor principal";
+  if (label.includes("descricao")) return "Descreva os pontos principais deste cadastro.";
+  if (label.includes("observacao") || label.includes("observacoes")) return "Inclua observacoes relevantes para a equipe.";
+
+  if (fieldType === "number") return "0";
+  if (fieldType === "textarea") return "Digite as informacoes importantes.";
+
+  return `Informe ${label}`;
+}
+
 function readFileAsDataUrl(file) {
   assertInlineImageFile(file);
 
@@ -97,17 +136,17 @@ function ImageUploadControl({ disabled = false, field, formData, onChange }) {
   return (
     <div className="space-y-3">
       {previewUrl ? (
-        <div className="grid h-44 place-items-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
+        <div className="grid h-40 place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100">
           <img alt="Preview" className="h-full w-full object-contain" src={previewUrl} />
         </div>
       ) : (
-        <div className="grid h-32 place-items-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55">
+        <div className="grid h-28 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55">
           Nenhuma imagem selecionada
         </div>
       )}
       <input
         accept="image/*"
-        className="block h-11 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10 disabled:opacity-50"
+        className="block h-9 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10 disabled:opacity-50"
         disabled={disabled}
         type="file"
         onChange={handleFileChange}
@@ -186,27 +225,27 @@ function FileUploadControl({ disabled = false, field, formData, onChange }) {
   return (
     <div className="space-y-3">
       {previewUrl && canPreviewImage ? (
-        <div className="grid h-44 place-items-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-100">
+        <div className="grid h-40 place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100">
           <img alt={fileValue.originalFileName || "Arquivo"} className="h-full w-full object-contain" src={previewUrl} />
         </div>
       ) : null}
       {previewUrl && canPreviewVideo ? (
-        <video className="h-48 w-full rounded-md border border-zinc-200 bg-amiste-black" controls src={previewUrl} />
+        <video className="h-44 w-full rounded-2xl border border-zinc-200 bg-amiste-black" controls src={previewUrl} />
       ) : null}
       {fileValue.originalFileName ? (
-        <div className="grid grid-cols-1 gap-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-xs md:grid-cols-3">
           <span className="truncate font-black text-amiste-black">{fileValue.originalFileName}</span>
           <span className="font-bold text-amiste-gray">{fileValue.format || resolveFileFormat(fileValue)}</span>
           <span className="font-bold text-amiste-gray">{formatFileSize(fileValue.fileSize)}</span>
         </div>
       ) : (
-        <div className="grid h-24 place-items-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55">
+        <div className="grid h-24 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55">
           Nenhum arquivo selecionado
         </div>
       )}
       <input
         accept={field.accept || "*/*"}
-        className="block h-11 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10 disabled:opacity-50"
+        className="block h-9 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10 disabled:opacity-50"
         disabled={disabled}
         type="file"
         onChange={handleFileChange}
@@ -262,7 +301,7 @@ function VariantListControl({ canUpload = true, field, formData, onChange }) {
   return (
     <div className="space-y-3">
       {variants.map((variant, index) => (
-        <section className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={`variant-${index + 1}`}>
+        <section className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3" key={`variant-${index + 1}`}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <strong className="text-sm font-black text-amiste-black">Versao {index + 1}</strong>
             <Button className="h-8 px-3 text-xs" icon="trash" variant="secondary" onClick={() => removeVariant(index)}>
@@ -270,24 +309,24 @@ function VariantListControl({ canUpload = true, field, formData, onChange }) {
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <TextInput placeholder="Nome do modelo" value={variant.name || ""} onChange={(event) => updateVariant(index, "name", event.target.value)} />
-            <TextInput placeholder="Peso" value={variant.weight || ""} onChange={(event) => updateVariant(index, "weight", event.target.value)} />
-            <TextInput placeholder="Voltagem" value={variant.voltage || ""} onChange={(event) => updateVariant(index, "voltage", event.target.value)} />
-            <TextInput placeholder="Amperagem" value={variant.amperage || ""} onChange={(event) => updateVariant(index, "amperage", event.target.value)} />
-            <TextInput placeholder="Potencia" value={variant.power || ""} onChange={(event) => updateVariant(index, "power", event.target.value)} />
-            <TextInput placeholder="Litragem" value={variant.litreCapacity || ""} onChange={(event) => updateVariant(index, "litreCapacity", event.target.value)} />
+            <TextInput placeholder="Ex: Lio 2C Plus" value={variant.name || ""} onChange={(event) => updateVariant(index, "name", event.target.value)} />
+            <TextInput placeholder="Ex: 18kg" value={variant.weight || ""} onChange={(event) => updateVariant(index, "weight", event.target.value)} />
+            <TextInput placeholder="Ex: 220v" value={variant.voltage || ""} onChange={(event) => updateVariant(index, "voltage", event.target.value)} />
+            <TextInput placeholder="Ex: 20A" value={variant.amperage || ""} onChange={(event) => updateVariant(index, "amperage", event.target.value)} />
+            <TextInput placeholder="Ex: 1500W" value={variant.power || ""} onChange={(event) => updateVariant(index, "power", event.target.value)} />
+            <TextInput placeholder="Ex: 2L" value={variant.litreCapacity || ""} onChange={(event) => updateVariant(index, "litreCapacity", event.target.value)} />
             <label className="md:col-span-2">
               <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Foto propria</span>
               <input
                 accept="image/*"
-                className="block h-11 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white disabled:opacity-50"
+                className="block h-9 w-full rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white disabled:opacity-50"
                 disabled={!canUpload}
                 type="file"
                 onChange={(event) => updateVariantImage(index, event.target.files?.[0])}
               />
             </label>
             {variant.photoDataUrl ? (
-              <img alt={variant.name || `Versao ${index + 1}`} className="h-28 rounded-md border border-zinc-200 bg-white object-contain md:col-span-2" src={variant.photoDataUrl} />
+              <img alt={variant.name || `Versao ${index + 1}`} className="h-28 rounded-2xl border border-zinc-200 bg-white object-contain md:col-span-2" src={variant.photoDataUrl} />
             ) : null}
           </div>
         </section>
@@ -410,7 +449,7 @@ function FieldControl({ canUpload, field, formData, snapshot, onChange }) {
   if (isCheckbox) {
     return (
       <button
-        className="flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray transition hover:border-amiste-red disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex h-9 w-full items-center justify-between rounded-xl border border-zinc-200 bg-zinc-100 px-3 text-[13px] font-bold text-amiste-gray transition hover:border-amiste-red disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         type="button"
         onClick={() => onChange(field.name, !formData[field.name])}
@@ -428,7 +467,7 @@ function FieldControl({ canUpload, field, formData, snapshot, onChange }) {
       <TextArea
         disabled={disabled}
         maxLength={field.maxLength}
-        placeholder={field.placeholder}
+        placeholder={resolveFieldPlaceholder(field)}
         value={formData[field.name] || ""}
         onChange={(event) => onChange(field.name, event.target.value)}
       />
@@ -443,7 +482,7 @@ function FieldControl({ canUpload, field, formData, snapshot, onChange }) {
         value={formData[field.name] || ""}
         onChange={(event) => onChange(field.name, event.target.value)}
       >
-        <option value="">Selecione</option>
+        <option value="">{`Selecione ${String(field.label || "uma opcao").toLowerCase()}`}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -459,7 +498,7 @@ function FieldControl({ canUpload, field, formData, snapshot, onChange }) {
       max={field.max}
       maxLength={field.maxLength}
       min={field.min}
-      placeholder={field.placeholder}
+      placeholder={resolveFieldPlaceholder(field)}
       readOnly={field.readOnly}
       required={field.required}
       step={field.step || (field.type === "currency" ? "0.01" : undefined)}
@@ -548,17 +587,17 @@ export default function EntityFormModal({
   }
 
   const formContent = (
-    <form className="space-y-5" onSubmit={handleSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
       {/* --- SECAO: CAMPOS AGRUPADOS DO FORMULARIO --- */}
       {fieldGroups.map((group) => (
         <FormSection eyebrow={group.eyebrow} key={group.id} title={group.title}>
           {group.description ? (
             <p className="-mt-2 text-sm font-semibold leading-6 text-amiste-gray/65">{group.description}</p>
           ) : null}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {group.fields.map((field) => (
               <label className={field.full ? "md:col-span-2" : ""} key={field.name}>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
                   {field.label}
                   {field.required ? <span className="text-amiste-red"> *</span> : null}
                 </span>
@@ -576,13 +615,13 @@ export default function EntityFormModal({
       ))}
 
       {errorMessage ? (
-        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+        <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
           {errorMessage}
         </div>
       ) : null}
 
       {/* --- SECAO: ACOES DO FORMULARIO --- */}
-      <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-5">
+      <footer className="flex min-h-14 justify-end gap-3 border-t border-zinc-100 pt-4">
         <Button variant="secondary" onClick={onClose}>
           Cancelar
         </Button>

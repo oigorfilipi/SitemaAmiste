@@ -33,6 +33,7 @@ export default function HomePage({ user, quickAccess, onSelectPage }) {
         actionIcon="plus"
         actionLabel="Novo Checklist"
         description="Bem-vindo ao painel de controle operacional."
+        icon="home"
         title={`Ola, ${user?.displayName || "usuario"}!`}
         onAction={() => onSelectPage("checklists")}
       />
@@ -41,10 +42,10 @@ export default function HomePage({ user, quickAccess, onSelectPage }) {
       <MetricsGrid metrics={dashboard.metrics} />
 
       {/* --- SECAO: ATALHOS OPERACIONAIS --- */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-display text-lg font-black text-amiste-black">Acesso rapido</h2>
-          <p className="mt-1 text-sm italic text-amiste-gray/60">Centrais e rotas usadas no dia a dia.</p>
+          <h2 className="font-display text-base font-black text-amiste-black">Acesso rapido</h2>
+          <p className="mt-1 text-xs font-semibold text-amiste-gray/60">Centrais e rotas usadas no dia a dia.</p>
         </div>
         <Button icon="settings" variant="secondary" onClick={() => onSelectPage("opcoes")}>
           Ajustar opcoes
@@ -53,10 +54,10 @@ export default function HomePage({ user, quickAccess, onSelectPage }) {
       <QuickAccessGrid items={quickAccess} onSelectPage={onSelectPage} />
 
       {/* --- SECAO: ATALHOS SECUNDARIOS --- */}
-      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <section className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-base font-black text-amiste-black">Atalhos auxiliares</h2>
+            <h2 className="font-display text-sm font-black text-amiste-black">Atalhos auxiliares</h2>
             <p className="mt-1 text-xs font-semibold text-amiste-gray/60">
               Paginas secundarias, hubs e areas de apoio liberadas para o perfil atual.
             </p>
@@ -65,7 +66,7 @@ export default function HomePage({ user, quickAccess, onSelectPage }) {
         <div className="flex flex-wrap gap-2">
           {secondaryShortcuts.map((shortcut) => (
             <button
-              className="inline-flex h-8 items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 text-xs font-black text-amiste-gray transition hover:border-amiste-red hover:text-amiste-red"
+              className="inline-flex h-8 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-xs font-black text-amiste-gray transition hover:-translate-y-px hover:border-amiste-red/30 hover:bg-amiste-red/10 hover:text-amiste-red"
               key={shortcut.id}
               type="button"
               onClick={() => onSelectPage(shortcut.pageId)}

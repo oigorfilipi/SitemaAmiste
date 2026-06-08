@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
+import ConfirmDialog from "../../components/molecules/ConfirmDialog.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
 import EntityFormModal from "../../components/organisms/EntityFormModal.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
@@ -26,6 +27,7 @@ export default function OpcoesPage({ accessLevel, user }) {
   const [editingRecord, setEditingRecord] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [pendingDeleteOption, setPendingDeleteOption] = useState(null);
   const config = moduleConfigs.options;
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("options");
   const canMutate = accessLevel === "AC";
@@ -105,17 +107,22 @@ export default function OpcoesPage({ accessLevel, user }) {
       return;
     }
 
-    const confirmed = window.confirm(`Excluir "${option.name}"?`);
+    setPendingDeleteOption(option);
+  }
 
-    if (confirmed) {
-      setErrorMessage("");
-      setFeedbackMessage("");
+  async function confirmDeleteOption() {
+    if (!pendingDeleteOption) {
+      return;
+    }
 
-      try {
-        await deleteRecord(option.id);
-      } catch (error) {
-        setErrorMessage(error.message);
-      }
+    setErrorMessage("");
+    setFeedbackMessage("");
+
+    try {
+      await deleteRecord(pendingDeleteOption.id);
+      setPendingDeleteOption(null);
+    } catch (error) {
+      setErrorMessage(error.message);
     }
   }
 
@@ -133,6 +140,7 @@ export default function OpcoesPage({ accessLevel, user }) {
         actionIcon="plus"
         actionLabel={canCreate ? config.actionLabel : ""}
         description={config.description}
+        icon={config.icon}
         title={config.title}
         onAction={() => openCreateModal(activeGroup)}
       />
@@ -215,6 +223,14 @@ export default function OpcoesPage({ accessLevel, user }) {
         validate={(payload) => validateOptionPayload(payload, records, editingRecord)}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
+      />
+      <ConfirmDialog
+        confirmLabel="Excluir opcao"
+        description={`Excluir "${pendingDeleteOption?.name || "opcao"}"? Ela deixara de aparecer nos formularios que usam este grupo.`}
+        open={Boolean(pendingDeleteOption)}
+        title="Excluir opcao reutilizavel"
+        onCancel={() => setPendingDeleteOption(null)}
+        onConfirm={confirmDeleteOption}
       />
     </div>
   );

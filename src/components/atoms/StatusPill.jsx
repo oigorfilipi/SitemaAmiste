@@ -33,7 +33,7 @@ export default function StatusPill({ status, label = status, className = "", ...
   return (
     <span
       className={cn(
-        "inline-flex h-7 items-center rounded-full px-3 text-xs font-bold uppercase tracking-normal ring-1",
+        "inline-flex h-6 min-w-[76px] items-center justify-center rounded-full px-2.5 text-[10px] font-black uppercase tracking-wide ring-1",
         STATUS_STYLES[normalizedStatus] || STATUS_STYLES.automatico,
         className
       )}

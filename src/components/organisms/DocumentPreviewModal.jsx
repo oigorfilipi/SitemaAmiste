@@ -36,7 +36,7 @@ export default function DocumentPreviewModal({
       return;
     }
 
-    window.print();
+    downloadDocumentPdf(documentType, record, snapshot);
   }
 
   return (
@@ -58,7 +58,7 @@ export default function DocumentPreviewModal({
           <Button disabled={!canDownload || !canPrint} icon="download" onClick={handleDownload}>
             Baixar PDF
           </Button>
-          <Button disabled={!canPrint} icon="fileText" variant="secondary" onClick={handlePrint}>
+          <Button disabled={!canPrint} icon="printer" variant="secondary" onClick={handlePrint}>
             Imprimir
           </Button>
         </div>

@@ -23,7 +23,7 @@ export default function DataSourcePanel({ sources }) {
                   </span>
                   <h3 className="font-display text-base font-black text-amiste-black">{source.title}</h3>
                 </div>
-                <p className="mt-3 text-sm font-semibold leading-6 text-amiste-gray/72">{source.detail}</p>
+                <p className="mt-3 text-sm font-semibold leading-6 text-amiste-gray/70">{source.detail}</p>
               </div>
               <StatusPill label={source.statusLabel} status={source.status} />
             </div>

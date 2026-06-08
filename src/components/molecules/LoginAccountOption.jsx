@@ -7,7 +7,7 @@ export default function LoginAccountOption({ account, active, onSelect }) {
       aria-label={`Selecionar ${account.displayName}`}
       className={cn(
         "flex w-full items-center gap-3 rounded-md border px-3 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-amiste-red",
-        active ? "border-amiste-red bg-amiste-red/8" : "border-zinc-200 bg-white"
+        active ? "border-amiste-red bg-amiste-red/10" : "border-zinc-200 bg-white"
       )}
       type="button"
       onClick={() => onSelect(account.id)}

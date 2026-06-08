@@ -333,6 +333,8 @@ export async function printLabelFile(label) {
   <meta charset="utf-8" />
   <title>${label.name}</title>
   <style>
+    @page { margin: 0; size: auto; }
+    * { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     html, body { height: 100%; margin: 0; }
     body { align-items: center; background: #fff; display: flex; justify-content: center; }
     img { max-height: 100vh; max-width: 100vw; object-fit: contain; }

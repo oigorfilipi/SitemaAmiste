@@ -94,6 +94,7 @@ export default function PrecosPage({ accessLevel = "OC", user }) {
         actionIcon="download"
         actionLabel={canDownload ? "Exportar Tabela" : ""}
         description="Gestao de tabelas de precos, descontos e promocoes."
+        icon="calculator"
         title="Precificacao"
         onAction={handleExportPricing}
       />

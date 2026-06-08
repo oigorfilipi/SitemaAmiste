@@ -70,6 +70,7 @@ export default function VendasPage({ accessLevel, user }) {
         actionIcon="download"
         actionLabel={canDownload ? "Exportar Vendas" : ""}
         description="Registro de vendas avulsas, saida de insumos e faturamento direto."
+        icon="shoppingCart"
         title="Vendas Rapidas"
         onAction={handleExport}
       />

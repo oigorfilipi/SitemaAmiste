@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import ConfirmDialog from "../../components/molecules/ConfirmDialog.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
 import BackupRestorePanel from "../../components/organisms/BackupRestorePanel.jsx";
 import CollectionHealthTable from "../../components/organisms/CollectionHealthTable.jsx";
@@ -19,6 +20,7 @@ import { getRolePermissions } from "../../services/permissionService.js";
 function DeveloperSettingsContent({ user }) {
   const [backupText, setBackupText] = useState("");
   const [message, setMessage] = useState(null);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const { snapshot, refresh } = useErpSnapshot();
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
   const canDownload = rolePermissions["action:download"] !== "OC";
@@ -68,15 +70,14 @@ function DeveloperSettingsContent({ user }) {
       return;
     }
 
-    const confirmed = window.confirm("Resetar a base local para os dados iniciais?");
+    setResetConfirmOpen(true);
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
+  async function confirmResetDatabase() {
     await resetSettingsDatabase();
     setBackupText("");
     setMessage({ type: "success", text: "Base local resetada para o seed inicial." });
+    setResetConfirmOpen(false);
     await refresh();
   }
 
@@ -86,6 +87,7 @@ function DeveloperSettingsContent({ user }) {
         actionIcon="download"
         actionLabel={canDownload ? "Baixar Backup" : ""}
         description="Central tecnica para fonte de dados, backup local e saude das colecoes."
+        icon="settings"
         title="Configuracoes"
         onAction={handleDownloadBackup}
       />
@@ -109,6 +111,15 @@ function DeveloperSettingsContent({ user }) {
 
       {/* --- SECAO: COLECOES VERSIONADAS --- */}
       <CollectionHealthTable rows={collectionRows} />
+      <ConfirmDialog
+        confirmLabel="Resetar base"
+        description="Resetar a base local para os dados iniciais? Essa acao substitui os dados locais atuais pelo seed do sistema."
+        icon="archive"
+        open={resetConfirmOpen}
+        title="Resetar base local"
+        onCancel={() => setResetConfirmOpen(false)}
+        onConfirm={confirmResetDatabase}
+      />
     </div>
   );
 }

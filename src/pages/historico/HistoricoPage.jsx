@@ -60,6 +60,7 @@ export default function HistoricoPage({ user }) {
         actionIcon="download"
         actionLabel={canDownload ? "Exportar Log" : ""}
         description="Log de atividades, edicao e auditoria do sistema."
+        icon="history"
         title="Historico Geral"
         onAction={handleExportLog}
       />

@@ -96,17 +96,17 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
             </label>
 
             {error ? (
-              <div className="rounded-md border border-white/30 bg-white/12 px-4 py-3 text-sm font-bold text-white">
+              <div className="rounded-2xl border border-white/30 bg-white/15 px-4 py-3 text-sm font-bold text-white">
                 {error}
               </div>
             ) : null}
 
-            <Button className="w-full border-white bg-white text-amiste-red hover:bg-zinc-100" disabled={isLoading} icon="shield" type="submit">
+            <Button className="w-full border-white bg-white font-black text-amiste-red hover:border-white hover:bg-zinc-100 hover:text-red-900" disabled={isLoading} icon="shield" type="submit">
               Entrar no Sistema
             </Button>
           </form>
 
-          <div className="mt-5 flex flex-wrap justify-between gap-3 text-sm font-bold text-white/82">
+          <div className="mt-5 flex flex-wrap justify-between gap-3 text-sm font-bold text-white/80">
             <button type="button">Esqueci minha senha</button>
             <button type="button" onClick={() => setRequestOpen(true)}>
               Nao Tenho Acesso? Solicitar Conta
@@ -126,28 +126,28 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
           <form className="space-y-4" onSubmit={handleRequestAccess}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <label>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Nome completo</span>
-                <TextInput required value={requestData.fullName} onChange={(event) => updateRequestField("fullName", event.target.value)} />
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Nome completo</span>
+                <TextInput required placeholder="Ex: Igor Filipi" value={requestData.fullName} onChange={(event) => updateRequestField("fullName", event.target.value)} />
               </label>
               <label>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">E-mail</span>
-                <TextInput required type="email" value={requestData.email} onChange={(event) => updateRequestField("email", event.target.value)} />
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">E-mail</span>
+                <TextInput required placeholder="nome@empresa.com" type="email" value={requestData.email} onChange={(event) => updateRequestField("email", event.target.value)} />
               </label>
               <label>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">CPF ou RG</span>
-                <TextInput required value={requestData.document} onChange={(event) => updateRequestField("document", event.target.value)} />
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">CPF ou RG</span>
+                <TextInput required placeholder="000.000.000-00" value={requestData.document} onChange={(event) => updateRequestField("document", event.target.value)} />
               </label>
               <label>
-                <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Telefone</span>
-                <TextInput required value={requestData.phone} onChange={(event) => updateRequestField("phone", event.target.value)} />
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Telefone</span>
+                <TextInput required placeholder="(11) 99999-9999" value={requestData.phone} onChange={(event) => updateRequestField("phone", event.target.value)} />
               </label>
             </div>
             <label>
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Motivo da solicitacao</span>
-              <TextArea value={requestData.reason} onChange={(event) => updateRequestField("reason", event.target.value)} />
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Motivo da solicitacao</span>
+              <TextArea placeholder="Explique por que precisa de acesso ao sistema." value={requestData.reason} onChange={(event) => updateRequestField("reason", event.target.value)} />
             </label>
             {requestMessage ? (
-              <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-bold text-amiste-gray">
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-bold text-amiste-gray">
                 {requestMessage}
               </div>
             ) : null}
@@ -166,7 +166,7 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
       {/* --- SECAO: IDENTIDADE INSTITUCIONAL --- */}
       <section className="hidden min-h-screen place-items-center bg-amiste-white px-8 py-10 lg:grid">
         <div className="max-w-[520px] text-center">
-          <div className="mx-auto grid size-20 place-items-center rounded-md border border-zinc-200 bg-white text-amiste-red shadow-sm">
+          <div className="mx-auto grid size-20 place-items-center rounded-3xl border border-zinc-200 bg-white text-amiste-red shadow-sm">
             <AppIcon name="coffee" size={42} />
           </div>
           <h2 className="mt-8 font-display text-6xl font-black tracking-normal text-amiste-black">

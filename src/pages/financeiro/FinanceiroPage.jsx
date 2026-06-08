@@ -59,6 +59,7 @@ export default function FinanceiroPage({ accessLevel, user }) {
         actionIcon="download"
         actionLabel={canDownload ? "Gerar Relatorio" : ""}
         description="Gestao de fluxo de caixa, receitas recorrentes, despesas e relatorios avancados."
+        icon="money"
         title="Financeiro"
         onAction={handleExportReport}
       />

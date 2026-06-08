@@ -7,7 +7,7 @@ import { resolveLabelFileUrl } from "../../services/labelService.js";
 function PreviewFrame({ isLoading, label, previewUrl }) {
   if (isLoading) {
     return (
-      <div className="grid min-h-[420px] place-items-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
+      <div className="grid min-h-[320px] place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
         <div>
           <AppIcon className="mx-auto text-amiste-gray/45" name="fileClock" size={42} />
           <strong className="mt-4 block font-display text-lg font-black text-amiste-black">Carregando preview</strong>
@@ -21,7 +21,7 @@ function PreviewFrame({ isLoading, label, previewUrl }) {
 
   if (!label?.hasFile || !previewUrl) {
     return (
-      <div className="grid min-h-[420px] place-items-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
+      <div className="grid min-h-[320px] place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
         <div>
           <AppIcon className="mx-auto text-amiste-gray/45" name="fileText" size={42} />
           <strong className="mt-4 block font-display text-lg font-black text-amiste-black">Arquivo nao anexado</strong>
@@ -35,8 +35,8 @@ function PreviewFrame({ isLoading, label, previewUrl }) {
 
   if (label.previewKind === "image") {
     return (
-      <div className="grid min-h-[520px] place-items-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 p-4">
-        <img alt={label.name} className="max-h-[640px] max-w-full object-contain" src={previewUrl} />
+      <div className="grid min-h-[360px] place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 p-4">
+        <img alt={label.name} className="max-h-[520px] max-w-full object-contain" src={previewUrl} />
       </div>
     );
   }
@@ -44,7 +44,7 @@ function PreviewFrame({ isLoading, label, previewUrl }) {
   if (label.previewKind === "pdf" || label.previewKind === "text") {
     return (
       <iframe
-        className="h-[640px] w-full rounded-md border border-zinc-200 bg-white"
+        className="h-[520px] w-full rounded-2xl border border-zinc-200 bg-white"
         src={previewUrl}
         title={`Preview ${label.name}`}
       />
@@ -52,7 +52,7 @@ function PreviewFrame({ isLoading, label, previewUrl }) {
   }
 
   return (
-    <div className="grid min-h-[420px] place-items-center rounded-md border border-zinc-200 bg-zinc-50 p-8 text-center">
+    <div className="grid min-h-[320px] place-items-center rounded-2xl border border-zinc-200 bg-zinc-50 p-8 text-center">
       <div>
         <AppIcon className="mx-auto text-amiste-gray/45" name="fileSpreadsheet" size={46} />
         <strong className="mt-4 block font-display text-lg font-black text-amiste-black">
@@ -111,7 +111,7 @@ export default function LabelFilePreviewPanel({ canDownload = true, canPrint = t
 
   if (!label) {
     return (
-      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm xl:sticky xl:top-20 xl:self-start">
         <TableEmptyState
           description="Selecione um card para carregar a pre-visualizacao do arquivo."
           icon="fileText"
@@ -122,13 +122,13 @@ export default function LabelFilePreviewPanel({ canDownload = true, canPrint = t
   }
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm xl:sticky xl:top-20 xl:self-start">
       {/* --- SECAO: CABECALHO DO PREVIEW --- */}
-      <header className="mb-4 flex items-start justify-between gap-4">
+      <header className="mb-3 flex flex-col gap-3 2xl:flex-row 2xl:items-start 2xl:justify-between">
         <div className="min-w-0">
           <span className="text-xs font-black uppercase text-amiste-gray/50">Preview do arquivo</span>
-          <h2 className="mt-1 truncate font-display text-xl font-black text-amiste-black">{label.name}</h2>
-          <p className="mt-1 truncate text-sm font-semibold text-amiste-gray/65">
+          <h2 className="mt-1 truncate font-display text-lg font-black text-amiste-black">{label.name}</h2>
+          <p className="mt-1 truncate text-xs font-semibold text-amiste-gray/65">
             {label.category} | {label.format} | {label.fileSizeLabel}
           </p>
         </div>

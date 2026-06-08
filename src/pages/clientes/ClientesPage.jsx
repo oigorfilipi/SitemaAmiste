@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
+import ConfirmDialog from "../../components/molecules/ConfirmDialog.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
 import Client360Panel from "../../components/organisms/Client360Panel.jsx";
 import ClientPortfolioTable from "../../components/organisms/ClientPortfolioTable.jsx";
@@ -22,6 +23,7 @@ export default function ClientesPage({ accessLevel, user }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [pendingDeleteClient, setPendingDeleteClient] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const config = moduleConfigs.clients;
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("clients");
@@ -87,17 +89,22 @@ export default function ClientesPage({ accessLevel, user }) {
       return;
     }
 
-    const confirmed = window.confirm(`Excluir "${client.name}"?`);
+    setPendingDeleteClient(client);
+  }
 
-    if (confirmed) {
-      setErrorMessage("");
+  async function confirmDeleteClient() {
+    if (!pendingDeleteClient) {
+      return;
+    }
 
-      try {
-        await deleteRecord(client.id);
-        setSelectedClientId("");
-      } catch (error) {
-        setErrorMessage(error.message);
-      }
+    setErrorMessage("");
+
+    try {
+      await deleteRecord(pendingDeleteClient.id);
+      setSelectedClientId("");
+      setPendingDeleteClient(null);
+    } catch (error) {
+      setErrorMessage(error.message);
     }
   }
 
@@ -115,6 +122,7 @@ export default function ClientesPage({ accessLevel, user }) {
         actionIcon="plus"
         actionLabel={canCreate ? config.actionLabel : ""}
         description={config.description}
+        icon={config.icon}
         title={config.title}
         onAction={openCreateModal}
       />
@@ -166,6 +174,14 @@ export default function ClientesPage({ accessLevel, user }) {
         title={config.formTitle}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
+      />
+      <ConfirmDialog
+        confirmLabel="Excluir cliente"
+        description={`Excluir "${pendingDeleteClient?.name || "cliente"}"? Os registros vinculados continuam no historico local.`}
+        open={Boolean(pendingDeleteClient)}
+        title="Excluir cliente"
+        onCancel={() => setPendingDeleteClient(null)}
+        onConfirm={confirmDeleteClient}
       />
     </div>
   );

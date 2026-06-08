@@ -40,7 +40,7 @@ export default function BackupRestorePanel({
         />
         <div className="space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
           <strong className="block text-sm font-black text-amiste-black">Acoes da base local</strong>
-          <p className="text-xs font-semibold leading-5 text-amiste-gray/62">
+          <p className="text-xs font-semibold leading-5 text-amiste-gray/60">
             Restaurar substitui os dados locais normalizando as colecoes atuais do ERP.
           </p>
           <Button

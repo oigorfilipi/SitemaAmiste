@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Button from "../atoms/Button.jsx";
 import DataTable from "./DataTable.jsx";
 import EntityFormModal from "./EntityFormModal.jsx";
+import ConfirmDialog from "../molecules/ConfirmDialog.jsx";
 import Modal from "../molecules/Modal.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 
@@ -20,6 +21,7 @@ export default function RelatedRecordsHub({
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pendingDeleteRecord, setPendingDeleteRecord] = useState(null);
   const { records, createRecord, updateRecord, deleteRecord } = useCollection(hub.collection);
   const resolvedFields = useMemo(() => {
     return typeof hub.fields === "function" ? hub.fields(parentRecord, snapshot) : hub.fields;
@@ -93,15 +95,20 @@ export default function RelatedRecordsHub({
       return;
     }
 
-    setErrorMessage("");
-    const confirmed = window.confirm(`Excluir "${record.name || record.problem || record.id}"?`);
+    setPendingDeleteRecord(record);
+  }
 
-    if (confirmed) {
-      try {
-        await deleteRecord(record.id);
-      } catch (error) {
-        setErrorMessage(error.message);
-      }
+  async function confirmDeleteRecord() {
+    if (!pendingDeleteRecord) {
+      return;
+    }
+
+    setErrorMessage("");
+    try {
+      await deleteRecord(pendingDeleteRecord.id);
+      setPendingDeleteRecord(null);
+    } catch (error) {
+      setErrorMessage(error.message);
     }
   }
 
@@ -155,6 +162,14 @@ export default function RelatedRecordsHub({
           title={hub.formTitle}
           onClose={() => setFormOpen(false)}
           onSubmit={handleSubmit}
+        />
+        <ConfirmDialog
+          confirmLabel="Excluir"
+          description={`Excluir "${pendingDeleteRecord?.name || pendingDeleteRecord?.problem || pendingDeleteRecord?.id || "registro vinculado"}"?`}
+          open={Boolean(pendingDeleteRecord)}
+          title="Excluir registro vinculado"
+          onCancel={() => setPendingDeleteRecord(null)}
+          onConfirm={confirmDeleteRecord}
         />
       </div>
     </Modal>

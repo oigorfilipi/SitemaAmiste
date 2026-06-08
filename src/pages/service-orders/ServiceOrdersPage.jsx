@@ -426,6 +426,7 @@ export default function ServiceOrdersPage({ accessLevel, user }) {
         actionIcon="plus"
         actionLabel={canCreate ? "Nova Entrada" : ""}
         description="Fila tecnica de consertos com controle de etapa, SLA de 3 dias e historico de movimentacoes."
+        icon="fileClock"
         title="Consertos SLA"
         onAction={() => {
           if (canCreate) {

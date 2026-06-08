@@ -3,25 +3,25 @@ import { cn } from "../../utils/cn.js";
 
 export default function OptionGroupList({ activeGroup, groups, onSelectGroup }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase text-amiste-gray/55">Listas do sistema</p>
           <h2 className="mt-1 font-display text-xl font-black text-amiste-black">Grupos</h2>
         </div>
-        <span className="grid size-10 place-items-center rounded-md bg-amiste-blue/10 text-amiste-blue">
+        <span className="grid size-10 place-items-center rounded-xl bg-amiste-blue/10 text-amiste-blue">
           <AppIcon name="layoutGrid" size={20} />
         </span>
       </div>
 
-      <div className="mt-4 max-h-[640px] space-y-2 overflow-y-auto pr-1">
+      <div className="mt-4 max-h-[560px] space-y-2 overflow-y-auto pr-1">
         {groups.map((group) => (
           <button
             className={cn(
-              "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-3 text-left transition",
+              "flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition duration-200",
               activeGroup === group.id
                 ? "border-amiste-red bg-amiste-red text-white"
-                : "border-zinc-200 bg-zinc-50 text-amiste-black hover:border-amiste-red hover:bg-white"
+                : "border-zinc-200 bg-zinc-50 text-amiste-black hover:-translate-y-px hover:border-amiste-red/40 hover:bg-white"
             )}
             key={group.id}
             type="button"
@@ -36,7 +36,7 @@ export default function OptionGroupList({ activeGroup, groups, onSelectGroup }) 
                 {group.description}
               </span>
             </span>
-            <span className={activeGroup === group.id ? "rounded-md bg-white/18 px-2 py-1 text-xs font-black" : "rounded-md bg-white px-2 py-1 text-xs font-black text-amiste-gray"}>
+            <span className={activeGroup === group.id ? "rounded-xl bg-white/20 px-2 py-1 text-xs font-black" : "rounded-xl bg-white px-2 py-1 text-xs font-black text-amiste-gray"}>
               {group.empty ? "Vazio" : group.count}
             </span>
           </button>

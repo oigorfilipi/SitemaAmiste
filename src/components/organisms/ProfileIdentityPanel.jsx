@@ -9,9 +9,9 @@ export default function ProfileIdentityPanel({ profile }) {
   const profilePhoto = profile.profilePhotoDataUrl || profile.profilePhotoUrl;
 
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="flex items-start gap-4">
-        <span className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-md bg-amiste-red text-2xl font-black text-white">
+        <span className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-3xl bg-amiste-red text-2xl font-black text-white shadow-sm">
           {profilePhoto ? (
             <img alt={profile.displayName} className="h-full w-full object-cover" src={profilePhoto} />
           ) : profile.avatarInitials}
@@ -26,11 +26,11 @@ export default function ProfileIdentityPanel({ profile }) {
           </div>
           <p className="mt-2 text-sm font-semibold text-amiste-gray/70">{profile.fullName}</p>
           <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-            <div className="rounded-md bg-zinc-50 p-3">
+            <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
               <span className="block text-xs font-black uppercase text-amiste-gray/50">Email</span>
               <strong className="mt-1 block truncate text-amiste-black">{profile.email || "-"}</strong>
             </div>
-            <div className="rounded-md bg-zinc-50 p-3">
+            <div className="rounded-2xl border border-zinc-100 bg-zinc-50 p-3">
               <span className="block text-xs font-black uppercase text-amiste-gray/50">Telefone</span>
               <strong className="mt-1 block text-amiste-black">{profile.phone || "-"}</strong>
             </div>

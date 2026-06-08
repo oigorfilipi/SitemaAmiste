@@ -180,6 +180,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
         actionIcon="userPlus"
         actionLabel={canCreate ? "Cadastrar Colaborador" : ""}
         description="Controle de acessos, permissoes e colaboradores da plataforma."
+        icon="userPlus"
         title="Gestao de Contas"
         onAction={openCreateModal}
       />

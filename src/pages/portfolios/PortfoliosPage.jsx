@@ -63,6 +63,7 @@ export default function PortfoliosPage({ accessLevel, user }) {
         actionIcon="briefcase"
         actionLabel=""
         description="Gerenciamento de propostas, negociacoes com clientes e documentos operacionais."
+        icon="briefcase"
         title="Portfolios e Fichas"
       />
 

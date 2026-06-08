@@ -14,6 +14,7 @@ import {
 
 export default function App() {
   const [activePage, setActivePage] = useState("home");
+  const [pageHistory, setPageHistory] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewUserId, setPreviewUserId] = useState("");
   const {
@@ -82,10 +83,24 @@ export default function App() {
   function handleSelectPage(pageId) {
     if (!canAccessPage(activeRole, pageId)) {
       setActivePage("home");
+      setPageHistory([]);
       return;
     }
 
+    const currentSafePage = canAccessPage(activeRole, activePage) ? activePage : "home";
+
+    if (pageId !== currentSafePage) {
+      setPageHistory((currentHistory) => [...currentHistory.slice(-18), currentSafePage]);
+    }
+
     setActivePage(pageId);
+  }
+
+  function handleBackPage() {
+    const previousPage = pageHistory[pageHistory.length - 1];
+
+    setPageHistory((currentHistory) => currentHistory.slice(0, -1));
+    setActivePage(previousPage && canAccessPage(activeRole, previousPage) ? previousPage : "home");
   }
 
   function handlePreviewUser(userId) {
@@ -112,6 +127,7 @@ export default function App() {
   async function handleLogout() {
     setPreviewUserId("");
     setActivePage("home");
+    setPageHistory([]);
     await logout();
   }
 
@@ -149,10 +165,12 @@ export default function App() {
       user={activeUser}
       realUser={userContext.user}
       onExitPreview={() => setPreviewUserId("")}
+      onBackPage={handleBackPage}
       onPreviewUser={handlePreviewUser}
       onSelectPage={handleSelectPage}
       onLogout={handleLogout}
       onToggleSidebar={() => setSidebarCollapsed((currentState) => !currentState)}
+      canGoBack={pageHistory.length > 0 && safeActivePage !== "home"}
     >
       <Suspense
         fallback={(

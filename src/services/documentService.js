@@ -432,9 +432,10 @@ export function buildDocumentHtml(documentType, record, snapshot) {
   <title>${escapeHtml(model.documentTitle)}</title>
   <style>
     @page { margin: 0; size: A4; }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    html, body { min-height: 100%; }
     body { background: #e4e4e7; color: #111; font-family: Arial, sans-serif; margin: 0; padding: 24px; }
-    .paper { background: #fff; box-shadow: 0 12px 36px rgba(15, 23, 42, .18); height: 297mm; margin: 0 auto; overflow: hidden; position: relative; width: 210mm; }
+    .paper { background: #fff; break-after: avoid; break-inside: avoid; box-shadow: 0 12px 36px rgba(15, 23, 42, .18); height: 297mm; margin: 0 auto; overflow: hidden; page-break-after: avoid; page-break-inside: avoid; position: relative; width: 210mm; }
     .brand-header, .brand-footer { align-items: center; background: #A82020; color: #FAFAFA; display: flex; justify-content: space-between; padding: 18px 24px; }
     .brand-header span, .sheet-header span { display: block; font-size: 11px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; opacity: .78; }
     .brand-header h1, .sheet-header h1 { font-size: 28px; margin: 5px 0 0; }
@@ -476,7 +477,8 @@ export function buildDocumentHtml(documentType, record, snapshot) {
     .signature-grid { bottom: 22px; display: grid; gap: 52px; grid-template-columns: 1fr 1fr; left: 28px; position: absolute; right: 28px; text-align: center; }
     .signature-grid span { border-top: 1px solid #71717a; color: #71717a; font-size: 11px; font-weight: 900; padding-top: 10px; text-transform: uppercase; }
     @media print {
-      body { background: #fff; padding: 0; }
+      html, body { background: #fff; height: 297mm; overflow: hidden; width: 210mm; }
+      body { padding: 0; }
       .paper { box-shadow: none; margin: 0; }
     }
   </style>

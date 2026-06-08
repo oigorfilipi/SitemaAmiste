@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
+import ConfirmDialog from "../../components/molecules/ConfirmDialog.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
 import TableEmptyState from "../../components/molecules/TableEmptyState.jsx";
 import LabelFilePreviewPanel from "../../components/organisms/LabelFilePreviewPanel.jsx";
@@ -24,6 +25,7 @@ import { moduleConfigs } from "../config/moduleConfigs.js";
 export default function EtiquetasPage({ accessLevel, user }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [pendingDeleteLabel, setPendingDeleteLabel] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { records, createRecord, deleteRecord } = useCollection("labels");
@@ -98,17 +100,22 @@ export default function EtiquetasPage({ accessLevel, user }) {
       return;
     }
 
-    const confirmed = window.confirm(`Excluir "${label.name}"?`);
+    setPendingDeleteLabel(label);
+  }
 
-    if (confirmed) {
-      setErrorMessage("");
+  async function confirmDeleteLabel() {
+    if (!pendingDeleteLabel) {
+      return;
+    }
 
-      try {
-        await deleteRecord(label.id);
-        await deleteStoredLabelFile(label);
-      } catch (error) {
-        setErrorMessage(error.message);
-      }
+    setErrorMessage("");
+
+    try {
+      await deleteRecord(pendingDeleteLabel.id);
+      await deleteStoredLabelFile(pendingDeleteLabel);
+      setPendingDeleteLabel(null);
+    } catch (error) {
+      setErrorMessage(error.message);
     }
   }
 
@@ -130,14 +137,15 @@ export default function EtiquetasPage({ accessLevel, user }) {
         actionIcon="upload"
         actionLabel={canUpload ? config.actionLabel : ""}
         description={config.description}
+        icon={config.icon}
         title={config.title}
         onAction={() => setUploadOpen(true)}
       />
 
       {/* --- SECAO: FILTROS E EXPORTACAO --- */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <TextInput
-          className="w-96"
+          className="w-full lg:w-80 xl:w-96"
           icon="search"
           placeholder="Buscar por nome, categoria ou formato"
           value={searchTerm}
@@ -149,7 +157,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
       </div>
 
       {errorMessage ? (
-        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+        <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
           {errorMessage}
         </div>
       ) : null}
@@ -158,7 +166,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
       <MetricsGrid metrics={metrics} />
 
       {/* --- SECAO: ARQUIVOS E PREVIEW --- */}
-      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1fr)_560px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_500px] 2xl:grid-cols-[minmax(0,1fr)_560px]">
         <LabelRepositoryGrid
           canDelete={canDelete}
           canDownload={canDownload}
@@ -185,6 +193,14 @@ export default function EtiquetasPage({ accessLevel, user }) {
         snapshot={snapshot}
         onClose={() => setUploadOpen(false)}
         onUpload={handleUpload}
+      />
+      <ConfirmDialog
+        confirmLabel="Excluir arquivo"
+        description={`Excluir "${pendingDeleteLabel?.name || "arquivo"}"? O arquivo salvo no repositorio local tambem sera removido.`}
+        open={Boolean(pendingDeleteLabel)}
+        title="Excluir etiqueta"
+        onCancel={() => setPendingDeleteLabel(null)}
+        onConfirm={confirmDeleteLabel}
       />
     </div>
   );

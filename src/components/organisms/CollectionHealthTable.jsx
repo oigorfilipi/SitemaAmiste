@@ -41,7 +41,7 @@ export default function CollectionHealthTable({ rows }) {
                   <strong className="font-black text-amiste-black">{row.name}</strong>
                 </td>
                 <td className="px-5 py-3 font-bold text-amiste-gray">{row.count}</td>
-                <td className="px-5 py-3 font-semibold text-amiste-gray/72">
+                <td className="px-5 py-3 font-semibold text-amiste-gray/70">
                   {formatCollectionUpdate(row.lastUpdate)}
                 </td>
                 <td className="px-5 py-3">

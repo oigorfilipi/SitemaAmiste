@@ -12,11 +12,11 @@ export const primaryNavigationMock = [
 ];
 
 export const headerNavigationMock = [
-  { id: "precos", label: "Precos" },
-  { id: "estoque", label: "Contagem de Estoque" },
-  { id: "clientes", label: "Clientes" },
-  { id: "opcoes", label: "Adicionar Opcoes" },
-  { id: "etiquetas", label: "Etiquetas" },
+  { id: "precos", label: "Precos", icon: "calculator" },
+  { id: "estoque", label: "Contagem de Estoque", icon: "boxes" },
+  { id: "clientes", label: "Clientes", icon: "users" },
+  { id: "opcoes", label: "Adicionar Opcoes", icon: "layoutGrid" },
+  { id: "etiquetas", label: "Etiquetas", icon: "tags" },
 ];
 
 export const quickAccessMock = [

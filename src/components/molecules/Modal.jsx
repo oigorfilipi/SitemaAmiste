@@ -21,16 +21,16 @@ export default function Modal({
     wide: "max-w-6xl",
   }[size] || "max-w-3xl";
   const maxHeight = size === "fullscreen" ? "max-h-[94vh]" : "max-h-[88vh]";
-  const bodyHeight = size === "fullscreen" ? "max-h-[calc(94vh-88px)]" : "max-h-[calc(88vh-88px)]";
+  const bodyHeight = size === "fullscreen" ? "max-h-[calc(94vh-76px)]" : "max-h-[calc(88vh-76px)]";
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-amiste-black/40 p-6 backdrop-blur-sm">
-      <section className={`${maxHeight} w-full ${maxWidth} overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl`}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-amiste-black/45 p-4 backdrop-blur-md">
+      <section className={`${maxHeight} animate-amiste-in w-full ${maxWidth} overflow-hidden rounded-2xl border border-white/70 bg-white shadow-2xl`}>
         {/* --- SECAO: CABECALHO DO MODAL --- */}
-        <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-6 py-5">
+        <header className="flex items-start justify-between gap-4 border-b border-zinc-100 bg-white/95 px-5 py-4">
           <div>
-            <h2 className="font-display text-xl font-black text-amiste-black">{title}</h2>
-            {description ? <p className="mt-1 text-sm italic text-amiste-gray/65">{description}</p> : null}
+            <h2 className="font-display text-lg font-black text-amiste-black">{title}</h2>
+            {description ? <p className="mt-1 max-w-3xl text-xs font-semibold text-amiste-gray/60">{description}</p> : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {headerActions}
@@ -38,7 +38,7 @@ export default function Modal({
           </div>
         </header>
 
-        <div className={cn(`${bodyHeight} overflow-y-auto p-6`, bodyClassName)}>{children}</div>
+        <div className={cn(`${bodyHeight} overflow-y-auto bg-zinc-50/55 p-5`, bodyClassName)}>{children}</div>
       </section>
     </div>
   );

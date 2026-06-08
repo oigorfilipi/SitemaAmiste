@@ -77,41 +77,41 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Nova Senha</span>
-              <TextInput required type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <TextInput required placeholder="Digite a nova senha" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Confirmar Senha</span>
-              <TextInput required type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+              <TextInput required placeholder="Repita a nova senha" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Nome de Exibicao</span>
-              <TextInput required value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+              <TextInput required placeholder="Ex: Igor" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">URL da Foto</span>
-              <TextInput value={profilePhotoUrl} onChange={(event) => setProfilePhotoUrl(event.target.value)} />
+              <TextInput placeholder="https://..." value={profilePhotoUrl} onChange={(event) => setProfilePhotoUrl(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Foto de Perfil</span>
               <input
                 accept="image/*"
-                className="block h-11 w-full rounded-md border border-white/25 bg-white px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-md file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white"
+                className="block h-9 w-full rounded-xl border border-white/25 bg-white px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white"
                 type="file"
                 onChange={handlePhotoChange}
               />
             </label>
 
             {previewPhoto ? (
-              <img alt={displayName || "Foto de perfil"} className="h-32 w-32 rounded-md border border-white/30 bg-white object-cover" src={previewPhoto} />
+              <img alt={displayName || "Foto de perfil"} className="h-28 w-28 rounded-2xl border border-white/30 bg-white object-cover" src={previewPhoto} />
             ) : null}
 
             {error ? (
-              <div className="rounded-md border border-white/30 bg-white/12 px-4 py-3 text-sm font-bold text-white">
+              <div className="rounded-2xl border border-white/30 bg-white/15 px-4 py-3 text-sm font-bold text-white">
                 {error}
               </div>
             ) : null}
 
-            <Button className="w-full border-white bg-white text-amiste-red hover:bg-zinc-100" disabled={isLoading} icon="shield" type="submit">
+            <Button className="w-full border-white bg-white font-black text-amiste-red hover:border-white hover:bg-zinc-100 hover:text-red-900" disabled={isLoading} icon="shield" type="submit">
               Concluir Acesso
             </Button>
             <Button className="w-full border-white/40 bg-transparent text-white hover:bg-white/10" disabled={isLoading} variant="secondary" onClick={onLogout}>
@@ -127,7 +127,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
       {/* --- SECAO: IDENTIDADE INSTITUCIONAL --- */}
       <section className="hidden min-h-screen place-items-center bg-amiste-white px-8 py-10 lg:grid">
         <div className="max-w-[520px] text-center">
-          <div className="mx-auto grid size-20 place-items-center rounded-md border border-zinc-200 bg-white text-amiste-red shadow-sm">
+          <div className="mx-auto grid size-20 place-items-center rounded-3xl border border-zinc-200 bg-white text-amiste-red shadow-sm">
             <AppIcon name="coffee" size={42} />
           </div>
           <h2 className="mt-8 font-display text-6xl font-black tracking-normal text-amiste-black">AMISTE</h2>
