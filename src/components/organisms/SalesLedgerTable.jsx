@@ -20,14 +20,14 @@ export default function SalesLedgerTable({ rows }) {
   }
 
   return (
-    <section aria-label="Historico de vendas" className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section aria-label="Historico de vendas" className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <header className="border-b border-zinc-100 px-4 py-4">
         <h2 className="font-display text-lg font-black text-amiste-black">Historico de vendas</h2>
         <p className="mt-1 text-sm font-semibold text-amiste-gray/60">Saidas registradas com estoque e financeiro integrados.</p>
       </header>
       <div className="overflow-x-auto">
         <div className="min-w-[940px]">
-          <div className="grid grid-cols-[110px_1fr_1.15fr_90px_130px_130px_125px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+          <div className="grid grid-cols-[110px_1fr_1.15fr_90px_130px_130px_125px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
             <span>Data</span>
             <span>Cliente</span>
             <span>Produto</span>
@@ -39,7 +39,7 @@ export default function SalesLedgerTable({ rows }) {
 
           {rows.map((sale) => (
             <div
-              className="grid grid-cols-[110px_1fr_1.15fr_90px_130px_130px_125px] items-center gap-4 border-b border-zinc-100 px-4 py-4 last:border-b-0"
+              className="grid grid-cols-[110px_1fr_1.15fr_90px_130px_130px_125px] items-center gap-4 border-b border-zinc-100 px-4 py-4 transition hover:bg-amiste-red/5 last:border-b-0"
               key={sale.id}
             >
               <span className="text-sm font-bold text-amiste-black">{sale.date}</span>

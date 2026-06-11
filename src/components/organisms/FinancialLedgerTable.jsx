@@ -28,10 +28,10 @@ export default function FinancialLedgerTable({ canMutate, rows, onSettle }) {
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <div className="min-w-[1040px]">
-          <div className="grid grid-cols-[100px_1.35fr_1fr_125px_140px_145px_120px_120px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+          <div className="grid grid-cols-[100px_1.35fr_1fr_125px_140px_145px_120px_120px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
             <span>Tipo</span>
             <span>Descricao</span>
             <span>Cliente/Categoria</span>
@@ -44,7 +44,7 @@ export default function FinancialLedgerTable({ canMutate, rows, onSettle }) {
 
           {rows.map((row) => (
             <div
-              className="grid grid-cols-[100px_1.35fr_1fr_125px_140px_145px_120px_120px] items-center gap-4 border-b border-zinc-100 px-4 py-4 last:border-b-0"
+              className="grid grid-cols-[100px_1.35fr_1fr_125px_140px_145px_120px_120px] items-center gap-4 border-b border-zinc-100 px-4 py-4 transition hover:bg-amiste-red/5 last:border-b-0"
               key={`${row.collectionName}-${row.id}`}
             >
               <span className={row.direction === "in" ? "text-sm font-black text-amiste-green" : "text-sm font-black text-amiste-red"}>
@@ -69,7 +69,7 @@ export default function FinancialLedgerTable({ canMutate, rows, onSettle }) {
                 <div className="text-right">
                   <Button
                     aria-label={`Baixa ${row.description}`}
-                    className="h-8 px-3 text-xs"
+                    className="h-8 w-[72px] px-3 text-xs"
                     icon="checkSquare"
                     variant="success"
                     onClick={() => onSettle(row)}

@@ -9,7 +9,7 @@ export default function GlobalSearchPanel({ isSearching, open, results, term, on
   const hasResults = results.length > 0;
 
   return (
-    <section className="absolute right-0 top-12 z-50 w-[560px] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
+    <section className="absolute right-0 top-12 z-50 w-[min(560px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
       {/* --- SECAO: CABECALHO DA BUSCA --- */}
       <header className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
         <div>
@@ -20,7 +20,7 @@ export default function GlobalSearchPanel({ isSearching, open, results, term, on
         </div>
         <button
           aria-label="Fechar busca"
-          className="grid size-8 place-items-center rounded-md border border-zinc-200 text-amiste-gray transition hover:border-amiste-red hover:text-amiste-red"
+          className="grid size-8 cursor-pointer place-items-center rounded-xl border border-zinc-200 text-amiste-gray transition hover:border-amiste-red hover:text-amiste-red"
           type="button"
           onClick={onClose}
         >
@@ -33,13 +33,13 @@ export default function GlobalSearchPanel({ isSearching, open, results, term, on
         {hasResults ? (
           results.map((result) => (
             <button
-              className="grid w-full grid-cols-[44px_1fr_auto] items-center gap-3 rounded-md p-3 text-left transition hover:bg-amiste-red/5"
+              className="grid w-full cursor-pointer grid-cols-[44px_1fr_auto] items-center gap-3 rounded-xl p-3 text-left transition hover:bg-amiste-red/5"
               key={result.id}
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => onSelectResult(result)}
             >
-              <span className="grid size-10 place-items-center rounded-md bg-amiste-red/10 text-amiste-red">
+              <span className="grid size-10 place-items-center rounded-xl bg-amiste-red/10 text-amiste-red">
                 <AppIcon name={result.icon} size={19} />
               </span>
               <span className="min-w-0">
@@ -61,7 +61,7 @@ export default function GlobalSearchPanel({ isSearching, open, results, term, on
             </button>
           ))
         ) : (
-          <div className="grid min-h-36 place-items-center rounded-md border border-dashed border-zinc-200 bg-zinc-50 px-4 text-center">
+          <div className="grid min-h-36 place-items-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 text-center">
             <div>
               <span className="mx-auto grid size-11 place-items-center rounded-full bg-white text-zinc-400 ring-1 ring-zinc-200">
                 <AppIcon name="search" size={20} />

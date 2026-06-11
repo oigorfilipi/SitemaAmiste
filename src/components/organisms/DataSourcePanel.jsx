@@ -14,11 +14,11 @@ export default function DataSourcePanel({ sources }) {
       {/* --- SECAO: FONTES DISPONIVEIS --- */}
       <div className="grid grid-cols-1 gap-4">
         {sources.map((source) => (
-          <article className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm" key={source.id}>
+          <article className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition duration-300 hover:shadow-amiste-soft" key={source.id}>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="grid size-9 place-items-center rounded-md bg-zinc-100 text-amiste-gray">
+                  <span className="grid size-9 place-items-center rounded-xl bg-zinc-100 text-amiste-gray">
                     <AppIcon name={source.id === "local" ? "archive" : "database"} size={19} />
                   </span>
                   <h3 className="font-display text-base font-black text-amiste-black">{source.title}</h3>

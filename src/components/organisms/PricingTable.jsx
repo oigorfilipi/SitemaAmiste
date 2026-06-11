@@ -25,10 +25,10 @@ export default function PricingTable({ canMutate, records, onEdit }) {
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <div className="min-w-[1040px]">
-          <div className="grid grid-cols-[1.35fr_1fr_135px_135px_135px_115px_150px_110px_110px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+          <div className="grid grid-cols-[1.35fr_1fr_135px_135px_135px_115px_150px_110px_110px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
             <span>Item</span>
             <span>Categoria</span>
             <span>Principal</span>
@@ -42,7 +42,7 @@ export default function PricingTable({ canMutate, records, onEdit }) {
 
           {records.map((item) => (
             <div
-              className="grid grid-cols-[1.35fr_1fr_135px_135px_135px_115px_150px_110px_110px] items-center gap-4 border-b border-zinc-100 px-4 py-4 last:border-b-0"
+              className="grid grid-cols-[1.35fr_1fr_135px_135px_135px_115px_150px_110px_110px] items-center gap-4 border-b border-zinc-100 px-4 py-4 transition hover:bg-amiste-red/5 last:border-b-0"
               key={item.id}
             >
               <div className="min-w-0">
@@ -71,7 +71,7 @@ export default function PricingTable({ canMutate, records, onEdit }) {
                 <div className="text-right">
                   <Button
                     aria-label={`Editar ${item.name}`}
-                    className="h-8 px-3 text-xs"
+                    className="h-8 w-[76px] px-3 text-xs"
                     icon="pencil"
                     variant="secondary"
                     onClick={() => onEdit(item)}

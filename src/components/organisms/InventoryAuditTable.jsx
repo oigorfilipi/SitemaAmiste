@@ -14,7 +14,7 @@ function formatStockGap(item) {
 function MachineAssets({ assets = [] }) {
   if (!assets.length) {
     return (
-      <div className="rounded-md border border-dashed border-zinc-200 bg-zinc-50 px-4 py-3 text-xs font-bold text-amiste-gray/55">
+      <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-3 text-xs font-bold text-amiste-gray/55">
         Nenhum patrimonio/serie registrado para esta linha.
       </div>
     );
@@ -23,7 +23,7 @@ function MachineAssets({ assets = [] }) {
   return (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
       {assets.map((asset, index) => (
-        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3" key={`${asset.assetTag}_${asset.serialNumber}_${index}`}>
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3" key={`${asset.assetTag}_${asset.serialNumber}_${index}`}>
           <span className="block text-[11px] font-black uppercase text-amiste-gray/45">Unidade {index + 1}</span>
           <strong className="mt-1 block text-xs text-amiste-black">Serie: {asset.serialNumber || "-"}</strong>
           <strong className="mt-1 block text-xs text-amiste-black">Patrimonio: {asset.assetTag || "-"}</strong>
@@ -59,11 +59,11 @@ export default function InventoryAuditTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <div className="min-w-[980px]">
           {isPhysical ? (
-            <div className="grid grid-cols-[1.45fr_130px_180px_180px_170px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+            <div className="grid grid-cols-[1.45fr_130px_180px_180px_170px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
               <span>Produto</span>
               <span>Quantidade</span>
               <span>Ultima Auditoria</span>
@@ -71,7 +71,7 @@ export default function InventoryAuditTable({
               <span className="text-right">Acao</span>
             </div>
           ) : (
-            <div className="grid grid-cols-[1.45fr_140px_160px_160px_120px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+            <div className="grid grid-cols-[1.45fr_140px_160px_160px_120px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
               <span>Produto</span>
               <span>Quantidade Atual</span>
               <span>Status de Giro</span>
@@ -84,7 +84,7 @@ export default function InventoryAuditTable({
             const expanded = expandedId === item.id;
 
             return (
-              <div className="border-b border-zinc-100 last:border-b-0" key={item.id}>
+              <div className="border-b border-zinc-100 transition hover:bg-amiste-red/5 last:border-b-0" key={item.id}>
                 {isPhysical ? (
                   <div className="grid grid-cols-[1.45fr_130px_180px_180px_170px] items-center gap-4 px-4 py-4">
                     <div className="min-w-0">
@@ -98,19 +98,19 @@ export default function InventoryAuditTable({
                     <span className="truncate text-sm font-semibold text-amiste-gray">{item.countedBy || "-"}</span>
                     <div className="flex justify-end gap-2">
                       {isMachines ? (
-                        <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => setExpandedId(expanded ? "" : item.id)}>
+                        <Button className="h-8 w-[72px] px-3 text-xs" variant="secondary" onClick={() => setExpandedId(expanded ? "" : item.id)}>
                           {expanded ? "Ocultar" : "Ver"}
                         </Button>
                       ) : null}
                       {canMutate ? (
                         <>
                           {canAdjust ? (
-                            <Button className="h-8 px-3 text-xs" icon="pencil" variant="secondary" onClick={() => onAdjust(item)}>
+                            <Button className="h-8 w-[76px] px-3 text-xs" icon="pencil" variant="secondary" onClick={() => onAdjust(item)}>
                               Editar
                             </Button>
                           ) : null}
                           {canDelete ? (
-                            <Button className="h-8 px-3 text-xs" icon="trash" variant="secondary" onClick={() => onDelete(item)}>
+                            <Button className="h-8 w-[76px] px-3 text-xs" icon="trash" variant="secondary" onClick={() => onDelete(item)}>
                               Excluir
                             </Button>
                           ) : null}
@@ -133,7 +133,7 @@ export default function InventoryAuditTable({
                     <StatusPill label={item.stockStatusLabel} status={item.stockStatus?.status || item.status} />
                     <div className="text-right">
                       {isMachines ? (
-                        <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => setExpandedId(expanded ? "" : item.id)}>
+                        <Button className="h-8 w-[72px] px-3 text-xs" variant="secondary" onClick={() => setExpandedId(expanded ? "" : item.id)}>
                           {expanded ? "Ocultar" : "Ver"}
                         </Button>
                       ) : (

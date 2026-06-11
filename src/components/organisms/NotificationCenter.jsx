@@ -8,7 +8,7 @@ export default function NotificationCenter({ alerts, open, onClose, onSelectAler
   }
 
   return (
-    <section className="absolute right-0 top-12 z-50 w-[420px] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
+    <section className="absolute right-0 top-12 z-50 w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
       {/* --- SECAO: CABECALHO DA CENTRAL --- */}
       <header className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
         <div>
@@ -19,7 +19,7 @@ export default function NotificationCenter({ alerts, open, onClose, onSelectAler
         </div>
         <button
           aria-label="Fechar alertas"
-          className="grid size-8 place-items-center rounded-md border border-zinc-200 text-amiste-gray transition hover:border-amiste-red hover:text-amiste-red"
+          className="grid size-8 cursor-pointer place-items-center rounded-xl border border-zinc-200 text-amiste-gray transition hover:border-amiste-red hover:text-amiste-red"
           type="button"
           onClick={onClose}
         >

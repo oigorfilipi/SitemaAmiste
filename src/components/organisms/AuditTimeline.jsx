@@ -27,7 +27,7 @@ export default function AuditTimeline({ rows, selectedId, onSelect }) {
   }
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <header className="border-b border-zinc-100 px-5 py-4">
         <p className="text-xs font-black uppercase text-amiste-gray/55">Linha do tempo</p>
         <h2 className="mt-1 font-display text-xl font-black text-amiste-black">Eventos recentes</h2>
@@ -37,14 +37,14 @@ export default function AuditTimeline({ rows, selectedId, onSelect }) {
         {rows.map((entry) => (
           <button
             className={cn(
-              "flex w-full items-start gap-4 px-5 py-4 text-left transition hover:bg-amiste-red/5",
+              "flex w-full cursor-pointer items-start gap-4 px-5 py-4 text-left transition hover:bg-amiste-red/5",
               selectedId === entry.id ? "bg-amiste-red/5" : ""
             )}
             key={entry.id}
             type="button"
             onClick={() => onSelect(entry)}
           >
-            <span className={cn("mt-1 grid size-10 shrink-0 place-items-center rounded-md", ACTION_TONES[entry.action] || "bg-zinc-100 text-zinc-600")}>
+            <span className={cn("mt-1 grid size-10 shrink-0 place-items-center rounded-xl", ACTION_TONES[entry.action] || "bg-zinc-100 text-zinc-600")}>
               <AppIcon name="history" size={18} />
             </span>
             <span className="min-w-0 flex-1">

@@ -54,7 +54,7 @@ export default function QuickSaleForm({
   }
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase text-amiste-gray/55">Venda assistida</p>
@@ -147,7 +147,7 @@ export default function QuickSaleForm({
         </FormSection>
 
         {/* --- SECAO: RESUMO DO PRODUTO --- */}
-        <div className="grid grid-cols-3 gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 sm:grid-cols-3">
           <div>
             <span className="text-xs font-black uppercase text-amiste-gray/55">Estoque atual</span>
             <strong className="mt-1 block text-lg font-black text-amiste-black">{sale.stock}</strong>
@@ -165,7 +165,7 @@ export default function QuickSaleForm({
         </div>
 
         <button
-          className="flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray transition hover:border-amiste-red disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-zinc-200 bg-zinc-100 px-3 text-sm font-bold text-amiste-gray transition hover:border-amiste-red disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!canMutate}
           type="button"
           onClick={() => updateField("generateCharge", !formData.generateCharge)}
@@ -183,7 +183,7 @@ export default function QuickSaleForm({
         ) : null}
 
         {errorMessage ? (
-          <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
             {errorMessage}
           </div>
         ) : null}

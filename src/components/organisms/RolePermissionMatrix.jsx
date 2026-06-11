@@ -21,10 +21,10 @@ function accessTone(access) {
 
 export default function RolePermissionMatrix({ editable = false, matrix, roles, onChange }) {
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <div className="min-w-[980px]">
-          <div className="grid grid-cols-[1.3fr_repeat(6,1fr)] gap-2 border-b border-zinc-100 bg-zinc-50 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+          <div className="grid grid-cols-[1.3fr_repeat(6,1fr)] gap-2 border-b border-zinc-100 bg-zinc-50/80 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
             <span>Rota</span>
             {roles.map((role) => (
               <span key={role}>{role}</span>
@@ -32,7 +32,7 @@ export default function RolePermissionMatrix({ editable = false, matrix, roles, 
           </div>
           {matrix.map((row) => (
             <div
-              className="grid grid-cols-[1.3fr_repeat(6,1fr)] items-center gap-2 border-b border-zinc-100 px-4 py-3 last:border-b-0"
+              className="grid grid-cols-[1.3fr_repeat(6,1fr)] items-center gap-2 border-b border-zinc-100 px-4 py-3 transition hover:bg-amiste-red/5 last:border-b-0"
               key={row.pageId}
             >
               <div>

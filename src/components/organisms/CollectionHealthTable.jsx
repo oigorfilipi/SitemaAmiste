@@ -13,7 +13,7 @@ export default function CollectionHealthTable({ rows }) {
   }
 
   return (
-    <section className="rounded-md border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <header className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
         <div>
           <h2 className="font-display text-lg font-black text-amiste-black">Colecoes locais</h2>
@@ -24,9 +24,9 @@ export default function CollectionHealthTable({ rows }) {
       </header>
 
       {/* --- SECAO: TABELA DE COLECOES --- */}
-      <div className="overflow-hidden">
+      <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">
-          <thead className="bg-zinc-50 text-xs uppercase text-amiste-gray/50">
+          <thead className="bg-zinc-50/80 text-xs uppercase text-amiste-gray/50">
             <tr>
               <th className="px-5 py-3 font-black">Colecao</th>
               <th className="px-5 py-3 font-black">Registros</th>
@@ -36,7 +36,7 @@ export default function CollectionHealthTable({ rows }) {
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {rows.map((row) => (
-              <tr className="transition hover:bg-zinc-50" key={row.id}>
+              <tr className="transition hover:bg-amiste-red/5" key={row.id}>
                 <td className="px-5 py-3">
                   <strong className="font-black text-amiste-black">{row.name}</strong>
                 </td>

@@ -23,10 +23,10 @@ export default function AccountRosterTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <div className="min-w-[980px]">
-          <div className="grid grid-cols-[1.3fr_1fr_120px_120px_145px_160px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+          <div className="grid grid-cols-[1.3fr_1fr_120px_120px_145px_160px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
             <span>Colaborador</span>
             <span>Email</span>
             <span>Cargo</span>
@@ -40,7 +40,7 @@ export default function AccountRosterTable({
 
             return (
               <div
-                className="grid grid-cols-[1.3fr_1fr_120px_120px_145px_160px] items-center gap-4 border-b border-zinc-100 px-4 py-4 last:border-b-0"
+                className="grid grid-cols-[1.3fr_1fr_120px_120px_145px_160px] items-center gap-4 border-b border-zinc-100 px-4 py-4 transition hover:bg-amiste-red/5 last:border-b-0"
                 key={account.id}
               >
                 <div className="flex min-w-0 items-center gap-3">
@@ -67,7 +67,7 @@ export default function AccountRosterTable({
                   {canToggleStatus && targetAllowed ? (
                     <Button
                       aria-label={account.status === "ativo" ? `Desativar ${account.displayName}` : `Reativar ${account.displayName}`}
-                      className="h-8 px-3 text-xs"
+                      className="h-8 w-[92px] px-3 text-xs"
                       icon={account.status === "ativo" ? "archive" : "refresh"}
                       variant={account.status === "ativo" ? "secondary" : "success"}
                       onClick={() => onToggleStatus(account)}
