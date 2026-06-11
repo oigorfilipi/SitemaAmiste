@@ -32,7 +32,7 @@ ENV=local
 
 ## Banco de dados
 
-Execute o arquivo `migrations/001_create_erp_records.sql` no SQL Editor do Supabase ou no Postgres usado pelo Render.
+Execute o arquivo `../supabase/migrations/20260611194000_create_erp_records.sql` no SQL Editor do Supabase ou no Postgres usado pelo Render.
 
 ## Estrategia inicial
 
