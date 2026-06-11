@@ -1,15 +1,46 @@
-import {
-  createRecord,
-  deleteRecord,
-  getDatabaseSnapshot,
-  listRecords,
-  setCollection,
-  updateRecord,
-} from "./local/localDatabase.js";
+import * as apiDatabase from "./api/apiDatabase.js";
+import { isApiDataSource } from "./dataSource.js";
+import * as localDatabase from "./local/localDatabase.js";
 import {
   buildDeletionBlockedMessage,
   getDeletionBlockers,
 } from "./referenceIntegrityService.js";
+
+async function getDatabaseSnapshot() {
+  return isApiDataSource()
+    ? apiDatabase.getDatabaseSnapshot()
+    : localDatabase.getDatabaseSnapshot();
+}
+
+async function listRecords(collectionName) {
+  return isApiDataSource()
+    ? apiDatabase.listRecords(collectionName)
+    : localDatabase.listRecords(collectionName);
+}
+
+async function createRecord(collectionName, payload) {
+  return isApiDataSource()
+    ? apiDatabase.createRecord(collectionName, payload)
+    : localDatabase.createRecord(collectionName, payload);
+}
+
+async function updateRecord(collectionName, id, payload, historyConfig) {
+  return isApiDataSource()
+    ? apiDatabase.updateRecord(collectionName, id, payload)
+    : localDatabase.updateRecord(collectionName, id, payload, historyConfig);
+}
+
+async function deleteRecord(collectionName, id) {
+  return isApiDataSource()
+    ? apiDatabase.deleteRecord(collectionName, id)
+    : localDatabase.deleteRecord(collectionName, id);
+}
+
+async function setCollection(collectionName, records) {
+  return isApiDataSource()
+    ? apiDatabase.setCollection(collectionName, records)
+    : localDatabase.setCollection(collectionName, records);
+}
 
 function asCurrencyNumber(value) {
   return Number(value || 0);
@@ -268,7 +299,7 @@ async function persistChecklistInventory(database) {
 }
 
 async function persistSaleStockDelta(previousSale, nextSale) {
-  const database = getDatabaseSnapshot();
+  const database = await getDatabaseSnapshot();
   const touchedCollections = new Set();
 
   if (previousSale?.productCollection && previousSale?.productId) {
@@ -287,7 +318,7 @@ async function persistSaleStockDelta(previousSale, nextSale) {
 }
 
 async function syncSaleReceivable(sale, previousSale = sale) {
-  const database = getDatabaseSnapshot();
+  const database = await getDatabaseSnapshot();
   const receivable = findSaleReceivable(database, sale) || findSaleReceivable(database, previousSale);
   const receivablePayload = {
     origin: buildSaleReceivableOrigin(sale),
@@ -319,7 +350,7 @@ async function syncSaleReceivable(sale, previousSale = sale) {
 }
 
 async function createSale(payload) {
-  const database = getDatabaseSnapshot();
+  const database = await getDatabaseSnapshot();
   const validationMessage = validateSalePayload(database, payload);
 
   if (validationMessage) {
@@ -340,7 +371,7 @@ async function createSale(payload) {
 }
 
 async function updateSale(id, payload, historyConfig) {
-  const database = getDatabaseSnapshot();
+  const database = await getDatabaseSnapshot();
   const existingSale = findRecord(database, "sales", id);
 
   if (!existingSale) {
@@ -363,7 +394,7 @@ async function updateSale(id, payload, historyConfig) {
 }
 
 async function deleteSale(id) {
-  const database = getDatabaseSnapshot();
+  const database = await getDatabaseSnapshot();
   const existingSale = findRecord(database, "sales", id);
 
   if (!existingSale) {
@@ -383,7 +414,7 @@ async function createChecklist(payload) {
   const syncDate = new Date().toISOString();
 
   if (shouldSyncCompletion) {
-    const validationMessage = validateChecklistCompletionPayload(getDatabaseSnapshot(), payload);
+    const validationMessage = validateChecklistCompletionPayload(await getDatabaseSnapshot(), payload);
 
     if (validationMessage) {
       throw new Error(validationMessage);
@@ -402,7 +433,7 @@ async function createChecklist(payload) {
    * Checklists finalizados ja movimentam estoque e financeiro no MVP local.
    */
   if (shouldSyncCompletion) {
-    const database = getDatabaseSnapshot();
+    const database = await getDatabaseSnapshot();
     adjustChecklistInventory(database, checklist);
     await persistChecklistInventory(database);
 
@@ -422,7 +453,7 @@ async function createChecklist(payload) {
 }
 
 async function updateChecklist(id, payload, historyConfig) {
-  const database = getDatabaseSnapshot();
+  const database = await getDatabaseSnapshot();
   const existingChecklist = (database.checklists || []).find((checklist) => checklist.id === id);
   const finalizingNow = payload.status === "finalizado" && existingChecklist?.status !== "finalizado";
   const shouldSyncInventory = finalizingNow && !existingChecklist?.inventorySyncedAt;
@@ -452,7 +483,7 @@ async function updateChecklist(id, payload, historyConfig) {
    * transicao para finalizado. Edicoes posteriores nao duplicam movimentos.
    */
   if (shouldSyncInventory) {
-    const nextDatabase = getDatabaseSnapshot();
+    const nextDatabase = await getDatabaseSnapshot();
     adjustChecklistInventory(nextDatabase, updatedChecklist);
     await persistChecklistInventory(nextDatabase);
 
@@ -500,7 +531,7 @@ export async function updateEntity(collectionName, id, payload, historyConfig) {
 }
 
 export async function deleteEntity(collectionName, id) {
-  const database = getDatabaseSnapshot();
+  const database = await getDatabaseSnapshot();
   const blockers = getDeletionBlockers(database, collectionName, id);
 
   if (blockers.length) {

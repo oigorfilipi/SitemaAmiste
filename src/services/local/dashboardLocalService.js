@@ -199,8 +199,7 @@ function buildLatestOperations(database, role) {
     .slice(0, 8);
 }
 
-export async function getDashboardLocal(role = "VEN") {
-  const database = getDatabaseSnapshot();
+export function buildDashboardFromDatabase(database, role = "VEN") {
   const now = new Date();
   const activeChecklists = database.checklists.filter((checklist) => checklist.status !== "finalizado");
   const openRepairOrders = (database.repairOrders || []).filter((order) => order.status !== "entregue");
@@ -266,4 +265,8 @@ export async function getDashboardLocal(role = "VEN") {
     latestOperations: buildLatestOperations(database, role),
     activeClientsCount: activeClients.length,
   };
+}
+
+export async function getDashboardLocal(role = "VEN") {
+  return buildDashboardFromDatabase(getDatabaseSnapshot(), role);
 }

@@ -1,8 +1,9 @@
-import { getDashboardLocal } from "./local/dashboardLocalService.js";
+import { getErpSnapshot } from "./erpService.js";
+import { buildDashboardFromDatabase } from "./local/dashboardLocalService.js";
 
 /* --- SECAO: FACHADA DO DASHBOARD ---
- * Os cards e tabelas usam o servico local e preservam um contrato unico para a UI.
+ * O dashboard trabalha sobre o snapshot atual, seja localStorage ou API.
  */
 export async function getDashboard(role) {
-  return getDashboardLocal(role);
+  return buildDashboardFromDatabase(await getErpSnapshot(), role);
 }

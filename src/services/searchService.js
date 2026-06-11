@@ -1,5 +1,5 @@
-import { getDatabaseSnapshot } from "./local/localDatabase.js";
 import { canAccessPage } from "./permissionService.js";
+import { getErpSnapshot } from "./erpService.js";
 
 const SEARCH_LIMIT = 9;
 
@@ -236,7 +236,7 @@ export async function searchGlobal(term, role = "VEN", limit = SEARCH_LIMIT) {
   }
 
   const tokens = normalizedTerm.split(/\s+/).filter(Boolean);
-  const database = getDatabaseSnapshot();
+  const database = await getErpSnapshot();
 
   return buildSearchDocuments(database)
     .filter((document) => canAccessPage(role, document.pageId))

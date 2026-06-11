@@ -1,6 +1,8 @@
-import { DATA_SOURCE } from "./dataSource.js";
+import * as apiDatabase from "./api/apiDatabase.js";
+import { DATA_SOURCE, isApiDataSource } from "./dataSource.js";
+import { erpSeed } from "../mocks/erpSeed.mock.js";
+import { getErpSnapshot } from "./erpService.js";
 import {
-  getDatabaseSnapshot,
   getLocalDatabaseInfo,
   replaceLocalDatabase,
   resetLocalDatabase,
@@ -141,6 +143,14 @@ export function buildDataSourceCards() {
       detail: "Persistencia local em JSON com armazenamento no navegador.",
       items: ["CRUD modular", "Historico local", "Backup manual"],
     },
+    {
+      id: "api",
+      title: "API FastAPI",
+      status: isApiDataSource() ? "ativo" : "pendente",
+      statusLabel: isApiDataSource() ? "Ativo" : "Preparado",
+      detail: "Persistencia externa via backend FastAPI e Postgres/Supabase.",
+      items: ["Contrato HTTP", "Postgres JSONB", "Deploy Render"],
+    },
   ];
 }
 
@@ -207,14 +217,15 @@ export function formatCollectionUpdate(timestamp) {
   return timestamp ? formatDateTime(new Date(timestamp)) : "-";
 }
 
-export async function buildBackupPayload(snapshot = getDatabaseSnapshot()) {
+export async function buildBackupPayload(snapshot = null) {
   const { storageKey } = getLocalDatabaseInfo();
+  const databaseSnapshot = snapshot || await getErpSnapshot();
 
   return {
-    database: snapshot,
+    database: databaseSnapshot,
     generatedAt: new Date().toISOString(),
-    labelFiles: await buildLabelFileBackups(snapshot),
-    storageKey,
+    labelFiles: await buildLabelFileBackups(databaseSnapshot),
+    storageKey: isApiDataSource() ? "amiste_erp_api_database" : storageKey,
     version: BACKUP_VERSION,
   };
 }
@@ -273,7 +284,13 @@ export async function restoreBackupFromText(text) {
   }
 
   await clearLabelFiles();
-  await replaceLocalDatabase(parsedBackup.database);
+
+  if (isApiDataSource()) {
+    await apiDatabase.replaceDatabaseSnapshot(parsedBackup.database);
+  } else {
+    await replaceLocalDatabase(parsedBackup.database);
+  }
+
   const restoredLabelFiles = await restoreLabelFileBackups(parsedBackup.labelFiles);
   clearNotificationReads();
 
@@ -282,7 +299,13 @@ export async function restoreBackupFromText(text) {
 
 export async function resetSettingsDatabase() {
   await clearLabelFiles();
-  await resetLocalDatabase();
+
+  if (isApiDataSource()) {
+    await apiDatabase.replaceDatabaseSnapshot(erpSeed);
+  } else {
+    await resetLocalDatabase();
+  }
+
   clearNotificationReads();
   return { ok: true };
 }
