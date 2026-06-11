@@ -184,7 +184,7 @@ function RepairOrderCard({ canMutate, order, snapshot, onMove, onOpenDetails }) 
   return (
     <article
       className={cn(
-        "rounded-md border bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-amiste",
+        "rounded-2xl border bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-amiste-soft",
         sla.isLate ? "border-amiste-red/35" : "border-zinc-200"
       )}
     >
@@ -206,11 +206,11 @@ function RepairOrderCard({ canMutate, order, snapshot, onMove, onOpenDetails }) 
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-md bg-zinc-50 p-2">
+        <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-2">
           <span className="block font-black uppercase text-amiste-gray/45">Tecnico</span>
           <strong className="mt-1 block truncate text-amiste-black">{order.technician || "-"}</strong>
         </div>
-        <div className="rounded-md bg-zinc-50 p-2">
+        <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-2">
           <span className="block font-black uppercase text-amiste-gray/45">Na etapa</span>
           <strong className={cn("mt-1 block", sla.isLate ? "text-amiste-red" : "text-amiste-black")}>
             {formatDays(sla.stageDays)}
@@ -282,27 +282,27 @@ function RepairOrderDetailsModal({ order, snapshot, open, onClose }) {
     >
       <div className="space-y-6">
         {/* --- SECAO: RESUMO OPERACIONAL --- */}
-        <section className="grid grid-cols-4 gap-3">
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3">
             <span className="block text-xs font-black uppercase text-amiste-gray/50">Status SLA</span>
             <StatusPill className="mt-2" label={sla.label} status={sla.status} />
           </div>
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3">
             <span className="block text-xs font-black uppercase text-amiste-gray/50">Na etapa</span>
             <strong className="mt-2 block text-sm text-amiste-black">{formatDays(sla.stageDays)}</strong>
           </div>
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3">
             <span className="block text-xs font-black uppercase text-amiste-gray/50">Total aberto</span>
             <strong className="mt-2 block text-sm text-amiste-black">{formatDays(sla.totalDays)}</strong>
           </div>
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3">
             <span className="block text-xs font-black uppercase text-amiste-gray/50">Orcamento</span>
             <strong className="mt-2 block text-sm text-amiste-black">{formatMoney(order.estimatedValue)}</strong>
           </div>
         </section>
 
-        <section className="grid grid-cols-[1.1fr_0.9fr] gap-4">
-          <div className="rounded-md border border-zinc-200 bg-white p-4">
+        <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
             <h3 className="font-display text-base font-black text-amiste-black">Problema e diagnostico</h3>
             <dl className="mt-4 space-y-4">
               <div>
@@ -320,7 +320,7 @@ function RepairOrderDetailsModal({ order, snapshot, open, onClose }) {
             </dl>
           </div>
 
-          <div className="rounded-md border border-zinc-200 bg-white p-4">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
             <h3 className="font-display text-base font-black text-amiste-black">Dados do atendimento</h3>
             <dl className="mt-4 space-y-3 text-sm">
               <div className="flex justify-between gap-3">
@@ -351,11 +351,11 @@ function RepairOrderDetailsModal({ order, snapshot, open, onClose }) {
          * A timeline guarda cada mudanca de etapa dentro da propria ordem para
          * manter a leitura tecnica e auditoria da O.S. no mesmo registro local.
          */}
-        <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <section className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
           <h3 className="font-display text-base font-black text-amiste-black">Timeline da O.S.</h3>
           <ol className="mt-4 space-y-3">
             {timeline.map((event) => (
-              <li className="flex gap-3 rounded-md bg-white p-3" key={`${event.at}-${event.label}`}>
+              <li className="flex gap-3 rounded-2xl border border-zinc-100 bg-white p-3" key={`${event.at}-${event.label}`}>
                 <span className="mt-1 size-2 rounded-full bg-amiste-red" />
                 <div>
                   <strong className="block text-sm font-black text-amiste-black">{event.label}</strong>
@@ -436,50 +436,52 @@ export default function ServiceOrdersPage({ accessLevel, user }) {
       />
 
       {/* --- SECAO: INDICADORES DE SLA --- */}
-      <section className="grid grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
           <MetricCard key={metric.id} metric={metric} />
         ))}
       </section>
 
       {/* --- SECAO: QUADRO KANBAN --- */}
-      <section className="grid min-h-[620px] grid-cols-5 gap-4">
-        {REPAIR_ORDER_STAGES.map((stage) => {
-          const stageOrders = ordersByStage[stage.id] || [];
+      <section className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white/60 p-2 shadow-sm">
+        <div className="grid min-h-[620px] min-w-[1180px] grid-cols-5 gap-3">
+          {REPAIR_ORDER_STAGES.map((stage) => {
+            const stageOrders = ordersByStage[stage.id] || [];
 
-          return (
-            <div className="flex min-w-0 flex-col rounded-lg border border-zinc-200 bg-zinc-100/70" key={stage.id}>
-              <header className="flex h-16 items-center justify-between gap-3 border-b border-zinc-200 px-4">
-                <div className="min-w-0">
-                  <h2 className="truncate font-display text-base font-black text-amiste-black">{stage.shortLabel}</h2>
-                  <span className="mt-1 block text-xs font-bold text-amiste-gray/55">{stage.label}</span>
-                </div>
-                <span className="grid size-8 shrink-0 place-items-center rounded-md bg-white text-sm font-black text-amiste-black ring-1 ring-zinc-200">
-                  {stageOrders.length}
-                </span>
-              </header>
-
-              <div className="flex-1 space-y-3 overflow-y-auto p-3">
-                {stageOrders.length ? (
-                  stageOrders.map((order) => (
-                    <RepairOrderCard
-                      canMutate={canUpdate}
-                      key={order.id}
-                      order={order}
-                      snapshot={snapshot}
-                      onMove={handleMoveOrder}
-                      onOpenDetails={setDetailOrder}
-                    />
-                  ))
-                ) : (
-                  <div className="grid h-32 place-items-center rounded-md border border-dashed border-zinc-300 bg-white/70 px-4 text-center text-sm font-bold text-amiste-gray/45">
-                    Sem O.S. nesta etapa
+            return (
+              <div className="flex min-w-0 flex-col rounded-2xl border border-zinc-200 bg-zinc-100/70" key={stage.id}>
+                <header className="flex h-16 items-center justify-between gap-3 border-b border-zinc-200 px-4">
+                  <div className="min-w-0">
+                    <h2 className="truncate font-display text-base font-black text-amiste-black">{stage.shortLabel}</h2>
+                    <span className="mt-1 block text-xs font-bold text-amiste-gray/55">{stage.label}</span>
                   </div>
-                )}
+                  <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-white text-sm font-black text-amiste-black ring-1 ring-zinc-200">
+                    {stageOrders.length}
+                  </span>
+                </header>
+
+                <div className="flex-1 space-y-3 overflow-y-auto p-3">
+                  {stageOrders.length ? (
+                    stageOrders.map((order) => (
+                      <RepairOrderCard
+                        canMutate={canUpdate}
+                        key={order.id}
+                        order={order}
+                        snapshot={snapshot}
+                        onMove={handleMoveOrder}
+                        onOpenDetails={setDetailOrder}
+                      />
+                    ))
+                  ) : (
+                    <div className="grid h-32 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-white/70 px-4 text-center text-sm font-bold text-amiste-gray/45">
+                      Sem O.S. nesta etapa
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </section>
 
       <EntityFormModal

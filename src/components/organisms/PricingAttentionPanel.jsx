@@ -13,13 +13,13 @@ export default function PricingAttentionPanel({ canMutate, records, onEdit }) {
   const attentionRows = records.filter((item) => item.attention).slice(0, 5);
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition duration-300 hover:shadow-amiste-soft">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase text-amiste-gray/55">Analise comercial</p>
           <h2 className="mt-1 font-display text-xl font-black text-amiste-black">Pontos de atencao</h2>
         </div>
-        <span className="grid size-10 place-items-center rounded-md bg-amiste-yellow/35 text-yellow-900">
+        <span className="grid size-10 place-items-center rounded-xl bg-amiste-yellow/35 text-yellow-900">
           <AppIcon name="gauge" size={20} />
         </span>
       </div>
@@ -37,7 +37,7 @@ export default function PricingAttentionPanel({ canMutate, records, onEdit }) {
               {canMutate ? (
                 <Button
                   aria-label={`Editar ${item.name}`}
-                  className="h-8 px-3 text-xs"
+                  className="h-8 w-[76px] px-3 text-xs"
                   icon="pencil"
                   variant="secondary"
                   onClick={() => onEdit(item)}
@@ -49,7 +49,7 @@ export default function PricingAttentionPanel({ canMutate, records, onEdit }) {
           ))}
         </div>
       ) : (
-        <div className="mt-4 rounded-md bg-zinc-50 px-4 py-5">
+        <div className="mt-4 rounded-2xl border border-zinc-100 bg-zinc-50/80 px-4 py-5">
           <strong className="block text-sm font-black text-amiste-black">Tabela sem alerta</strong>
           <span className="mt-1 block text-sm text-amiste-gray/70">Valores atuais estao dentro dos criterios comerciais.</span>
         </div>
