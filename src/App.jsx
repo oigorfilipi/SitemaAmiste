@@ -174,7 +174,7 @@ export default function App() {
     >
       <Suspense
         fallback={(
-          <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-amiste-gray shadow-sm">
+          <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-amiste-gray shadow-sm">
             Carregando modulo...
           </div>
         )}

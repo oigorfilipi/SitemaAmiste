@@ -207,7 +207,7 @@ export default function EntityCrudPage({ config, accessLevel = "AC", showHeader 
       </div>
 
       {errorMessage ? (
-        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+        <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
           {errorMessage}
         </div>
       ) : null}

@@ -135,11 +135,11 @@ export default function PrecosPage({ accessLevel = "OC", user }) {
             </div>
           </FormSection>
 
-          <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+          <section className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
             <span className="text-xs font-black uppercase text-amiste-gray/50">Resumo em tempo real</span>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {group.fields.map((field) => (
-                <div className="rounded-md bg-white p-3" key={`summary-${field.key}`}>
+                <div className="rounded-2xl border border-zinc-100 bg-white p-3" key={`summary-${field.key}`}>
                   <span className="text-xs font-black uppercase text-amiste-gray/50">{field.label}</span>
                   <strong className="mt-1 block text-sm font-black text-amiste-black">
                     {new Intl.NumberFormat("pt-BR", { currency: "BRL", style: "currency" }).format(Number(formData[field.key] || 0))}
@@ -150,7 +150,7 @@ export default function PrecosPage({ accessLevel = "OC", user }) {
           </section>
 
           {errorMessage ? (
-            <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+            <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
               {errorMessage}
             </div>
           ) : null}

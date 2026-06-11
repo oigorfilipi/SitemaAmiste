@@ -128,7 +128,7 @@ export default function ProfileFormPanel({
                 <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Upload de foto</span>
                 <input
                   accept="image/*"
-                  className="block h-9 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white disabled:opacity-50"
+                  className="block h-9 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-xl file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white disabled:opacity-50"
                   disabled={!canMutate || !canUpload}
                   type="file"
                   onChange={handlePhotoChange}

@@ -189,7 +189,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
       <MetricsGrid metrics={metrics} />
 
       {errorMessage ? (
-        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+        <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
           {errorMessage}
         </div>
       ) : null}
@@ -244,7 +244,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
               roles={roles}
               onChange={handlePermissionChange}
             />
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs italic text-amiste-gray/70">
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-xs italic text-amiste-gray/70">
               {canEditPermissions
                 ? "Alteracoes salvas localmente e aplicadas imediatamente a paginas, abas, modulos e acoes."
                 : "Somente DEV altera a matriz. DONO visualiza a estrutura e continua com permissao administrativa protegida."}
@@ -265,9 +265,9 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
         title="Registro de Colaborador"
         validate={validateAccountPayload}
         asideContent={(
-          <aside className="flex min-h-[520px] flex-col justify-between rounded-md bg-amiste-red p-6 text-white">
+          <aside className="flex min-h-[520px] flex-col justify-between rounded-2xl bg-amiste-red p-6 text-white">
             <div>
-              <div className="grid size-14 place-items-center rounded-md bg-white text-amiste-red">
+              <div className="grid size-14 place-items-center rounded-2xl bg-white text-amiste-red">
                 <AppIcon name="userPlus" size={30} />
               </div>
               <h2 className="mt-6 font-display text-2xl font-black">Registro Corporativo</h2>

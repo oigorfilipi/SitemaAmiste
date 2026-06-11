@@ -146,7 +146,7 @@ export default function OpcoesPage({ accessLevel, user }) {
       />
 
       {/* --- SECAO: ORIENTACAO DA PAGINA --- */}
-      <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div>
             <span className="text-xs font-black uppercase text-amiste-red">Central de opcoes reutilizaveis</span>
@@ -155,7 +155,7 @@ export default function OpcoesPage({ accessLevel, user }) {
               bebidas, insumos, acessorios, status e parametros que aparecem em formularios e paginas relacionadas.
             </p>
           </div>
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
             <strong className="block text-sm font-black text-amiste-black">O que esta pagina nao faz</strong>
             <p className="mt-2 text-sm font-semibold leading-6 text-amiste-gray">
               Ela nao cria novas paginas, modulos ou funcionalidades. Cada opcao cadastrada apenas alimenta
@@ -166,13 +166,13 @@ export default function OpcoesPage({ accessLevel, user }) {
       </section>
 
       {feedbackMessage ? (
-        <div className="rounded-md border border-amiste-green/25 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
+        <div className="rounded-2xl border border-amiste-green/25 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
           {feedbackMessage}
         </div>
       ) : null}
 
       {errorMessage ? (
-        <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+        <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
           {errorMessage}
         </div>
       ) : null}

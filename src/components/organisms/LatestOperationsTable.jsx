@@ -33,9 +33,9 @@ export default function LatestOperationsTable({ operations, onSelectPage }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <table className="w-full table-fixed border-collapse text-left">
-          <thead className="bg-zinc-50 text-xs font-black uppercase text-amiste-black">
+          <thead className="bg-zinc-50/80 text-xs font-black uppercase text-amiste-black">
             <tr>
               <th className="w-28 px-4 py-3">Tipo</th>
               <th className="w-28 px-4 py-3">Ref.</th>

@@ -78,7 +78,7 @@ export default function AppSidebar({
           {sidebarUsers.map((user) => (
             <button
               className={cn(
-                "flex h-10 w-full items-center gap-2 rounded-md px-2 text-left transition hover:bg-white/10",
+                "flex h-10 w-full items-center gap-2 rounded-xl px-2 text-left transition hover:bg-white/10",
                 previewUser?.id === user.id ? "bg-white/12" : "",
                 collapsed ? "justify-center" : ""
               )}

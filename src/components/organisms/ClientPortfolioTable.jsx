@@ -32,10 +32,10 @@ export default function ClientPortfolioTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <div className="min-w-[1060px]">
-          <div className="grid grid-cols-[1.3fr_1fr_1fr_145px_150px_155px_120px] gap-4 border-b border-zinc-100 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+          <div className="grid grid-cols-[1.3fr_1fr_1fr_145px_150px_155px_120px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
             <span>Cliente</span>
             <span>Contato</span>
             <span>Contrato</span>
@@ -48,7 +48,7 @@ export default function ClientPortfolioTable({
           {rows.map((client) => (
             <div
               className={cn(
-                "grid w-full grid-cols-[1.3fr_1fr_1fr_145px_150px_155px_120px] items-center gap-4 border-b border-zinc-100 px-4 py-4 text-left transition last:border-b-0 hover:bg-amiste-red/5",
+                "grid w-full cursor-pointer grid-cols-[1.3fr_1fr_1fr_145px_150px_155px_120px] items-center gap-4 border-b border-zinc-100 px-4 py-4 text-left transition last:border-b-0 hover:bg-amiste-red/5",
                 selectedClientId === client.id ? "bg-amiste-red/5" : ""
               )}
               key={client.id}
@@ -78,7 +78,7 @@ export default function ClientPortfolioTable({
                 />
               </div>
               <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
-                <Button className="h-8 px-3 text-xs" icon="fileText" variant="secondary" onClick={() => onSelect(client)}>
+                <Button className="h-8 w-[58px] px-3 text-xs" icon="fileText" variant="secondary" onClick={() => onSelect(client)}>
                   360
                 </Button>
                 {canMutate ? (

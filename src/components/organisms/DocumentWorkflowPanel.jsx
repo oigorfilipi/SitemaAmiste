@@ -5,7 +5,7 @@ import TableEmptyState from "../molecules/TableEmptyState.jsx";
 function DocumentWorkflowRow({ actionLabel, canMutate, item, loading, onAction }) {
   return (
     <div
-      className="grid grid-cols-[1fr_150px_150px] items-center gap-4 rounded-md border border-zinc-200 bg-white px-4 py-3"
+      className="grid grid-cols-1 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 md:grid-cols-[1fr_150px_150px]"
       data-workflow-row={item.id}
     >
       <div className="min-w-0">
@@ -21,7 +21,7 @@ function DocumentWorkflowRow({ actionLabel, canMutate, item, loading, onAction }
         {item.hasReceivable ? "Financeiro ok" : "Sem cobranca"}
       </span>
       <Button
-        className="h-8 px-3 text-xs"
+        className="h-8 w-[96px] px-3 text-xs"
         disabled={!canMutate || loading}
         icon="checkSquare"
         variant="secondary"
@@ -45,7 +45,7 @@ export default function DocumentWorkflowPanel({
   const hasPendingItems = workflow.actionableProposals.length || workflow.unsignedSheets.length;
 
   return (
-    <section className="rounded-md border border-zinc-200 bg-zinc-50 p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-lg font-black text-amiste-black">Fluxo documental</h2>
@@ -60,7 +60,7 @@ export default function DocumentWorkflowPanel({
       </div>
 
       {message ? (
-        <div className="mt-4 rounded-md border border-amiste-green/20 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
+        <div className="mt-4 rounded-2xl border border-amiste-green/20 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
           {message}
         </div>
       ) : null}

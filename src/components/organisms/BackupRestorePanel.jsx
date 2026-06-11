@@ -16,7 +16,7 @@ export default function BackupRestorePanel({
   const hasMessage = Boolean(message?.text);
 
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-lg font-black text-amiste-black">Backup e restauracao</h2>
@@ -38,7 +38,7 @@ export default function BackupRestorePanel({
           value={backupText}
           onChange={(event) => onChangeBackupText(event.target.value)}
         />
-        <div className="space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+        <div className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
           <strong className="block text-sm font-black text-amiste-black">Acoes da base local</strong>
           <p className="text-xs font-semibold leading-5 text-amiste-gray/60">
             Restaurar substitui os dados locais normalizando as colecoes atuais do ERP.
@@ -72,7 +72,7 @@ export default function BackupRestorePanel({
       {hasMessage ? (
         <div
           className={cn(
-            "mt-4 rounded-md border px-4 py-3 text-sm font-bold",
+            "mt-4 rounded-2xl border px-4 py-3 text-sm font-bold",
             message.type === "error"
               ? "border-amiste-red/20 bg-amiste-red/10 text-amiste-red"
               : "border-amiste-green/20 bg-amiste-green/10 text-amiste-green"

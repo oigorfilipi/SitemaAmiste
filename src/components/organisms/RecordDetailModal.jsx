@@ -39,14 +39,14 @@ export default function RecordDetailModal({ open, record, config, snapshot, onCl
     >
       <div className="space-y-5">
         {/* --- SECAO: DADOS AGRUPADOS --- */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {config.fields.map((field) => {
             const value = resolveValue(record, field, snapshot);
 
             return (
               <div className={field.full ? "col-span-2" : ""} key={field.key}>
                 <span className="block text-xs font-black uppercase text-amiste-gray/50">{field.label}</span>
-                <div className="mt-2 rounded-md bg-zinc-50 p-3 text-sm font-semibold text-amiste-black">
+                <div className="mt-2 rounded-2xl border border-zinc-100 bg-zinc-50/80 p-3 text-sm font-semibold text-amiste-black">
                   {field.type === "status" ? (
                     <StatusPill status={value} />
                   ) : field.type === "currency" ? (

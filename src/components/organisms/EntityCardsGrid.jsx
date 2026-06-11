@@ -59,7 +59,7 @@ function DocumentCardPreview({ card, record, snapshot }) {
               <span className="text-[8px] font-black uppercase opacity-80">Amiste Cafe</span>
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-[74px_1fr] gap-2 p-2">
-              <div className="grid place-items-center overflow-hidden rounded-lg bg-zinc-100">
+              <div className="grid place-items-center overflow-hidden rounded-xl bg-zinc-100">
                 {machine.imageDataUrl || machine.imageUrl ? (
                   <img alt={machine.name || "Maquina"} className="h-full w-full object-cover" src={machine.imageDataUrl || machine.imageUrl} />
                 ) : (
@@ -70,7 +70,7 @@ function DocumentCardPreview({ card, record, snapshot }) {
                 <div className="h-2.5 w-3/4 rounded-full bg-zinc-200" />
                 <strong className="block truncate text-[10px] font-black text-amiste-black">{clientName}</strong>
                 <p className="truncate text-[9px] font-bold text-amiste-gray">{machine.name || "Maquina nao vinculada"}</p>
-                <div className="mt-2 rounded-lg bg-amiste-black px-2 py-1 text-[10px] font-black text-amiste-green">
+                <div className="mt-2 rounded-xl bg-amiste-black px-2 py-1 text-[10px] font-black text-amiste-green">
                   {totalValue}
                 </div>
               </div>
@@ -95,10 +95,10 @@ function DocumentCardPreview({ card, record, snapshot }) {
               <span className="text-[8px] font-black uppercase text-amiste-red">Tecnico</span>
             </div>
             <div className="mt-2 grid grid-cols-2 gap-1.5 text-[8px] font-black text-amiste-gray">
-              <span className="rounded-md bg-zinc-100 px-2 py-1 truncate">{clientName}</span>
-              <span className="rounded-md bg-zinc-100 px-2 py-1 truncate">{machineName}</span>
-              <span className="rounded-md bg-zinc-100 px-2 py-1">Data: {record.date || "-"}</span>
-              <span className="rounded-md bg-zinc-100 px-2 py-1">Hora: {record.time || "-"}</span>
+              <span className="truncate rounded-xl bg-zinc-100 px-2 py-1">{clientName}</span>
+              <span className="truncate rounded-xl bg-zinc-100 px-2 py-1">{machineName}</span>
+              <span className="rounded-xl bg-zinc-100 px-2 py-1">Data: {record.date || "-"}</span>
+              <span className="rounded-xl bg-zinc-100 px-2 py-1">Hora: {record.time || "-"}</span>
             </div>
             <div className="mt-2 grid flex-1 grid-cols-3 gap-1.5">
               {Array.from({ length: 9 }).map((_, index) => (

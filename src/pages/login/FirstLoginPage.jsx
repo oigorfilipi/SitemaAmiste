@@ -95,7 +95,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Foto de Perfil</span>
               <input
                 accept="image/*"
-                className="block h-9 w-full rounded-xl border border-white/25 bg-white px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-lg file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white"
+                className="block h-9 w-full rounded-xl border border-white/25 bg-white px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-xl file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white"
                 type="file"
                 onChange={handlePhotoChange}
               />

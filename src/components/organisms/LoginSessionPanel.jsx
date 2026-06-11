@@ -13,7 +13,7 @@ export default function LoginSessionPanel({
   onSubmit,
 }) {
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-5 shadow-2xl shadow-black/15">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl shadow-black/15">
       <div>
         <h1 className="font-display text-2xl font-black text-amiste-black">Acesso ao ERP</h1>
         <p className="mt-2 text-sm font-semibold text-amiste-gray/65">
@@ -47,7 +47,7 @@ export default function LoginSessionPanel({
         </div>
 
         {error ? (
-          <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
             {error}
           </div>
         ) : null}

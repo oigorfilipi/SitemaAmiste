@@ -121,7 +121,7 @@ export default function RelatedRecordsHub({
     >
       <div className="space-y-5">
         {/* --- SECAO: ACOES DO HUB --- */}
-        <div className="flex items-center justify-between rounded-lg bg-zinc-50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4">
           <div>
             <strong className="block text-sm font-black text-amiste-black">{hub.emptyTitle}</strong>
             <span className="text-xs italic text-amiste-gray/65">
@@ -147,7 +147,7 @@ export default function RelatedRecordsHub({
         />
 
         {errorMessage ? (
-          <div className="rounded-md border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+          <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
             {errorMessage}
           </div>
         ) : null}

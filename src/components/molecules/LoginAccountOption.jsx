@@ -6,13 +6,13 @@ export default function LoginAccountOption({ account, active, onSelect }) {
     <button
       aria-label={`Selecionar ${account.displayName}`}
       className={cn(
-        "flex w-full items-center gap-3 rounded-md border px-3 py-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-amiste-red",
+        "flex w-full cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-left transition duration-300 hover:-translate-y-0.5 hover:border-amiste-red hover:shadow-amiste-soft",
         active ? "border-amiste-red bg-amiste-red/10" : "border-zinc-200 bg-white"
       )}
       type="button"
       onClick={() => onSelect(account.id)}
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-amiste-red text-sm font-black text-white">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amiste-red text-sm font-black text-white">
         {account.avatarInitials}
       </span>
       <span className="min-w-0 flex-1">
