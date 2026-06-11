@@ -12,6 +12,7 @@ const COLLECTION_LABELS = {
   accounts: "Contas",
   accountRequests: "Solicitacoes de Conta",
   inventoryCounts: "Historico de Contagem",
+  inventoryLocations: "Estoques Separados",
   machineConfigs: "Configuracoes de Maquina",
   machines: "Maquinas",
   recipes: "Receitas",

@@ -9,9 +9,19 @@ import EntityGroupTabs from "../../components/molecules/EntityGroupTabs.jsx";
 import Modal from "../../components/molecules/Modal.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
 import InventoryAuditTable from "../../components/organisms/InventoryAuditTable.jsx";
+import InventoryLocationModal from "../../components/organisms/InventoryLocationModal.jsx";
+import InventoryLocationsPanel from "../../components/organisms/InventoryLocationsPanel.jsx";
 import InventoryRiskPanel from "../../components/organisms/InventoryRiskPanel.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
+import { useCollection } from "../../hooks/useCollection.js";
 import { useErpSnapshot } from "../../hooks/useErpSnapshot.js";
+import {
+  buildEmptyInventoryLocationForm,
+  buildInventoryLocationCards,
+  buildInventoryLocationForm,
+  buildInventoryLocationPayload,
+  validateInventoryLocationForm,
+} from "../../services/inventoryLocationService.js";
 import {
   INVENTORY_GROUPS,
   buildInventoryHistoryDashboard,
@@ -214,20 +224,32 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const [countRows, setCountRows] = useState([]);
   const [countNotes, setCountNotes] = useState("");
   const [editingItem, setEditingItem] = useState(null);
+  const [editingLocation, setEditingLocation] = useState(null);
   const [editQuantity, setEditQuantity] = useState("");
   const [editAssets, setEditAssets] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [importWarnings, setImportWarnings] = useState([]);
+  const [locationError, setLocationError] = useState("");
+  const [locationForm, setLocationForm] = useState(buildEmptyInventoryLocationForm);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [modalError, setModalError] = useState("");
   const [newCountOpen, setNewCountOpen] = useState(false);
   const [pendingDeleteItem, setPendingDeleteItem] = useState(null);
+  const [pendingDeleteLocation, setPendingDeleteLocation] = useState(null);
   const [selectedHistoryDate, setSelectedHistoryDate] = useState(todayInputValue());
+  const {
+    createRecord: createLocation,
+    deleteRecord: deleteLocation,
+    records: locationRecords,
+    updateRecord: updateLocation,
+  } = useCollection("inventoryLocations");
   const { snapshot, refresh } = useErpSnapshot();
   const group = getInventoryGroup(activeGroup);
   const physicalRecords = useMemo(() => buildPhysicalInventoryRows(snapshot, activeGroup), [activeGroup, snapshot]);
   const realtimeRecords = useMemo(() => buildRealtimeInventoryRows(snapshot, activeGroup), [activeGroup, snapshot]);
   const metrics = useMemo(() => buildInventoryMetrics(snapshot, activeGroup), [activeGroup, snapshot]);
+  const locationCards = useMemo(() => buildInventoryLocationCards(locationRecords, snapshot), [locationRecords, snapshot]);
   const latestCount = useMemo(() => getLatestInventoryCount(snapshot, activeGroup), [activeGroup, snapshot]);
   const activeGroupAccess = getScopedCollectionAccess(user?.role, "inventory", activeGroup);
   const canMutate = accessLevel === "AC" && activeGroupAccess === "AC";
@@ -237,6 +259,9 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
   const canDownload = rolePermissions["action:download"] !== "OC";
   const canUpload = rolePermissions["action:upload"] !== "OC";
+  const canCreateLocation = accessLevel === "AC" && rolePermissions["action:create"] === "AC";
+  const canUpdateLocation = accessLevel === "AC" && ["AC", "UP"].includes(rolePermissions["action:update"]);
+  const canDeleteLocation = accessLevel === "AC" && rolePermissions["action:delete"] === "AC";
 
   function resetCountModal() {
     setCountNotes("");
@@ -245,6 +270,82 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     setImportWarnings([]);
     setModalError("");
     setNewCountOpen(false);
+  }
+
+  function resetLocationModal() {
+    setEditingLocation(null);
+    setLocationError("");
+    setLocationForm(buildEmptyInventoryLocationForm());
+    setLocationModalOpen(false);
+  }
+
+  function openNewLocation() {
+    if (!canCreateLocation) {
+      return;
+    }
+
+    setEditingLocation(null);
+    setLocationError("");
+    setLocationForm(buildEmptyInventoryLocationForm());
+    setLocationModalOpen(true);
+  }
+
+  function openEditLocation(location) {
+    if (!canUpdateLocation) {
+      return;
+    }
+
+    setEditingLocation(location);
+    setLocationError("");
+    setLocationForm(buildInventoryLocationForm(location));
+    setLocationModalOpen(true);
+  }
+
+  async function saveLocation(event) {
+    event.preventDefault();
+
+    const validationMessage = validateInventoryLocationForm(locationForm);
+
+    if (validationMessage) {
+      setLocationError(validationMessage);
+      return;
+    }
+
+    const payload = buildInventoryLocationPayload(locationForm, snapshot);
+
+    try {
+      if (editingLocation) {
+        await updateLocation(editingLocation.id, payload, {
+          action: "Atualizou Estoque",
+          details: `Estoque separado atualizado: ${payload.machineQuantity} maquina(s), ${payload.products.length} produto(s).`,
+          module: "Estoque",
+          title: payload.name,
+        });
+      } else {
+        await createLocation(payload);
+      }
+
+      resetLocationModal();
+    } catch (error) {
+      setLocationError(error.message || "Nao foi possivel salvar o estoque.");
+    }
+  }
+
+  function requestDeleteLocation(location) {
+    if (!canDeleteLocation) {
+      return;
+    }
+
+    setPendingDeleteLocation(location);
+  }
+
+  async function confirmDeleteLocation() {
+    if (!pendingDeleteLocation) {
+      return;
+    }
+
+    await deleteLocation(pendingDeleteLocation.id);
+    setPendingDeleteLocation(null);
   }
 
   function openNewCount() {
@@ -478,6 +579,17 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
         ) : null}
       </div>
 
+      {/* --- SECAO: ESTOQUES SEPARADOS --- */}
+      <InventoryLocationsPanel
+        canCreate={canCreateLocation}
+        canDelete={canDeleteLocation}
+        canEdit={canUpdateLocation}
+        locations={locationCards}
+        onCreate={openNewLocation}
+        onDelete={requestDeleteLocation}
+        onEdit={openEditLocation}
+      />
+
       {/* --- SECAO: INDICADORES DE INVENTARIO --- */}
       <MetricsGrid metrics={metrics} />
 
@@ -665,6 +777,16 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
         onChangeDate={setSelectedHistoryDate}
         onClose={() => setHistoryOpen(false)}
       />
+      <InventoryLocationModal
+        errorMessage={locationError}
+        formData={locationForm}
+        open={locationModalOpen}
+        snapshot={snapshot}
+        title={editingLocation ? "Editar estoque separado" : "Novo estoque separado"}
+        onChange={setLocationForm}
+        onClose={resetLocationModal}
+        onSubmit={saveLocation}
+      />
       <ConfirmDialog
         confirmLabel="Excluir da contagem"
         description={`Excluir "${pendingDeleteItem?.name || "item"}" da ultima contagem fisica? O historico da auditoria sera atualizado.`}
@@ -672,6 +794,14 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
         title="Excluir item da contagem"
         onCancel={() => setPendingDeleteItem(null)}
         onConfirm={confirmDeletePhysicalItem}
+      />
+      <ConfirmDialog
+        confirmLabel="Excluir estoque"
+        description={`Excluir o estoque separado "${pendingDeleteLocation?.name || "selecionado"}"? O estoque principal nao sera alterado.`}
+        open={Boolean(pendingDeleteLocation)}
+        title="Excluir estoque separado"
+        onCancel={() => setPendingDeleteLocation(null)}
+        onConfirm={confirmDeleteLocation}
       />
     </div>
   );
