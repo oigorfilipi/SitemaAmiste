@@ -2,6 +2,11 @@ node_modules
 dist
 .vite
 .npm-cache
+__pycache__
+.pytest_cache
+.venv
+backend/.env
+backend/.env.local
 amiste-erp-*.png
 .env
 .env.local
