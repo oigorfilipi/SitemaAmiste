@@ -221,6 +221,7 @@ function InventoryHistoryModal({ groupId, open, selectedDate, snapshot, onChange
 
 export default function EstoquePage({ accessLevel = "OC", user }) {
   const [activeGroup, setActiveGroup] = useState("supplies");
+  const [activeSpecialTab, setActiveSpecialTab] = useState("");
   const [countRows, setCountRows] = useState([]);
   const [countNotes, setCountNotes] = useState("");
   const [editingItem, setEditingItem] = useState(null);
@@ -262,6 +263,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const canCreateLocation = accessLevel === "AC" && rolePermissions["action:create"] === "AC";
   const canUpdateLocation = accessLevel === "AC" && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canDeleteLocation = accessLevel === "AC" && rolePermissions["action:delete"] === "AC";
+  const isLocationsTab = activeSpecialTab === "locations";
 
   function resetCountModal() {
     setCountNotes("");
@@ -277,6 +279,15 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     setLocationError("");
     setLocationForm(buildEmptyInventoryLocationForm());
     setLocationModalOpen(false);
+  }
+
+  function selectInventoryGroup(groupId) {
+    setActiveSpecialTab("");
+    setActiveGroup(groupId);
+  }
+
+  function selectLocationsTab() {
+    setActiveSpecialTab("locations");
   }
 
   function openNewLocation() {
@@ -556,76 +567,94 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        actionIcon="download"
-        actionLabel={canDownload ? "Exportar Estoque" : ""}
-        description="Auditoria fisica, atualizacao de quantidades e historico de inventario."
+        actionIcon={isLocationsTab ? "plus" : "download"}
+        actionLabel={isLocationsTab ? (canCreateLocation ? "Novo Estoque" : "") : (canDownload ? "Exportar Estoque" : "")}
+        description={isLocationsTab
+          ? "Controle simples de estoques separados por cidade, cliente ou operacao externa."
+          : "Auditoria fisica, atualizacao de quantidades e historico de inventario."}
         icon="boxes"
         title="Contagem de Estoque"
-        onAction={handleExportInventory}
+        onAction={isLocationsTab ? openNewLocation : handleExportInventory}
       />
 
       {/* --- SECAO: ABAS DE ESTOQUE --- */}
-      <EntityGroupTabs activeGroup={activeGroup} groups={INVENTORY_GROUPS} onSelectGroup={setActiveGroup} />
-
-      {/* --- SECAO: ACOES DE AUDITORIA --- */}
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button icon="history" variant="secondary" onClick={() => setHistoryOpen(true)}>
-          Historico de Contagem
-        </Button>
-        {canCreate ? (
-          <Button icon="checkSquare" onClick={openNewCount}>
-            Nova Contagem
-          </Button>
-        ) : null}
-      </div>
-
-      {/* --- SECAO: ESTOQUES SEPARADOS --- */}
-      <InventoryLocationsPanel
-        canCreate={canCreateLocation}
-        canDelete={canDeleteLocation}
-        canEdit={canUpdateLocation}
-        locations={locationCards}
-        onCreate={openNewLocation}
-        onDelete={requestDeleteLocation}
-        onEdit={openEditLocation}
-      />
-
-      {/* --- SECAO: INDICADORES DE INVENTARIO --- */}
-      <MetricsGrid metrics={metrics} />
-
-      {/* --- SECAO: ESTOQUE FISICO E VIRTUAL --- */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
-          <div>
-            <h2 className="font-display text-lg font-black text-amiste-black">Estoque Fisico Consolidado</h2>
-            <p className="mt-1 text-sm italic text-amiste-gray/60">Ultima contagem oficial, sem alteracao automatica.</p>
-          </div>
-          <InventoryAuditTable
-            canAdjust={canUpdate}
-            canDelete={canDelete}
-            canMutate={canUpdate || canDelete}
-            groupId={activeGroup}
-            mode="physical"
-            records={physicalRecords}
-            unitLabel={group.unitLabel}
-            onAdjust={openEditPhysicalItem}
-            onDelete={deletePhysicalItem}
-          />
-
-          <div>
-            <h2 className="font-display text-lg font-black text-amiste-black">Estoque em Tempo Real</h2>
-            <p className="mt-1 text-sm italic text-amiste-gray/60">Estoque virtual atualizado por vendas, checklists e movimentacoes.</p>
-          </div>
-          <InventoryAuditTable
-            canMutate={false}
-            groupId={activeGroup}
-            mode="realtime"
-            records={realtimeRecords}
-            unitLabel={group.unitLabel}
-          />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <EntityGroupTabs activeGroup={isLocationsTab ? "" : activeGroup} groups={INVENTORY_GROUPS} onSelectGroup={selectInventoryGroup} />
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-sm">
+          <button
+            className={isLocationsTab
+              ? "inline-flex h-8 items-center justify-center rounded-xl bg-amiste-red px-3 text-xs font-black text-white shadow-sm transition duration-200"
+              : "inline-flex h-8 items-center justify-center rounded-xl px-3 text-xs font-black text-amiste-gray transition duration-200 hover:bg-amiste-red/10 hover:text-amiste-red"}
+            type="button"
+            onClick={selectLocationsTab}
+          >
+            Novo Estoque
+          </button>
         </div>
-        <InventoryRiskPanel canMutate={false} records={realtimeRecords} onAdjust={() => {}} />
       </div>
+
+      {isLocationsTab ? (
+        <InventoryLocationsPanel
+          canCreate={canCreateLocation}
+          canDelete={canDeleteLocation}
+          canEdit={canUpdateLocation}
+          locations={locationCards}
+          onCreate={openNewLocation}
+          onDelete={requestDeleteLocation}
+          onEdit={openEditLocation}
+        />
+      ) : (
+        <>
+          {/* --- SECAO: ACOES DE AUDITORIA --- */}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button icon="history" variant="secondary" onClick={() => setHistoryOpen(true)}>
+              Historico de Contagem
+            </Button>
+            {canCreate ? (
+              <Button icon="checkSquare" onClick={openNewCount}>
+                Nova Contagem
+              </Button>
+            ) : null}
+          </div>
+
+          {/* --- SECAO: INDICADORES DE INVENTARIO --- */}
+          <MetricsGrid metrics={metrics} />
+
+          {/* --- SECAO: ESTOQUE FISICO E VIRTUAL --- */}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-4">
+              <div>
+                <h2 className="font-display text-lg font-black text-amiste-black">Estoque Fisico Consolidado</h2>
+                <p className="mt-1 text-sm italic text-amiste-gray/60">Ultima contagem oficial, sem alteracao automatica.</p>
+              </div>
+              <InventoryAuditTable
+                canAdjust={canUpdate}
+                canDelete={canDelete}
+                canMutate={canUpdate || canDelete}
+                groupId={activeGroup}
+                mode="physical"
+                records={physicalRecords}
+                unitLabel={group.unitLabel}
+                onAdjust={openEditPhysicalItem}
+                onDelete={deletePhysicalItem}
+              />
+
+              <div>
+                <h2 className="font-display text-lg font-black text-amiste-black">Estoque em Tempo Real</h2>
+                <p className="mt-1 text-sm italic text-amiste-gray/60">Estoque virtual atualizado por vendas, checklists e movimentacoes.</p>
+              </div>
+              <InventoryAuditTable
+                canMutate={false}
+                groupId={activeGroup}
+                mode="realtime"
+                records={realtimeRecords}
+                unitLabel={group.unitLabel}
+              />
+            </div>
+            <InventoryRiskPanel canMutate={false} records={realtimeRecords} onAdjust={() => {}} />
+          </div>
+        </>
+      )}
 
       <Modal
         description="Importe dados, cole uma lista ou preencha manualmente uma contagem cega."
