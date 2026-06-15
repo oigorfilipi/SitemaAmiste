@@ -6,6 +6,7 @@ Backend FastAPI preparado para persistir os dados do ERP em Postgres/Supabase se
 
 - FastAPI
 - Postgres/Supabase
+- Supabase REST como fallback quando `DATABASE_URL` nao estiver disponivel
 - `psycopg` com pool de conexoes
 - Render para deploy
 
@@ -28,7 +29,11 @@ DATABASE_URL=postgresql://...
 FRONTEND_URL=http://127.0.0.1:5173
 SECRET_KEY=troque-esta-chave
 ENV=local
+SUPABASE_URL=https://...
+SUPABASE_SERVICE_ROLE_KEY=...
 ```
+
+Se `DATABASE_URL` ficar vazio, o backend usa `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` pela API REST do Supabase.
 
 ## Banco de dados
 

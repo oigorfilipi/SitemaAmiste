@@ -1,17 +1,16 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from psycopg import Connection
 
-from app.db.postgres import get_connection
-from app.repositories.record_repository import RecordRepository
+from app.db.postgres import get_optional_connection
+from app.repositories.repository_factory import build_repository
 from app.services.collection_service import CollectionService, ensure_collection_name
 
 router = APIRouter(tags=["collections"])
 
 
-def get_service(connection: Connection = Depends(get_connection)) -> CollectionService:
-    return CollectionService(RecordRepository(connection))
+def get_service(connection = Depends(get_optional_connection)) -> CollectionService:
+    return CollectionService(build_repository(connection))
 
 
 @router.get("/collections")

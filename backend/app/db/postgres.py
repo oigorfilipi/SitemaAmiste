@@ -49,3 +49,14 @@ def get_pool() -> ConnectionPool:
 def get_connection() -> Generator[Connection, None, None]:
     with get_pool().connection() as connection:
         yield connection
+
+
+def get_optional_connection() -> Generator[Connection | None, None, None]:
+    settings = get_settings()
+
+    if not settings.database_url:
+        yield None
+        return
+
+    with get_pool().connection() as connection:
+        yield connection

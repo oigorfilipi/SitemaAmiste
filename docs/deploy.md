@@ -20,6 +20,8 @@ Configure as variaveis secretas no dashboard do Render:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+`DATABASE_URL` e opcional se `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` estiverem configurados. Nesse modo, o backend usa a API REST do Supabase.
+
 O Render deve usar:
 
 - Root directory: `backend`

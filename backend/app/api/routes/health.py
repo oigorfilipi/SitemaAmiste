@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
 from psycopg import Connection
 
-from app.db.postgres import get_connection
+from app.core.config import get_settings
+from app.db.postgres import get_optional_connection
 
 router = APIRouter(tags=["health"])
 
@@ -12,9 +14,27 @@ def health_check() -> dict[str, str]:
 
 
 @router.get("/health/database")
-def database_health_check(connection: Connection = Depends(get_connection)) -> dict[str, str]:
-    with connection.cursor() as cursor:
-        cursor.execute("select 1")
-        cursor.fetchone()
+def database_health_check(connection: Connection | None = Depends(get_optional_connection)) -> dict[str, str]:
+    settings = get_settings()
 
-    return {"database": "ok"}
+    if connection:
+        with connection.cursor() as cursor:
+            cursor.execute("select 1")
+            cursor.fetchone()
+
+        return {"database": "ok", "provider": "postgres"}
+
+    if settings.supabase_url and settings.supabase_service_role_key:
+        response = httpx.get(
+            f"{settings.supabase_url.rstrip('/')}/rest/v1/erp_records?select=record_id&limit=1",
+            headers={
+                "apikey": settings.supabase_service_role_key,
+                "Authorization": f"Bearer {settings.supabase_service_role_key}",
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+
+        return {"database": "ok", "provider": "supabase-rest"}
+
+    raise HTTPException(status_code=503, detail="Nenhuma fonte de banco configurada.")
