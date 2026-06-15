@@ -49,3 +49,15 @@ Enquanto `VITE_DATA_SOURCE=local`, o sistema continua usando o modo local atual.
 5. Testar `GET /api/health/database`.
 6. Deploy do frontend na Vercel ainda com `VITE_DATA_SOURCE=local`.
 7. Alterar para `VITE_DATA_SOURCE=api` somente depois que a API estiver validada.
+
+## 5. Carga inicial do seed
+
+Para popular o Supabase com os dados mockados atuais do ERP, rode localmente:
+
+```powershell
+$env:SUPABASE_URL="https://jrikpqfplwfakkesuzuv.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="cole-a-service-role-key"
+node scripts/seed-supabase.mjs
+```
+
+O script usa `on_conflict=collection_name,record_id`, entao pode ser executado novamente sem duplicar os registros do seed.
