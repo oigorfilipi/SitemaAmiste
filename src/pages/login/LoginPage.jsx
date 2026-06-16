@@ -6,6 +6,7 @@ import TextInput from "../../components/atoms/TextInput.jsx";
 import Modal from "../../components/molecules/Modal.jsx";
 
 const ACCOUNT_REQUEST_COOLDOWN_KEY = "amiste_erp_public_account_request_v1";
+const HAS_ACCOUNT_HINT_KEY = "amiste_erp_has_account_hint_v1";
 const REQUEST_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const REQUEST_INITIAL_STATE = {
@@ -70,6 +71,20 @@ function isRequestCooldownActive() {
   return !Number.isNaN(requestedAt.getTime()) && Date.now() - requestedAt.getTime() < REQUEST_COOLDOWN_MS;
 }
 
+function readHasAccountHint() {
+  if (!canUseLocalStorage()) {
+    return false;
+  }
+
+  return window.localStorage.getItem(HAS_ACCOUNT_HINT_KEY) === "true";
+}
+
+function saveHasAccountHint() {
+  if (canUseLocalStorage()) {
+    window.localStorage.setItem(HAS_ACCOUNT_HINT_KEY, "true");
+  }
+}
+
 export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -78,7 +93,9 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
   const [requestMessage, setRequestMessage] = useState("");
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestSent, setRequestSent] = useState(() => isRequestCooldownActive());
+  const [loginUnlocked, setLoginUnlocked] = useState(() => readHasAccountHint() || isRequestCooldownActive());
   const deviceKey = useMemo(() => getOrCreateDeviceKey(), []);
+  const isLoginLocked = !loginUnlocked;
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -104,6 +121,8 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
       });
       saveAccountRequestState(deviceKey);
       setRequestSent(true);
+      setLoginUnlocked(true);
+      setRequestOpen(false);
       setRequestMessage("Pedido registrado. DONO e DEV receberam uma notificacao interna no sistema.");
       setRequestData(REQUEST_INITIAL_STATE);
     } catch (requestError) {
@@ -119,12 +138,17 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
     setRequestMessage("");
   }
 
+  function handleHasAccount() {
+    saveHasAccountHint();
+    setLoginUnlocked(true);
+  }
+
   return (
     <main className="grid min-h-screen grid-cols-1 bg-amiste-white lg:grid-cols-2">
       {/* --- SECAO: LOGIN CORPORATIVO --- */}
-      <section className="flex min-h-screen flex-col justify-between bg-amiste-red px-8 py-10 text-white">
+      <section className="relative flex min-h-screen flex-col justify-between overflow-hidden bg-amiste-red px-8 py-10 text-white">
         <div />
-        <div className="mx-auto w-full max-w-[480px]">
+        <div className={`mx-auto w-full max-w-[480px] transition duration-300 ${isLoginLocked ? "pointer-events-none select-none opacity-45 blur-[2px]" : ""}`}>
           <div>
             <h1 className="font-display text-4xl font-black">Bem-vindo de Volta</h1>
             <p className="mt-3 text-sm font-semibold leading-6 text-white/75">
@@ -137,6 +161,7 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               <span className="mb-2 block text-xs font-black uppercase text-white/70">E-mail Corporativo</span>
               <TextInput
                 autoComplete="email"
+                className="[&_input]:border-white/35 [&_input]:bg-white [&_input]:text-amiste-black [&_input]:placeholder:text-amiste-gray/45"
                 icon="user"
                 placeholder="usuario@empresa.com"
                 required
@@ -150,6 +175,7 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Senha</span>
               <TextInput
                 autoComplete="current-password"
+                className="[&_input]:border-white/35 [&_input]:bg-white [&_input]:text-amiste-black [&_input]:placeholder:text-amiste-gray/45"
                 icon="shield"
                 placeholder="Digite sua senha"
                 required
@@ -165,7 +191,7 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               </div>
             ) : null}
 
-            <Button className="w-full border-white bg-white font-black text-amiste-red hover:border-white hover:bg-zinc-100 hover:text-red-900" disabled={isLoading} icon="shield" type="submit">
+            <Button className="mt-3 w-full border-white bg-white font-black text-amiste-red hover:border-white hover:bg-zinc-100 hover:text-red-900" disabled={isLoading} icon="shield" type="submit">
               Entrar no Sistema
             </Button>
           </form>
@@ -182,6 +208,41 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
             )}
           </div>
         </div>
+
+        {isLoginLocked ? (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-amiste-red/20 px-6 backdrop-blur-sm">
+            <div className="w-full max-w-[360px] rounded-3xl border border-white/30 bg-white/15 p-6 text-center shadow-2xl">
+              <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-white text-amiste-red shadow-sm">
+                <AppIcon name="fileClock" size={24} />
+              </div>
+              <h2 className="mt-4 font-display text-2xl font-black text-white">Acesso ao Sistema</h2>
+              <p className="mt-2 text-sm font-semibold leading-6 text-white/75">
+                Solicite uma conta para que DONO ou DEV liberem seu acesso.
+              </p>
+              {requestSent ? (
+                <div className="mt-5 rounded-2xl border border-white/30 bg-white/15 px-4 py-3 text-xs font-bold text-white">
+                  Pedido enviado. O login foi liberado neste dispositivo enquanto a solicitacao estiver ativa.
+                </div>
+              ) : (
+                <Button
+                  className="mt-5 w-full border-white bg-white text-amiste-red hover:border-white hover:bg-zinc-100 hover:text-red-900"
+                  icon="fileClock"
+                  onClick={() => setRequestOpen(true)}
+                >
+                  Pedido de Conta
+                </Button>
+              )}
+              <button
+                className="mt-3 text-xs font-black text-white/80 underline decoration-white/35 underline-offset-4 transition hover:text-white"
+                type="button"
+                onClick={handleHasAccount}
+              >
+                Ja tenho conta
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <footer className="text-xs font-semibold text-white/65">
           C 2026/27 Amiste Cafe. Todos os Direitos Reservados.
         </footer>
