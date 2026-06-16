@@ -219,7 +219,9 @@ export function formatCollectionUpdate(timestamp) {
 
 export async function buildBackupPayload(snapshot = null) {
   const { storageKey } = getLocalDatabaseInfo();
-  const databaseSnapshot = snapshot || await getErpSnapshot();
+  const databaseSnapshot = snapshot || (isApiDataSource()
+    ? await apiDatabase.getBackupSnapshot()
+    : await getErpSnapshot());
 
   return {
     database: databaseSnapshot,

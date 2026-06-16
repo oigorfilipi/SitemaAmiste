@@ -67,6 +67,10 @@ export async function getDatabaseSnapshot() {
   return apiRequest("/api/snapshot");
 }
 
+export async function getBackupSnapshot() {
+  return apiRequest("/api/backup");
+}
+
 export async function replaceDatabaseSnapshot(database) {
   const updatedSnapshot = await apiRequest("/api/snapshot", {
     body: JSON.stringify(database),

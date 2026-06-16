@@ -23,12 +23,14 @@ class CollectionService:
     def list_collection_names(self) -> list[str]:
         return COLLECTION_NAMES
 
-    def build_snapshot(self) -> dict[str, list[dict[str, Any]]]:
+    def build_snapshot(self, include_sensitive_accounts: bool = False) -> dict[str, list[dict[str, Any]]]:
         snapshot = {
             collection_name: self.repository.list_records(collection_name)
             for collection_name in COLLECTION_NAMES
         }
-        snapshot["accounts"] = [sanitize_account(account) for account in snapshot.get("accounts", [])]
+
+        if not include_sensitive_accounts:
+            snapshot["accounts"] = [sanitize_account(account) for account in snapshot.get("accounts", [])]
 
         return snapshot
 

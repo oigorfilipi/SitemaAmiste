@@ -61,3 +61,7 @@ node scripts/seed-supabase.mjs
 ```
 
 O script usa `on_conflict=collection_name,record_id`, entao pode ser executado novamente sem duplicar os registros do seed.
+
+## 6. Backup de producao
+
+No modo API, o backup baixado pela pagina Configuracoes usa `/api/backup` e fica restrito ao perfil DEV. Esse backup completo preserva hashes de senha e dados administrativos, entao deve ser armazenado apenas em local seguro.

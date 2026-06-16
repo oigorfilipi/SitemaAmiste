@@ -1,4 +1,6 @@
 from typing import Any
+from datetime import UTC, datetime
+from secrets import token_hex
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -8,6 +10,44 @@ from app.core.security import hash_password, sanitize_account
 from app.services.collection_service import CollectionService, ensure_collection_name
 
 router = APIRouter(tags=["collections"])
+
+COLLECTION_LABELS = {
+    "accounts": "Contas",
+    "accountRequests": "Solicitacoes de Conta",
+    "inventoryCounts": "Historico de Contagem",
+    "inventoryLocations": "Estoques Separados",
+    "machineConfigs": "Configuracoes de Maquina",
+    "machines": "Maquinas",
+    "recipes": "Receitas",
+    "supplies": "Insumos",
+    "accessories": "Acessorios",
+    "clients": "Clientes",
+    "checklists": "Checklists",
+    "repairOrders": "Ordens de Servico",
+    "proposals": "Portfolios",
+    "serviceSheets": "Fichas Operacionais",
+    "sales": "Vendas",
+    "receivables": "Contas a Receber",
+    "payables": "Contas a Pagar",
+    "labels": "Etiquetas",
+    "options": "Adicionar Opcoes",
+    "wikiSolutions": "Wiki",
+    "history": "Historico",
+    "system": "Sistema",
+}
+
+AUDIT_IGNORED_FIELDS = {
+    "createdAt",
+    "fileDataUrl",
+    "imageDataUrl",
+    "password",
+    "passwordHash",
+    "photoDataUrl",
+    "profilePhotoDataUrl",
+    "profilePhotoUrl",
+    "temporaryPassword",
+    "updatedAt",
+}
 
 
 def get_service(repository = Depends(get_repository)) -> CollectionService:
@@ -51,6 +91,71 @@ def serialize_record(collection_name: str, record: dict[str, Any] | None):
     return record
 
 
+def build_history_id() -> str:
+    return f"history_{int(datetime.now(UTC).timestamp() * 1000)}_{token_hex(3)}"
+
+
+def summarize_value(value: Any) -> str:
+    if value is None or value == "":
+        return "-"
+
+    if isinstance(value, bool):
+        return "Sim" if value else "Nao"
+
+    if isinstance(value, list):
+        return f"{len(value)} item(ns)"
+
+    if isinstance(value, dict):
+        return f"{len(value.keys())} campo(s)"
+
+    text = str(value)
+    return f"{text[:87]}..." if len(text) > 90 else text
+
+
+def resolve_record_title(record: dict[str, Any] | None, fallback: str = "-") -> str:
+    if not record:
+        return fallback
+
+    return str(
+        record.get("name") or
+        record.get("code") or
+        record.get("description") or
+        record.get("origin") or
+        record.get("id") or
+        fallback
+    )
+
+
+def build_change_details(previous_record: dict[str, Any] | None, next_record: dict[str, Any] | None) -> str:
+    previous_record = previous_record or {}
+    next_record = next_record or {}
+    field_names = sorted(set(previous_record.keys()) | set(next_record.keys()))
+    changes = [
+        f"{field_name}: {summarize_value(previous_record.get(field_name))} -> {summarize_value(next_record.get(field_name))}"
+        for field_name in field_names
+        if field_name not in AUDIT_IGNORED_FIELDS and previous_record.get(field_name) != next_record.get(field_name)
+    ]
+
+    return "\n".join(changes[:12]) if changes else "Registro salvo sem alteracoes relevantes nos campos auditaveis."
+
+
+def add_history_entry(repository, account: dict, collection_name: str, action: str, title: str, details: str = "") -> None:
+    if collection_name == "history":
+        return
+
+    repository.create_record("history", {
+        "action": action,
+        "date": datetime.now(UTC).isoformat(),
+        "details": details,
+        "id": build_history_id(),
+        "module": COLLECTION_LABELS.get(collection_name, collection_name),
+        "role": account.get("role") or "SYS",
+        "title": title,
+        "userId": account.get("id") or "",
+        "userName": account.get("displayName") or account.get("fullName") or "Sistema",
+    })
+
+
 @router.get("/collections")
 def list_collections(
     account: dict = Depends(get_current_account),
@@ -67,6 +172,25 @@ def get_snapshot(
     return service.build_snapshot()
 
 
+@router.get("/backup")
+def get_backup(
+    account: dict = Depends(get_current_account),
+    service: CollectionService = Depends(get_service),
+) -> dict[str, list[dict[str, Any]]]:
+    if account.get("role") != "DEV":
+        raise HTTPException(status_code=403, detail="Somente DEV pode gerar backup completo.")
+
+    add_history_entry(
+        service.repository,
+        account,
+        "system",
+        "Backup",
+        "Snapshot completo",
+        "Backup completo gerado por DEV.",
+    )
+    return service.build_snapshot(include_sensitive_accounts=True)
+
+
 @router.put("/snapshot")
 def replace_snapshot(
     database: dict[str, Any],
@@ -76,7 +200,17 @@ def replace_snapshot(
     if account.get("role") != "DEV":
         raise HTTPException(status_code=403, detail="Somente DEV pode restaurar snapshot completo.")
 
-    return service.replace_snapshot(database)
+    restored_snapshot = service.replace_snapshot(database)
+    add_history_entry(
+        service.repository,
+        account,
+        "system",
+        "Restaurou",
+        "Snapshot completo",
+        "Backup restaurado por DEV.",
+    )
+
+    return restored_snapshot
 
 
 @router.get("/collections/{collection_name}")
@@ -107,7 +241,20 @@ def set_collection(
     if collection_name == "accounts":
         records = [normalize_account_payload_for_storage(record, account) for record in records]
 
-    return service.repository.set_collection(collection_name, records)
+    updated_records = service.repository.set_collection(collection_name, records)
+    add_history_entry(
+        service.repository,
+        account,
+        collection_name,
+        "Atualizou",
+        f"Colecao {COLLECTION_LABELS.get(collection_name, collection_name)}",
+        f"{len(updated_records)} registro(s) substituido(s).",
+    )
+
+    if collection_name == "accounts":
+        return [sanitize_account(record) for record in updated_records]
+
+    return updated_records
 
 
 @router.post("/collections/{collection_name}", status_code=status.HTTP_201_CREATED)
@@ -122,7 +269,17 @@ def create_record(
     if collection_name == "accounts":
         payload = normalize_account_payload_for_storage(payload, account)
 
-    return serialize_record(collection_name, service.repository.create_record(collection_name, payload))
+    created_record = service.repository.create_record(collection_name, payload)
+    add_history_entry(
+        service.repository,
+        account,
+        collection_name,
+        "Criou",
+        resolve_record_title(created_record),
+        f"Registro criado. ID: {created_record.get('id', '-')}",
+    )
+
+    return serialize_record(collection_name, created_record)
 
 
 @router.put("/collections/{collection_name}/{record_id}")
@@ -138,11 +295,22 @@ def update_record(
     if collection_name == "accounts":
         existing_record = service.repository.get_record(collection_name, record_id)
         payload = normalize_account_payload_for_storage(payload, account, existing_record)
+    else:
+        existing_record = service.repository.get_record(collection_name, record_id)
 
     updated_record = service.repository.update_record(collection_name, record_id, payload)
 
     if not updated_record:
         raise HTTPException(status_code=404, detail="Registro nao encontrado.")
+
+    add_history_entry(
+        service.repository,
+        account,
+        collection_name,
+        "Editou",
+        resolve_record_title(updated_record, record_id),
+        build_change_details(existing_record, updated_record),
+    )
 
     return serialize_record(collection_name, updated_record)
 
@@ -160,5 +328,14 @@ def delete_record(
 
     if not deleted_record:
         raise HTTPException(status_code=404, detail="Registro nao encontrado.")
+
+    add_history_entry(
+        service.repository,
+        account,
+        collection_name,
+        "Excluiu",
+        resolve_record_title(deleted_record, record_id),
+        f"Registro excluido. ID: {deleted_record.get('id', record_id)}",
+    )
 
     return serialize_record(collection_name, deleted_record)
