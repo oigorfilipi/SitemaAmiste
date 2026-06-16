@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, collections, health
+from app.api.routes import auth, collections, files, health
 from app.core.config import get_settings
 from app.db.postgres import close_pool, init_pool
 
@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
+    app.include_router(files.router, prefix="/api")
     app.include_router(collections.router, prefix="/api")
 
     return app

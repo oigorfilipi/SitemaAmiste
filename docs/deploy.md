@@ -65,3 +65,7 @@ O script usa `on_conflict=collection_name,record_id`, entao pode ser executado n
 ## 6. Backup de producao
 
 No modo API, o backup baixado pela pagina Configuracoes usa `/api/backup` e fica restrito ao perfil DEV. Esse backup completo preserva hashes de senha e dados administrativos, entao deve ser armazenado apenas em local seguro.
+
+## 7. Arquivos e uploads
+
+No modo API, arquivos de etiquetas sao enviados pelo backend para o Supabase Storage no bucket privado `amiste-files`. O frontend recebe apenas metadados e usa URLs assinadas temporarias para preview, download e impressao.

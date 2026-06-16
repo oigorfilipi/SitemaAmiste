@@ -1,3 +1,6 @@
+import { isApiDataSource } from "./dataSource.js";
+import { deleteApiFile, getApiFileBlob, uploadApiFile } from "./api/fileApiService.js";
+
 const DB_NAME = "amiste_erp_label_files_v1";
 const STORE_NAME = "labelFiles";
 const DB_VERSION = 1;
@@ -51,6 +54,10 @@ export function buildLabelFileStorageKey(labelId) {
 }
 
 export async function saveLabelFile(storageKey, file) {
+  if (isApiDataSource()) {
+    return uploadApiFile(file, "labels");
+  }
+
   const record = {
     blob: file,
     id: storageKey,
@@ -61,6 +68,7 @@ export async function saveLabelFile(storageKey, file) {
   };
 
   await runStoreAction("readwrite", (store) => store.put(record));
+  return null;
 }
 
 export async function getLabelFile(storageKey) {
@@ -69,6 +77,10 @@ export async function getLabelFile(storageKey) {
   }
 
   try {
+    if (isApiDataSource()) {
+      return getApiFileBlob(storageKey);
+    }
+
     const record = await runStoreAction("readonly", (store) => store.get(storageKey));
     return record?.blob || null;
   } catch {
@@ -78,6 +90,11 @@ export async function getLabelFile(storageKey) {
 
 export async function deleteLabelFile(storageKey) {
   if (!storageKey) {
+    return;
+  }
+
+  if (isApiDataSource()) {
+    await deleteApiFile(storageKey);
     return;
   }
 

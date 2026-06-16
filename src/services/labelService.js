@@ -175,12 +175,13 @@ export async function buildUploadedLabelPayload({ category, description = "", fi
    * O localStorage guarda somente metadados. O arquivo binario vai para IndexedDB,
    * evitando que PDFs/imagens grandes estourem a quota do banco local do ERP.
    */
-  await saveLabelFile(fileStorageKey, file);
+  const storageResult = await saveLabelFile(fileStorageKey, file);
 
   return {
     category,
     description,
-    fileStorageKey,
+    fileStorageKey: storageResult?.storageKey || fileStorageKey,
+    fileStorageProvider: storageResult?.storageProvider || "local",
     fileSize: file.size,
     format: resolveFileFormat(file),
     id,

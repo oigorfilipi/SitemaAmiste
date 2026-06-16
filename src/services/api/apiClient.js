@@ -7,10 +7,13 @@ function normalizeBaseUrl(url = "") {
 
 function buildHeaders(headers = {}, options = {}) {
   const token = options.auth === false ? "" : getApiAuthToken();
-  const resolvedHeaders = {
-    "Content-Type": "application/json",
-    ...headers,
-  };
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const resolvedHeaders = isFormData
+    ? { ...headers }
+    : {
+      "Content-Type": "application/json",
+      ...headers,
+    };
 
   if (token) {
     resolvedHeaders.Authorization = `Bearer ${token}`;
@@ -38,7 +41,7 @@ export async function apiRequest(path, options = {}) {
 
   const response = await fetch(`${baseUrl}${path}`, {
     ...requestOptions,
-    headers: buildHeaders(options.headers, { auth }),
+    headers: buildHeaders(options.headers, { auth, body: requestOptions.body }),
   });
 
   if (!response.ok) {
