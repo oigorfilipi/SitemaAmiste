@@ -13,6 +13,11 @@ const REQUEST_INITIAL_STATE = {
   reason: "",
 };
 
+const RESET_INITIAL_STATE = {
+  email: "",
+  phone: "",
+};
+
 export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -20,6 +25,9 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
   const [requestData, setRequestData] = useState(REQUEST_INITIAL_STATE);
   const [requestMessage, setRequestMessage] = useState("");
   const [requestOpen, setRequestOpen] = useState(false);
+  const [resetData, setResetData] = useState(RESET_INITIAL_STATE);
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -42,9 +50,13 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
       return;
     }
 
-    await onRequestAccess(requestData);
-    setRequestMessage("Solicitacao registrada. Os avisos para DONO e DEV foram simulados no ambiente local.");
-    setRequestData(REQUEST_INITIAL_STATE);
+    try {
+      await onRequestAccess({ ...requestData, requestType: "accountAccess" });
+      setRequestMessage("Solicitacao registrada. DONO e DEV poderao acompanhar o pedido em Gestao de Contas.");
+      setRequestData(REQUEST_INITIAL_STATE);
+    } catch (error) {
+      setRequestMessage(error.message || "Nao foi possivel registrar a solicitacao.");
+    }
   }
 
   function updateRequestField(fieldName, value) {
@@ -53,6 +65,37 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
       [fieldName]: value,
     }));
     setRequestMessage("");
+  }
+
+  async function handlePasswordReset(event) {
+    event.preventDefault();
+    setResetMessage("");
+
+    if (!resetData.email) {
+      setResetMessage("Informe o e-mail corporativo.");
+      return;
+    }
+
+    try {
+      await onRequestAccess({
+        email: resetData.email,
+        phone: resetData.phone,
+        reason: "Usuario solicitou redefinicao de senha pelo login.",
+        requestType: "passwordReset",
+      });
+      setResetMessage("Pedido registrado. DONO ou DEV devera validar e gerar uma nova senha provisoria.");
+      setResetData(RESET_INITIAL_STATE);
+    } catch (error) {
+      setResetMessage(error.message || "Nao foi possivel registrar o pedido.");
+    }
+  }
+
+  function updateResetField(fieldName, value) {
+    setResetData((currentData) => ({
+      ...currentData,
+      [fieldName]: value,
+    }));
+    setResetMessage("");
   }
 
   return (
@@ -107,7 +150,7 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
           </form>
 
           <div className="mt-5 flex flex-wrap justify-between gap-3 text-sm font-bold text-white/80">
-            <button type="button">Esqueci minha senha</button>
+            <button type="button" onClick={() => setResetOpen(true)}>Esqueci minha senha</button>
             <button type="button" onClick={() => setRequestOpen(true)}>
               Nao Tenho Acesso? Solicitar Conta
             </button>
@@ -157,6 +200,37 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               </Button>
               <Button icon="userPlus" type="submit">
                 Enviar Solicitacao
+              </Button>
+            </footer>
+          </form>
+        </Modal>
+
+        <Modal
+          description="O pedido fica registrado para DONO e DEV validarem e criarem uma nova senha provisoria."
+          open={resetOpen}
+          title="Redefinir Senha"
+          onClose={() => setResetOpen(false)}
+        >
+          <form className="space-y-4" onSubmit={handlePasswordReset}>
+            <label>
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">E-mail corporativo</span>
+              <TextInput required placeholder="nome@empresa.com" type="email" value={resetData.email} onChange={(event) => updateResetField("email", event.target.value)} />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Telefone para contato</span>
+              <TextInput placeholder="(11) 99999-9999" value={resetData.phone} onChange={(event) => updateResetField("phone", event.target.value)} />
+            </label>
+            {resetMessage ? (
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-bold text-amiste-gray">
+                {resetMessage}
+              </div>
+            ) : null}
+            <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-4">
+              <Button variant="secondary" onClick={() => setResetOpen(false)}>
+                Cancelar
+              </Button>
+              <Button icon="shield" type="submit">
+                Solicitar Redefinicao
               </Button>
             </footer>
           </form>

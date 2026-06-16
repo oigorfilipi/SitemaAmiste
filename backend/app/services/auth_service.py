@@ -112,11 +112,16 @@ def complete_first_login(repository: ErpRecordRepository, account: dict[str, Any
 
 
 def request_account_access(repository: ErpRecordRepository, payload: dict[str, Any]) -> dict[str, Any]:
-    required_fields = ["fullName", "email", "document", "phone"]
+    request_type = payload.get("requestType") or "accountAccess"
+    required_fields = ["email"] if request_type == "passwordReset" else ["fullName", "email", "document", "phone"]
     missing_fields = [field for field in required_fields if not str(payload.get(field, "")).strip()]
 
     if missing_fields:
-        raise HTTPException(status_code=422, detail="Preencha nome, e-mail, CPF/RG e telefone.")
+        detail = "Informe o e-mail corporativo." if request_type == "passwordReset" else "Preencha nome, e-mail, CPF/RG e telefone."
+        raise HTTPException(status_code=422, detail=detail)
+
+    related_account = _find_active_account_by_email(repository, payload.get("email", ""))
+    request_title = "Redefinicao de senha" if request_type == "passwordReset" else "Solicitacao de conta"
 
     recipients = [
         {
@@ -136,6 +141,10 @@ def request_account_access(repository: ErpRecordRepository, payload: dict[str, A
             for recipient in recipients
             for channel in ["email", "whatsapp"]
         ],
+        "fullName": payload.get("fullName") or related_account.get("fullName") if related_account else payload.get("fullName") or "",
+        "relatedAccountId": related_account.get("id") if related_account else "",
+        "requestType": request_type,
+        "requestTitle": request_title,
         "recipients": recipients,
         "requestedAt": datetime.now(UTC).isoformat(),
         "status": "pendente",

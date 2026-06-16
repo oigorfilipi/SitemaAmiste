@@ -85,3 +85,9 @@ SMOKE_EMAIL="usuario@empresa.com" SMOKE_PASSWORD="senha" npm run smoke:productio
 ```
 
 Sem credenciais, o script valida apenas frontend e health do banco. Com uma conta pendente de primeiro acesso, ele confirma que o login funciona e que rotas operacionais ficam bloqueadas. Com uma conta operacional, ele valida snapshot, backup DEV quando aplicavel e upload/download/exclusao no Supabase Storage.
+
+## 10. Solicitacoes de acesso e senha
+
+Os links "Nao Tenho Acesso? Solicitar Conta" e "Esqueci minha senha" registram pedidos na colecao `accountRequests`. DONO e DEV visualizam esses pedidos em Gestao de Contas, podem arquivar ou marcar como atendidos, e entao criar ou redefinir uma senha provisoria pelo cadastro de colaborador.
+
+Os disparos automaticos por e-mail/WhatsApp ficam registrados como `pendente` ate que um provedor transacional seja configurado.

@@ -9,6 +9,7 @@ import EntityFormModal from "../../components/organisms/EntityFormModal.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
 import RolePermissionMatrix from "../../components/organisms/RolePermissionMatrix.jsx";
 import RoleSummaryPanel from "../../components/organisms/RoleSummaryPanel.jsx";
+import StatusPill from "../../components/atoms/StatusPill.jsx";
 import TableEmptyState from "../../components/molecules/TableEmptyState.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import {
@@ -42,7 +43,14 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const canUpload = rolePermissions["action:upload"] !== "OC";
   const canEditPermissions = accessLevel === "AC" && rbacModuleAccess === "AC" && rolePermissions["action:rbac.edit"] === "AC";
   const rows = useMemo(() => buildAccountRows(records), [records]);
+  const { records: requestRecords, updateRecord: updateRequestRecord } = useCollection("accountRequests");
   const metrics = useMemo(() => buildAccountMetrics(rows), [rows]);
+  const pendingRequests = useMemo(
+    () => requestRecords
+      .filter((request) => request.status !== "atendida" && request.status !== "arquivada")
+      .sort((first, second) => String(second.requestedAt || "").localeCompare(String(first.requestedAt || ""))),
+    [requestRecords]
+  );
   const accountTabs = useMemo(
     () => ACCOUNT_TABS.filter((tab) => tab.id !== "matriz" || rbacModuleAccess !== "OC"),
     [rbacModuleAccess]
@@ -153,6 +161,23 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
   }
 
+  async function handleRequestStatus(request, status) {
+    if (!canUpdate) {
+      return;
+    }
+
+    try {
+      await updateRequestRecord(request.id, {
+        ...request,
+        resolvedAt: new Date().toISOString(),
+        resolvedBy: user?.displayName || user?.fullName || "",
+        status,
+      });
+    } catch (error) {
+      setErrorMessage(error.message || "Nao foi possivel atualizar a solicitacao.");
+    }
+  }
+
   function handlePermissionChange(role, resourceId, access) {
     if (!canEditPermissions) {
       return;
@@ -192,6 +217,50 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
         <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
           {errorMessage}
         </div>
+      ) : null}
+
+      {pendingRequests.length ? (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-black text-amiste-black">Solicitacoes pendentes</h2>
+              <p className="mt-1 text-sm font-semibold text-amiste-gray/60">
+                Pedidos de acesso e redefinicao de senha vindos da tela de login.
+              </p>
+            </div>
+            <StatusPill label={`${pendingRequests.length} pendente(s)`} status="pendente" />
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
+            {pendingRequests.map((request) => (
+              <article className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4" key={request.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <strong className="font-display text-base font-black text-amiste-black">
+                      {request.requestTitle || (request.requestType === "passwordReset" ? "Redefinicao de senha" : "Solicitacao de conta")}
+                    </strong>
+                    <span className="mt-1 block text-xs font-bold text-amiste-gray/60">
+                      {request.fullName || "Nome nao informado"} | {request.email || "-"}
+                    </span>
+                  </div>
+                  <StatusPill label={request.status || "pendente"} status="pendente" />
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs font-bold text-amiste-gray/70 md:grid-cols-2">
+                  <span>Telefone: {request.phone || "-"}</span>
+                  <span>Documento: {request.document || "-"}</span>
+                  <span className="md:col-span-2">Motivo: {request.reason || "-"}</span>
+                </div>
+                <footer className="mt-4 flex flex-wrap justify-end gap-2">
+                  <Button className="h-9 px-3 text-xs" disabled={!canUpdate} variant="secondary" onClick={() => handleRequestStatus(request, "arquivada")}>
+                    Arquivar
+                  </Button>
+                  <Button className="h-9 px-3 text-xs" disabled={!canUpdate} icon="checkSquare" onClick={() => handleRequestStatus(request, "atendida")}>
+                    Marcar atendida
+                  </Button>
+                </footer>
+              </article>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {/* --- SECAO: ABAS DE CONTAS --- */}

@@ -184,6 +184,11 @@ export async function completeFirstLoginLocal(userId, payload) {
 
 export async function requestAccountAccessLocal(payload) {
   const accounts = await listRecords("accounts");
+  const requestType = payload.requestType || "accountAccess";
+  const relatedAccount = accounts.find((account) =>
+    account.status === "ativo" &&
+    String(account.email || "").trim().toLowerCase() === String(payload.email || "").trim().toLowerCase()
+  );
   const recipients = accounts
     .filter((account) => account.role === "DEV" || account.role === "CEO")
     .map((account) => ({
@@ -199,6 +204,10 @@ export async function requestAccountAccessLocal(payload) {
       { channel: "email", recipient: recipient.email, status: "simulado" },
       { channel: "whatsapp", recipient: recipient.phone, status: "simulado" },
     ]),
+    fullName: payload.fullName || relatedAccount?.fullName || "",
+    relatedAccountId: relatedAccount?.id || "",
+    requestTitle: requestType === "passwordReset" ? "Redefinicao de senha" : "Solicitacao de conta",
+    requestType,
     recipients,
     requestedAt: new Date().toISOString(),
     status: "pendente",
