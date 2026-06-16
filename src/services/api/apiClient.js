@@ -1,14 +1,22 @@
 import { API_BASE_URL } from "../dataSource.js";
+import { getApiAuthToken } from "./authSession.js";
 
 function normalizeBaseUrl(url = "") {
   return url.replace(/\/+$/, "");
 }
 
-function buildHeaders(headers = {}) {
-  return {
+function buildHeaders(headers = {}, options = {}) {
+  const token = options.auth === false ? "" : getApiAuthToken();
+  const resolvedHeaders = {
     "Content-Type": "application/json",
     ...headers,
   };
+
+  if (token) {
+    resolvedHeaders.Authorization = `Bearer ${token}`;
+  }
+
+  return resolvedHeaders;
 }
 
 async function readErrorMessage(response) {
@@ -22,14 +30,15 @@ async function readErrorMessage(response) {
 
 export async function apiRequest(path, options = {}) {
   const baseUrl = normalizeBaseUrl(API_BASE_URL);
+  const { auth, ...requestOptions } = options;
 
   if (!baseUrl) {
     throw new Error("VITE_API_URL nao configurada para a fonte de dados API.");
   }
 
   const response = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: buildHeaders(options.headers),
+    ...requestOptions,
+    headers: buildHeaders(options.headers, { auth }),
   });
 
   if (!response.ok) {

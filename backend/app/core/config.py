@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str = Field(default="", alias="SUPABASE_ANON_KEY")
     supabase_service_role_key: str = Field(default="", alias="SUPABASE_SERVICE_ROLE_KEY")
     allow_unknown_collections: bool = Field(default=False, alias="ALLOW_UNKNOWN_COLLECTIONS")
+    access_token_ttl_minutes: int = Field(default=720, alias="ACCESS_TOKEN_TTL_MINUTES")
 
     @property
     def cors_origins(self) -> list[str]:
@@ -50,6 +51,7 @@ class Settings(BaseSettings):
             "http://localhost:5173",
             "http://127.0.0.1:4173",
             "http://localhost:4173",
+            "https://sitema-interno-amiste.vercel.app",
         ]
 
         return list(dict.fromkeys(origin for origin in origins if origin))

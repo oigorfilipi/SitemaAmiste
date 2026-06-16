@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.core.config import COLLECTION_NAMES, get_settings
+from app.core.security import sanitize_account
 from app.repositories.record_repository import RecordRepository
 
 
@@ -23,10 +24,13 @@ class CollectionService:
         return COLLECTION_NAMES
 
     def build_snapshot(self) -> dict[str, list[dict[str, Any]]]:
-        return {
+        snapshot = {
             collection_name: self.repository.list_records(collection_name)
             for collection_name in COLLECTION_NAMES
         }
+        snapshot["accounts"] = [sanitize_account(account) for account in snapshot.get("accounts", [])]
+
+        return snapshot
 
     def replace_snapshot(self, database: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         # --- SECAO: RESTAURACAO CONTROLADA ---
