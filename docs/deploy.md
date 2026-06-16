@@ -73,3 +73,5 @@ No modo API, arquivos de etiquetas sao enviados pelo backend para o Supabase Sto
 ## 8. Primeiro acesso
 
 Contas com `mustChangePassword=true` conseguem apenas autenticar e concluir `/api/auth/first-login`. As rotas operacionais de dados e arquivos recusam o acesso ate que senha definitiva, nome de exibicao e foto de perfil sejam preenchidos.
+
+Senhas novas e senhas provisorias precisam ter pelo menos 8 caracteres, incluindo letra maiuscula, letra minuscula e numero.

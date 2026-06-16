@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.core.security import create_access_token, hash_password, sanitize_account, verify_password
+from app.core.security import create_access_token, hash_password, sanitize_account, validate_password_strength, verify_password
 from app.repositories.repository_factory import ErpRecordRepository
 
 LOCAL_DEFAULT_PASSWORD = "1234"
@@ -83,6 +83,8 @@ def login(repository: ErpRecordRepository, email: str, password: str) -> dict[st
 def complete_first_login(repository: ErpRecordRepository, account: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     if not str(payload.get("password", "")).strip():
         raise HTTPException(status_code=422, detail="Informe a nova senha.")
+
+    validate_password_strength(payload["password"])
 
     if not str(payload.get("displayName", "")).strip():
         raise HTTPException(status_code=422, detail="Informe o nome de exibicao.")

@@ -12,6 +12,7 @@ from app.core.config import get_settings
 
 PASSWORD_ALGORITHM = "pbkdf2_sha256"
 PASSWORD_ITERATIONS = 210_000
+PASSWORD_POLICY_MESSAGE = "A senha deve ter pelo menos 8 caracteres, com letra maiuscula, letra minuscula e numero."
 TOKEN_ALGORITHM = "HS256"
 
 
@@ -53,6 +54,22 @@ def verify_password(password: str, password_hash: str) -> bool:
     ).hex()
 
     return hmac.compare_digest(candidate, digest)
+
+
+def validate_password_strength(password: str) -> None:
+    value = str(password or "")
+
+    if len(value) < 8:
+        raise HTTPException(status_code=422, detail=PASSWORD_POLICY_MESSAGE)
+
+    if not any(character.islower() for character in value):
+        raise HTTPException(status_code=422, detail=PASSWORD_POLICY_MESSAGE)
+
+    if not any(character.isupper() for character in value):
+        raise HTTPException(status_code=422, detail=PASSWORD_POLICY_MESSAGE)
+
+    if not any(character.isdigit() for character in value):
+        raise HTTPException(status_code=422, detail=PASSWORD_POLICY_MESSAGE)
 
 
 def create_access_token(account: dict[str, Any]) -> str:

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_operational_account, get_repository
 from app.core.permissions import can_access_page, can_perform_action, get_collection_page
-from app.core.security import hash_password, sanitize_account
+from app.core.security import hash_password, sanitize_account, validate_password_strength
 from app.services.collection_service import CollectionService, ensure_collection_name
 
 router = APIRouter(tags=["collections"])
@@ -75,7 +75,11 @@ def normalize_account_payload_for_storage(payload: dict[str, Any], current_accou
     next_payload = dict(payload)
     provisional_password = next_payload.get("temporaryPassword") or next_payload.get("password")
 
+    if not existing_account and not provisional_password:
+        raise HTTPException(status_code=422, detail="Informe uma senha provisoria para o primeiro acesso.")
+
     if provisional_password:
+        validate_password_strength(str(provisional_password))
         next_payload["passwordHash"] = hash_password(str(provisional_password))
         next_payload["password"] = ""
         next_payload["temporaryPassword"] = ""

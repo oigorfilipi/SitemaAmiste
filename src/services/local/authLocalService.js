@@ -1,4 +1,5 @@
 import { createRecord, listRecords, updateRecord } from "./localDatabase.js";
+import { validatePasswordStrength } from "../passwordPolicyService.js";
 
 const SESSION_KEY = "amiste_erp_auth_session_v1";
 const LOCAL_DEFAULT_PASSWORD = "1234";
@@ -142,6 +143,12 @@ export async function completeFirstLoginLocal(userId, payload) {
 
   if (!payload.password?.trim()) {
     throw new Error("Informe a nova senha.");
+  }
+
+  const passwordError = validatePasswordStrength(payload.password);
+
+  if (passwordError) {
+    throw new Error(passwordError);
   }
 
   if (!payload.displayName?.trim()) {

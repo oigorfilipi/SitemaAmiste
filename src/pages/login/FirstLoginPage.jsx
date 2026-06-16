@@ -3,6 +3,7 @@ import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import { assertInlineImageFile } from "../../services/imageUploadValidationService.js";
+import { validatePasswordStrength } from "../../services/passwordPolicyService.js";
 
 function readFileAsDataUrl(file) {
   assertInlineImageFile(file);
@@ -46,6 +47,13 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
 
     if (password !== confirmPassword) {
       setError("As senhas nao conferem.");
+      return;
+    }
+
+    const passwordError = validatePasswordStrength(password);
+
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 

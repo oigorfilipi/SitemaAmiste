@@ -10,6 +10,7 @@ import {
   buildProfileFormData,
   buildProfileMetrics,
   normalizeProfilePayload,
+  validateProfilePayload,
 } from "../../services/profileService.js";
 import { getRolePermissions } from "../../services/permissionService.js";
 
@@ -60,8 +61,10 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
     setErrorMessage("");
     setMessage("");
 
-    if (formData.securityNewPassword && formData.securityNewPassword !== formData.securityConfirmPassword) {
-      setErrorMessage("As senhas nao conferem.");
+    const validationError = validateProfilePayload(formData);
+
+    if (validationError) {
+      setErrorMessage(validationError);
       return;
     }
 

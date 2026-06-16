@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeAccountPayload } from "../accountService.js";
+import { normalizeAccountPayload, validateAccountPayload } from "../accountService.js";
 
 describe("accountService collaborator payload normalization", () => {
   it("does not inject a default password when editing an existing collaborator without password changes", () => {
@@ -34,12 +34,41 @@ describe("accountService collaborator payload normalization", () => {
         fullName: "Novo Usuario",
         role: "VEN",
         status: "ativo",
-        temporaryPassword: "senha-provisoria",
+        temporaryPassword: "Senha123",
       },
       null,
     );
 
-    expect(normalizedPayload.password).toBe("senha-provisoria");
+    expect(normalizedPayload.password).toBe("Senha123");
     expect(normalizedPayload.mustChangePassword).toBe(true);
+  });
+
+  it("rejects weak temporary passwords", () => {
+    expect(validateAccountPayload(
+      {
+        cpfDocument: "123",
+        displayName: "Novo Usuario",
+        email: "novo@amistecafe.local",
+        fullName: "Novo Usuario",
+        role: "VEN",
+        temporaryPassword: "1234",
+      },
+      { accounts: [] },
+      null,
+    )).toContain("A senha deve ter pelo menos 8 caracteres");
+  });
+
+  it("does not generate a default password for invalid new collaborator payloads", () => {
+    const normalizedPayload = normalizeAccountPayload(
+      {
+        displayName: "Sem Senha",
+        email: "sem-senha@amistecafe.local",
+        fullName: "Sem Senha",
+        role: "VEN",
+      },
+      null,
+    );
+
+    expect(normalizedPayload.password).toBeUndefined();
   });
 });

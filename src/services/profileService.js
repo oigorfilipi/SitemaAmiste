@@ -1,4 +1,5 @@
 import { PAGE_LABELS, ROLE_LABELS } from "./accountService.js";
+import { validatePasswordStrength } from "./passwordPolicyService.js";
 import { ALL_PAGES, getAccessLabel, getRolePermissions } from "./permissionService.js";
 
 export const PROFILE_FORM_FIELDS = [
@@ -121,17 +122,34 @@ export function normalizeProfilePayload(formData, profile) {
    * Cargo, status e historico ficam preservados para que o proprio usuario nao altere
    * permissoes pela tela de perfil. Essa regra pertence a Gestao de Contas.
    */
-  return {
+  const payload = {
     ...profile,
     displayName,
     fullName: formData.fullName || displayName,
     email: profile?.email || "",
     phone: formData.phone || "",
     avatarInitials: String(formData.avatarInitials || buildInitials(displayName)).slice(0, 3).toUpperCase(),
-    password: newPassword || profile?.password || profile?.temporaryPassword || "1234",
     activeSessions: Array.isArray(formData.activeSessions) ? formData.activeSessions : profile?.activeSessions || [],
     profilePhotoDataUrl: formData.profilePhotoDataUrl || "",
     profilePhotoUrl: formData.profilePhotoUrl || "",
     twoFactorEnabled: Boolean(formData.twoFactorEnabled),
   };
+
+  if (newPassword) {
+    payload.password = newPassword;
+  }
+
+  return payload;
+}
+
+export function validateProfilePayload(formData) {
+  if (!formData.securityNewPassword) {
+    return "";
+  }
+
+  if (formData.securityNewPassword !== formData.securityConfirmPassword) {
+    return "As senhas nao conferem.";
+  }
+
+  return validatePasswordStrength(formData.securityNewPassword);
 }

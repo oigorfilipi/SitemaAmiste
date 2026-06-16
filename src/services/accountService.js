@@ -5,6 +5,7 @@ import {
   getAccessLabel,
   getRolePermissions,
 } from "./permissionService.js";
+import { validatePasswordStrength } from "./passwordPolicyService.js";
 
 export const ACCOUNT_TABS = [
   { id: "ativas", label: "Ativas" },
@@ -265,8 +266,6 @@ export function normalizeAccountPayload(payload, editingRecord) {
     normalizedPayload.password = payload.temporaryPassword;
   } else if (editingRecord?.password) {
     normalizedPayload.password = editingRecord.password;
-  } else if (!editingRecord) {
-    normalizedPayload.password = "1234";
   }
 
   return normalizedPayload;
@@ -283,6 +282,14 @@ export function validateAccountPayload(payload, snapshot, editingRecord) {
 
   if (!editingRecord && !payload.temporaryPassword?.trim()) {
     return "Informe uma senha provisoria para o primeiro acesso.";
+  }
+
+  if (payload.temporaryPassword) {
+    const passwordError = validatePasswordStrength(payload.temporaryPassword);
+
+    if (passwordError) {
+      return passwordError;
+    }
   }
 
   if (!payload.cpfDocument?.trim()) {
