@@ -4,7 +4,7 @@ from secrets import token_hex
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import get_current_account, get_repository
+from app.api.dependencies import get_operational_account, get_repository
 from app.core.permissions import can_access_page, can_perform_action, get_collection_page
 from app.core.security import hash_password, sanitize_account
 from app.services.collection_service import CollectionService, ensure_collection_name
@@ -158,7 +158,7 @@ def add_history_entry(repository, account: dict, collection_name: str, action: s
 
 @router.get("/collections")
 def list_collections(
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> dict[str, list[str]]:
     return {"collections": service.list_collection_names()}
@@ -166,7 +166,7 @@ def list_collections(
 
 @router.get("/snapshot")
 def get_snapshot(
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> dict[str, list[dict[str, Any]]]:
     return service.build_snapshot()
@@ -174,7 +174,7 @@ def get_snapshot(
 
 @router.get("/backup")
 def get_backup(
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> dict[str, list[dict[str, Any]]]:
     if account.get("role") != "DEV":
@@ -194,7 +194,7 @@ def get_backup(
 @router.put("/snapshot")
 def replace_snapshot(
     database: dict[str, Any],
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> dict[str, list[dict[str, Any]]]:
     if account.get("role") != "DEV":
@@ -216,7 +216,7 @@ def replace_snapshot(
 @router.get("/collections/{collection_name}")
 def list_records(
     collection_name: str,
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     collection_name = ensure_collection_name(collection_name)
@@ -233,7 +233,7 @@ def list_records(
 def set_collection(
     collection_name: str,
     records: list[dict[str, Any]],
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     collection_name = ensure_collection_name(collection_name)
@@ -261,7 +261,7 @@ def set_collection(
 def create_record(
     collection_name: str,
     payload: dict[str, Any],
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> dict[str, Any]:
     collection_name = ensure_collection_name(collection_name)
@@ -287,7 +287,7 @@ def update_record(
     collection_name: str,
     record_id: str,
     payload: dict[str, Any],
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> dict[str, Any]:
     collection_name = ensure_collection_name(collection_name)
@@ -319,7 +319,7 @@ def update_record(
 def delete_record(
     collection_name: str,
     record_id: str,
-    account: dict = Depends(get_current_account),
+    account: dict = Depends(get_operational_account),
     service: CollectionService = Depends(get_service),
 ) -> dict[str, Any]:
     collection_name = ensure_collection_name(collection_name)

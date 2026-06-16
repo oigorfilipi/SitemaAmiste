@@ -69,3 +69,7 @@ No modo API, o backup baixado pela pagina Configuracoes usa `/api/backup` e fica
 ## 7. Arquivos e uploads
 
 No modo API, arquivos de etiquetas sao enviados pelo backend para o Supabase Storage no bucket privado `amiste-files`. O frontend recebe apenas metadados e usa URLs assinadas temporarias para preview, download e impressao.
+
+## 8. Primeiro acesso
+
+Contas com `mustChangePassword=true` conseguem apenas autenticar e concluir `/api/auth/first-login`. As rotas operacionais de dados e arquivos recusam o acesso ate que senha definitiva, nome de exibicao e foto de perfil sejam preenchidos.

@@ -26,3 +26,13 @@ def get_current_account(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Conta inativa ou inexistente.")
 
     return account
+
+
+def get_operational_account(account: dict = Depends(get_current_account)) -> dict:
+    if account.get("mustChangePassword"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Conclua o primeiro acesso antes de usar o sistema.",
+        )
+
+    return account

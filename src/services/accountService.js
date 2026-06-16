@@ -249,7 +249,7 @@ export function normalizeAccountPayload(payload, editingRecord) {
     ]
     : editingRecord?.inviteDispatches || [];
 
-  return {
+  const normalizedPayload = {
     ...payload,
     avatarInitials: payload.avatarInitials || buildInitials(displayName),
     createdAt: editingRecord?.createdAt || now,
@@ -257,10 +257,19 @@ export function normalizeAccountPayload(payload, editingRecord) {
     inviteDispatches,
     lastLogin: editingRecord?.lastLogin || "",
     mustChangePassword: passwordChanged ? true : Boolean(editingRecord?.mustChangePassword),
-    password: payload.temporaryPassword || editingRecord?.password || "1234",
     status: payload.status || "ativo",
     temporaryPassword: payload.temporaryPassword || editingRecord?.temporaryPassword || "",
   };
+
+  if (payload.temporaryPassword) {
+    normalizedPayload.password = payload.temporaryPassword;
+  } else if (editingRecord?.password) {
+    normalizedPayload.password = editingRecord.password;
+  } else if (!editingRecord) {
+    normalizedPayload.password = "1234";
+  }
+
+  return normalizedPayload;
 }
 
 export function validateAccountPayload(payload, snapshot, editingRecord) {
