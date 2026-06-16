@@ -11,12 +11,14 @@ import {
   filterQuickAccessByRole,
   getPageAccess,
 } from "./services/permissionService.js";
+import { applyTheme, getStoredTheme, saveStoredTheme, toggleTheme } from "./services/themeService.js";
 
 export default function App() {
   const [activePage, setActivePage] = useState("home");
   const [pageHistory, setPageHistory] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewUserId, setPreviewUserId] = useState("");
+  const [theme, setTheme] = useState(() => getStoredTheme(null));
   const {
     completeFirstAccess,
     data: userContext,
@@ -69,6 +71,12 @@ export default function App() {
       setActivePage("home");
     }
   }, [activePageAllowed]);
+
+  useEffect(() => {
+    const nextTheme = getStoredTheme(userContext.user);
+    setTheme(nextTheme);
+    applyTheme(nextTheme);
+  }, [userContext.user]);
 
   useEffect(() => {
     if (previewUserId && !previewableSidebarUsers.some((sidebarUser) => sidebarUser.id === previewUserId)) {
@@ -131,6 +139,14 @@ export default function App() {
     await logout();
   }
 
+  function handleToggleTheme() {
+    const nextTheme = toggleTheme(theme);
+
+    setTheme(nextTheme);
+    saveStoredTheme(userContext.user, nextTheme);
+    applyTheme(nextTheme);
+  }
+
   if (!userContext.user) {
     return (
       <LoginPage
@@ -162,6 +178,7 @@ export default function App() {
       previewUser={previewUserId ? activeUser : null}
       shortcuts={filteredShortcuts}
       sidebarUsers={previewableSidebarUsers}
+      theme={theme}
       user={activeUser}
       realUser={userContext.user}
       onExitPreview={() => setPreviewUserId("")}
@@ -169,6 +186,7 @@ export default function App() {
       onPreviewUser={handlePreviewUser}
       onSelectPage={handleSelectPage}
       onLogout={handleLogout}
+      onToggleTheme={handleToggleTheme}
       onToggleSidebar={() => setSidebarCollapsed((currentState) => !currentState)}
       canGoBack={pageHistory.length > 0 && safeActivePage !== "home"}
     >
@@ -181,6 +199,7 @@ export default function App() {
       >
         <CurrentPage
           accessLevel={activeAccessLevel}
+          navigation={navigation}
           previewUser={previewUserId ? activeUser : null}
           quickAccess={filteredQuickAccess}
           realUser={userContext.user}

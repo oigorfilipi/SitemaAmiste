@@ -14,7 +14,6 @@ export const PROFILE_FORM_FIELDS = [
   { name: "birthDate", label: "Data de nascimento", locked: true, section: "locked", type: "date" },
   { name: "securityNewPassword", label: "Nova senha", type: "password", section: "security" },
   { name: "securityConfirmPassword", label: "Confirmar senha", type: "password", section: "security" },
-  { name: "twoFactorEnabled", label: "Ativar autenticacao em duas etapas (2FA)", type: "checkbox", section: "security" },
 ];
 
 function buildInitials(value) {
@@ -132,7 +131,6 @@ export function normalizeProfilePayload(formData, profile) {
     activeSessions: Array.isArray(formData.activeSessions) ? formData.activeSessions : profile?.activeSessions || [],
     profilePhotoDataUrl: formData.profilePhotoDataUrl || "",
     profilePhotoUrl: formData.profilePhotoUrl || "",
-    twoFactorEnabled: Boolean(formData.twoFactorEnabled),
   };
 
   if (newPassword) {

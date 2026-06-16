@@ -11,6 +11,7 @@ export const ACCOUNT_TABS = [
   { id: "ativas", label: "Ativas" },
   { id: "desativadas", label: "Desativadas" },
   { id: "matriz", label: "Matriz RBAC" },
+  { id: "granular", label: "Matriz Granular" },
 ];
 
 export const ROLE_LABELS = {
@@ -67,9 +68,7 @@ export const ACCOUNT_FORM_FIELDS = [
   { name: "profilePhotoUrl", label: "URL da foto de perfil", section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
   { name: "profilePhotoDataUrl", label: "Upload de foto", type: "imageUpload", full: true, fallbackUrlField: "profilePhotoUrl", section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
   { name: "avatarInitials", label: "Iniciais", maxLength: 3, section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
-  { name: "requestedByCollaborator", label: "Solicitado pelo colaborador?", type: "checkbox", defaultValue: false, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
-  { name: "termsAccepted", label: "Concordo com os termos de criacao", type: "checkbox", defaultValue: false, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
-  { name: "captchaAccepted", label: "Nao sou robo", type: "checkbox", defaultValue: false, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
+  { name: "internalNotes", label: "Observacoes internas", type: "textarea", full: true, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
 ];
 
 export const PAGE_LABELS = {
@@ -89,6 +88,7 @@ export const PAGE_LABELS = {
   estoque: "Contagem de Estoque",
   etiquetas: "Etiquetas",
   financeiro: "Financeiro",
+  solicitacoes: "Solicitacoes",
   historico: "Historico Geral",
   home: "Home",
   insumos: "Catalogo de Insumos",
@@ -105,6 +105,21 @@ export const PAGE_LABELS = {
   "module:machines.wiki": "Modulo: Wiki Tecnica",
   "tab:machines.catalog": "Aba: Maquinas",
   "tab:machines.repairs": "Aba: Consertos em Maquinas",
+  "section:insumos.cadastro": "Granular: Insumos / Cadastro",
+  "section:insumos.precos": "Granular: Insumos / Precos",
+  "section:insumos.estoque": "Granular: Insumos / Estoque",
+  "section:insumos.impressao": "Granular: Insumos / Impressao",
+  "section:solicitacoes.criacao": "Granular: Solicitacoes / Criacao",
+  "section:solicitacoes.atendimento": "Granular: Solicitacoes / Atendimento",
+  "section:solicitacoes.historico": "Granular: Solicitacoes / Historico",
+  "section:solicitacoes.chat": "Granular: Solicitacoes / Chat",
+  "field:insumos.custo": "Campo: Insumos / Custo",
+  "field:insumos.margem": "Campo: Insumos / Margem",
+  "field:accounts.permissoes": "Campo: Contas / Permissoes",
+  "action:requests.attend": "Acao: Solicitações / Atender",
+  "action:requests.reject": "Acao: Solicitações / Rejeitar",
+  "action:requests.transfer": "Acao: Solicitações / Transferir",
+  "action:requests.close": "Acao: Solicitações / Encerrar",
   vendas: "Vendas",
 };
 
@@ -220,6 +235,16 @@ export function buildRoleMatrix() {
   }));
 }
 
+export function buildRoleMatrixByScope(scope = "base") {
+  const granularPrefixes = ["section:", "field:", "action:requests."];
+  const isGranularResource = (resourceId) => granularPrefixes.some((prefix) => resourceId.startsWith(prefix));
+
+  return buildRoleMatrix().filter((row) => scope === "granular"
+    ? isGranularResource(row.pageId)
+    : !isGranularResource(row.pageId)
+  );
+}
+
 export function buildRoleSummary(role) {
   const permissions = getRolePermissions(role) || {};
 
@@ -243,19 +268,12 @@ export function normalizeAccountPayload(payload, editingRecord) {
   const now = new Date().toISOString();
   const displayName = payload.displayName || payload.fullName || "Usuario";
   const passwordChanged = Boolean(payload.temporaryPassword) && payload.temporaryPassword !== editingRecord?.temporaryPassword;
-  const inviteDispatches = payload.requestedByCollaborator
-    ? [
-      { channel: "email", status: "simulado", target: payload.email || "" },
-      { channel: "whatsapp", status: "simulado", target: payload.phone || "" },
-    ]
-    : editingRecord?.inviteDispatches || [];
-
   const normalizedPayload = {
     ...payload,
     avatarInitials: payload.avatarInitials || buildInitials(displayName),
     createdAt: editingRecord?.createdAt || now,
     firstLoginCompletedAt: passwordChanged ? "" : editingRecord?.firstLoginCompletedAt || "",
-    inviteDispatches,
+    inviteDispatches: [],
     lastLogin: editingRecord?.lastLogin || "",
     mustChangePassword: passwordChanged ? true : Boolean(editingRecord?.mustChangePassword),
     status: payload.status || "ativo",
@@ -303,10 +321,6 @@ export function validateAccountPayload(payload, snapshot, editingRecord) {
 
   if (duplicateEmail) {
     return "Ja existe uma conta com este e-mail.";
-  }
-
-  if (!editingRecord && (!payload.termsAccepted || !payload.captchaAccepted)) {
-    return "Confirme os termos de criacao e a validacao de seguranca.";
   }
 
   return "";

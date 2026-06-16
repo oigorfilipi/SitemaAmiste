@@ -17,6 +17,7 @@ const PerfilPage = lazy(() => import("./perfil/PerfilPage.jsx"));
 const PortfoliosPage = lazy(() => import("./portfolios/PortfoliosPage.jsx"));
 const PrecosPage = lazy(() => import("./precos/PrecosPage.jsx"));
 const ServiceOrdersPage = lazy(() => import("./service-orders/ServiceOrdersPage.jsx"));
+const SolicitacoesPage = lazy(() => import("./solicitacoes/SolicitacoesPage.jsx"));
 const VendasPage = lazy(() => import("./vendas/VendasPage.jsx"));
 
 export const pageRegistry = {
@@ -36,6 +37,7 @@ export const pageRegistry = {
   opcoes: OpcoesPage,
   etiquetas: EtiquetasPage,
   accounts: AccountsPage,
+  solicitacoes: SolicitacoesPage,
   configuracoes: ConfiguracoesPage,
   perfil: PerfilPage,
 };

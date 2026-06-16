@@ -15,6 +15,7 @@ const ALL_PAGES = [
   "portfolios",
   "vendas",
   "financeiro",
+  "solicitacoes",
   "historico",
   "configuracoes",
   "perfil",
@@ -36,6 +37,24 @@ const INTERNAL_MODULES = [
   "module:accounts.rbac",
 ];
 
+const GRANULAR_RESOURCES = [
+  "section:insumos.cadastro",
+  "section:insumos.precos",
+  "section:insumos.estoque",
+  "section:insumos.impressao",
+  "section:solicitacoes.criacao",
+  "section:solicitacoes.atendimento",
+  "section:solicitacoes.historico",
+  "section:solicitacoes.chat",
+  "field:insumos.custo",
+  "field:insumos.margem",
+  "field:accounts.permissoes",
+  "action:requests.attend",
+  "action:requests.reject",
+  "action:requests.transfer",
+  "action:requests.close",
+];
+
 const ACTION_RESOURCES = [
   "action:create",
   "action:update",
@@ -47,7 +66,7 @@ const ACTION_RESOURCES = [
   "action:user.protectedEdit",
 ];
 
-const ALL_PERMISSION_RESOURCES = [...ALL_PAGES, ...INTERNAL_MODULES, ...ACTION_RESOURCES];
+const ALL_PERMISSION_RESOURCES = [...ALL_PAGES, ...INTERNAL_MODULES, ...GRANULAR_RESOURCES, ...ACTION_RESOURCES];
 const PERMISSION_OVERRIDE_KEY = "amiste_erp_permission_overrides_v1";
 
 const ROLE_PERMISSIONS = {
@@ -67,6 +86,7 @@ const ROLE_PERMISSIONS = {
     portfolios: ACCESS.AC,
     vendas: ACCESS.AC,
     financeiro: ACCESS.VIS,
+    solicitacoes: ACCESS.AC,
     historico: ACCESS.OC,
     configuracoes: ACCESS.OC,
     perfil: ACCESS.AC,
@@ -95,6 +115,7 @@ const ROLE_PERMISSIONS = {
     portfolios: ACCESS.VIS,
     vendas: ACCESS.AC,
     financeiro: ACCESS.OC,
+    solicitacoes: ACCESS.AC,
     historico: ACCESS.OC,
     configuracoes: ACCESS.OC,
     perfil: ACCESS.AC,
@@ -123,6 +144,7 @@ const ROLE_PERMISSIONS = {
     portfolios: ACCESS.OC,
     vendas: ACCESS.OC,
     financeiro: ACCESS.OC,
+    solicitacoes: ACCESS.AC,
     historico: ACCESS.OC,
     configuracoes: ACCESS.OC,
     perfil: ACCESS.AC,
@@ -151,6 +173,7 @@ const ROLE_PERMISSIONS = {
     portfolios: ACCESS.OC,
     vendas: ACCESS.VIS,
     financeiro: ACCESS.AC,
+    solicitacoes: ACCESS.AC,
     historico: ACCESS.AC,
     configuracoes: ACCESS.OC,
     perfil: ACCESS.AC,
@@ -227,6 +250,18 @@ function resolveFallbackAccess(role, resourceId, permissions) {
   }
 
   if (resourceId.startsWith("module:accounts")) {
+    return permissions.accounts || ACCESS.OC;
+  }
+
+  if (resourceId.startsWith("section:solicitacoes") || resourceId.startsWith("action:requests")) {
+    return permissions.solicitacoes || ACCESS.OC;
+  }
+
+  if (resourceId.startsWith("section:insumos") || resourceId.startsWith("field:insumos")) {
+    return permissions.insumos || ACCESS.OC;
+  }
+
+  if (resourceId.startsWith("field:accounts")) {
     return permissions.accounts || ACCESS.OC;
   }
 

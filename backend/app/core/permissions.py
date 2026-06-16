@@ -15,6 +15,7 @@ ALL_PAGES = [
     "portfolios",
     "vendas",
     "financeiro",
+    "solicitacoes",
     "historico",
     "configuracoes",
     "perfil",
@@ -46,6 +47,21 @@ ALL_PERMISSION_RESOURCES = [
     "module:insumos.recipes",
     "module:labels.files",
     "module:accounts.rbac",
+    "section:insumos.cadastro",
+    "section:insumos.precos",
+    "section:insumos.estoque",
+    "section:insumos.impressao",
+    "section:solicitacoes.criacao",
+    "section:solicitacoes.atendimento",
+    "section:solicitacoes.historico",
+    "section:solicitacoes.chat",
+    "field:insumos.custo",
+    "field:insumos.margem",
+    "field:accounts.permissoes",
+    "action:requests.attend",
+    "action:requests.reject",
+    "action:requests.transfer",
+    "action:requests.close",
     *ACTION_RESOURCES,
 ]
 
@@ -59,7 +75,7 @@ ROLE_PERMISSIONS = {
     "VEN": {
         "home": ACCESS["AC"], "checklists": ACCESS["AC"], "serviceOrders": ACCESS["OC"], "machines": ACCESS["AC"],
         "insumos": ACCESS["VIS"], "acessorios": ACCESS["VIS"], "portfolios": ACCESS["AC"], "vendas": ACCESS["AC"],
-        "financeiro": ACCESS["VIS"], "historico": ACCESS["OC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
+        "financeiro": ACCESS["VIS"], "solicitacoes": ACCESS["AC"], "historico": ACCESS["OC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
         "precos": ACCESS["UP"], "estoque": ACCESS["UP"], "clientes": ACCESS["AC"], "opcoes": ACCESS["VIS"],
         "etiquetas": ACCESS["UP"], "accounts": ACCESS["OC"], "action:create": ACCESS["AC"], "action:update": ACCESS["AC"],
         "action:delete": ACCESS["UP"], "action:upload": ACCESS["UP"], "action:download": ACCESS["UP"],
@@ -68,7 +84,7 @@ ROLE_PERMISSIONS = {
     "ADM": {
         "home": ACCESS["AC"], "checklists": ACCESS["AC"], "serviceOrders": ACCESS["OC"], "machines": ACCESS["VIS"],
         "insumos": ACCESS["AC"], "acessorios": ACCESS["AC"], "portfolios": ACCESS["VIS"], "vendas": ACCESS["AC"],
-        "financeiro": ACCESS["OC"], "historico": ACCESS["OC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
+        "financeiro": ACCESS["OC"], "solicitacoes": ACCESS["AC"], "historico": ACCESS["OC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
         "precos": ACCESS["UP"], "estoque": ACCESS["UP"], "clientes": ACCESS["AC"], "opcoes": ACCESS["VIS"],
         "etiquetas": ACCESS["UP"], "accounts": ACCESS["OC"], "action:create": ACCESS["AC"], "action:update": ACCESS["AC"],
         "action:delete": ACCESS["UP"], "action:upload": ACCESS["UP"], "action:download": ACCESS["UP"],
@@ -77,7 +93,7 @@ ROLE_PERMISSIONS = {
     "TEC": {
         "home": ACCESS["AC"], "checklists": ACCESS["AC"], "serviceOrders": ACCESS["AC"], "machines": ACCESS["AC"],
         "insumos": ACCESS["VIS"], "acessorios": ACCESS["VIS"], "portfolios": ACCESS["OC"], "vendas": ACCESS["OC"],
-        "financeiro": ACCESS["OC"], "historico": ACCESS["OC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
+        "financeiro": ACCESS["OC"], "solicitacoes": ACCESS["AC"], "historico": ACCESS["OC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
         "precos": ACCESS["VIS"], "estoque": ACCESS["UP"], "clientes": ACCESS["VIS"], "opcoes": ACCESS["UP"],
         "etiquetas": ACCESS["UP"], "accounts": ACCESS["OC"], "action:create": ACCESS["AC"], "action:update": ACCESS["UP"],
         "action:delete": ACCESS["OC"], "action:upload": ACCESS["UP"], "action:download": ACCESS["UP"],
@@ -86,7 +102,7 @@ ROLE_PERMISSIONS = {
     "FIN": {
         "home": ACCESS["AC"], "checklists": ACCESS["VIS"], "serviceOrders": ACCESS["OC"], "machines": ACCESS["AC"],
         "insumos": ACCESS["AC"], "acessorios": ACCESS["AC"], "portfolios": ACCESS["OC"], "vendas": ACCESS["VIS"],
-        "financeiro": ACCESS["AC"], "historico": ACCESS["AC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
+        "financeiro": ACCESS["AC"], "solicitacoes": ACCESS["AC"], "historico": ACCESS["AC"], "configuracoes": ACCESS["OC"], "perfil": ACCESS["AC"],
         "precos": ACCESS["AC"], "estoque": ACCESS["AC"], "clientes": ACCESS["AC"], "opcoes": ACCESS["UP"],
         "etiquetas": ACCESS["UP"], "accounts": ACCESS["OC"], "action:create": ACCESS["AC"], "action:update": ACCESS["AC"],
         "action:delete": ACCESS["UP"], "action:upload": ACCESS["UP"], "action:download": ACCESS["UP"],
@@ -96,7 +112,7 @@ ROLE_PERMISSIONS = {
 
 COLLECTION_PAGE_MAP = {
     "accounts": "accounts",
-    "accountRequests": "accounts",
+    "accountRequests": "solicitacoes",
     "accessories": "acessorios",
     "checklists": "checklists",
     "clients": "clientes",

@@ -5,6 +5,7 @@ import {
   resetRolePermissionOverrides,
   updateRolePermission,
 } from "../permissionService.js";
+import { buildRoleMatrixByScope } from "../accountService.js";
 
 describe("permissionService action matrix", () => {
   it("exposes upload, download and print as configurable action resources", () => {
@@ -22,5 +23,12 @@ describe("permissionService action matrix", () => {
     resetRolePermissionOverrides();
 
     expect(getRolePermissions("VEN")["action:upload"]).toBe("UP");
+  });
+
+  it("separates granular section and field permissions from the base matrix", () => {
+    expect(ALL_PERMISSION_RESOURCES).toContain("section:insumos.cadastro");
+    expect(ALL_PERMISSION_RESOURCES).toContain("field:insumos.custo");
+    expect(buildRoleMatrixByScope("granular").some((row) => row.pageId === "section:insumos.cadastro")).toBe(true);
+    expect(buildRoleMatrixByScope("base").some((row) => row.pageId === "section:insumos.cadastro")).toBe(false);
   });
 });

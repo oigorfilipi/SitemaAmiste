@@ -192,18 +192,6 @@ export default function ProfileFormPanel({
               />
             </label>
           </div>
-          <button
-            className="mt-4 flex h-9 w-full items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 text-[13px] font-bold text-amiste-gray transition hover:border-amiste-red/40 disabled:opacity-50"
-            disabled={!canMutate}
-            type="button"
-            onClick={() => onChange("twoFactorEnabled", !formData.twoFactorEnabled)}
-          >
-            <span>Ativar autenticacao em duas etapas (2FA)</span>
-            <span className={formData.twoFactorEnabled ? "text-amiste-green" : "text-amiste-red"}>
-              {formData.twoFactorEnabled ? "Ativo" : "Inativo"}
-            </span>
-          </button>
-
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-2xl border border-zinc-200 bg-white p-3">
               <div className="flex items-center justify-between gap-3">

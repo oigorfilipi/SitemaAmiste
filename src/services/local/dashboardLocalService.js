@@ -69,6 +69,10 @@ function canSeeStock(role) {
   return ["estoque", "machines", "insumos", "acessorios"].some((pageId) => canAccessPage(role, pageId));
 }
 
+function isRequestManagerRole(role) {
+  return ["DEV", "CEO", "DON"].includes(role);
+}
+
 function buildDashboardAlerts(database, now, role) {
   const lowStockItems = [...database.machines, ...database.supplies, ...database.accessories].filter(
     (item) => Number(item.stock || 0) <= Number(item.minStock || 0)
@@ -81,12 +85,26 @@ function buildDashboardAlerts(database, now, role) {
     (receivable) => receivable.status !== "pago" && isPastDate(receivable.dueDate, now)
   );
   const contractReviewClients = getContractReviewClients(database.clients, now);
+  const activeRequests = (database.accountRequests || []).filter((request) =>
+    ["pendente", "reativado", "atendendo", "analise", "aguardando-resposta", "transferido"].includes(request.status)
+  );
+  const visibleRequests = isRequestManagerRole(role)
+    ? activeRequests
+    : activeRequests.filter((request) => request.isGeneral);
 
   /* --- SECAO: PRIORIZACAO DOS ALERTAS ---
    * O painel privilegia risco operacional real: SLA vencido, dinheiro vencido,
    * estoque no limite e aprovacoes paradas.
    */
   return [
+    ...(canAccessPage(role, "solicitacoes") ? visibleRequests.slice(0, 3).map((request) => ({
+      id: `request_${request.id}_${request.status}`,
+      title: request.title || "Solicitacao interna",
+      description: `${request.requesterName || "Usuario"} | ${request.category || "-"} | ${request.priority || "-"}`,
+      type: "requests",
+      icon: "fileClock",
+      pageId: "solicitacoes",
+    })) : []),
     ...(canAccessPage(role, "serviceOrders") ? lateRepairOrders.slice(0, 3).map((order) => {
       const sla = getRepairOrderSla(order, now);
       const clientName = resolveName(database.clients, order.clientId, "Cliente nao informado");
@@ -132,7 +150,7 @@ function buildDashboardAlerts(database, now, role) {
       icon: "bell",
       pageId: "clientes",
     })) : []),
-  ].slice(0, 6);
+  ].slice(0, 7);
 }
 
 function buildLatestOperations(database, role) {

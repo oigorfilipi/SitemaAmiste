@@ -35,6 +35,17 @@
     text-rendering: optimizeLegibility;
   }
 
+  html[data-theme="dark"] {
+    background: #0f1115;
+  }
+
+  html[data-theme="dark"] body {
+    color: #f4f4f5;
+    background:
+      linear-gradient(180deg, rgba(168, 32, 32, 0.14), transparent 260px),
+      #0f1115;
+  }
+
   button,
   a,
   [role="button"],
@@ -66,6 +77,53 @@
   textarea::placeholder {
     color: rgba(46, 46, 46, 0.38);
     font-weight: 600;
+  }
+
+  html[data-theme="dark"] input::placeholder,
+  html[data-theme="dark"] textarea::placeholder {
+    color: rgba(245, 245, 245, 0.38);
+  }
+}
+
+@layer utilities {
+  html[data-theme="dark"] .bg-white,
+  html[data-theme="dark"] .bg-amiste-white,
+  html[data-theme="dark"] [class*="bg-zinc-50"],
+  html[data-theme="dark"] [class*="bg-zinc-100"] {
+    background-color: #181b21 !important;
+  }
+
+  html[data-theme="dark"] .bg-white\/95 {
+    background-color: rgba(24, 27, 33, 0.95) !important;
+  }
+
+  html[data-theme="dark"] [class*="border-zinc-"],
+  html[data-theme="dark"] .border-white\/30,
+  html[data-theme="dark"] .border-white\/50 {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  html[data-theme="dark"] .text-amiste-black {
+    color: #fafafa !important;
+  }
+
+  html[data-theme="dark"] .text-amiste-gray,
+  html[data-theme="dark"] [class*="text-amiste-gray\/"] {
+    color: rgba(244, 244, 245, 0.72) !important;
+  }
+
+  html[data-theme="dark"] input,
+  html[data-theme="dark"] textarea,
+  html[data-theme="dark"] select {
+    background-color: #111318 !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #fafafa !important;
+  }
+
+  html[data-theme="dark"] .shadow-sm,
+  html[data-theme="dark"] .shadow-amiste,
+  html[data-theme="dark"] .shadow-amiste-soft {
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34) !important;
   }
 }
 

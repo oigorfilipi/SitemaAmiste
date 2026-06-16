@@ -7,6 +7,7 @@ export const primaryNavigationMock = [
   { id: "portfolios", label: "Portfolios", icon: "briefcase" },
   { id: "vendas", label: "Vendas", icon: "shoppingCart" },
   { id: "financeiro", label: "Financeiro", icon: "money" },
+  { id: "solicitacoes", label: "Solicitacoes", icon: "fileClock" },
   { id: "historico", label: "Historico Geral", icon: "history" },
   { id: "configuracoes", label: "Configuracoes", icon: "settings" },
 ];

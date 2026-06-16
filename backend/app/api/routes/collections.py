@@ -13,7 +13,7 @@ router = APIRouter(tags=["collections"])
 
 COLLECTION_LABELS = {
     "accounts": "Contas",
-    "accountRequests": "Solicitacoes de Conta",
+    "accountRequests": "Solicitacoes",
     "inventoryCounts": "Historico de Contagem",
     "inventoryLocations": "Estoques Separados",
     "machineConfigs": "Configuracoes de Maquina",
@@ -63,6 +63,52 @@ def require_collection_access(account: dict, collection_name: str, action: str =
 
     if action and not can_perform_action(role, action):
         raise HTTPException(status_code=403, detail="Voce nao tem permissao para esta acao.")
+
+
+def is_request_manager(account: dict) -> bool:
+    return account.get("role") in {"DEV", "CEO", "DON"}
+
+
+def request_visible_to_account(request: dict[str, Any], account: dict) -> bool:
+    return is_request_manager(account) or request.get("isGeneral") or request.get("requesterId") == account.get("id")
+
+
+def normalize_request_payload_for_storage(payload: dict[str, Any], account: dict, existing_request: dict[str, Any] | None = None) -> dict[str, Any]:
+    next_payload = dict(payload)
+
+    if is_request_manager(account):
+        return next_payload
+
+    if existing_request and not request_visible_to_account(existing_request, account):
+        raise HTTPException(status_code=403, detail="Voce nao tem acesso a esta solicitacao.")
+
+    protected_fields = {
+        "assigneeId",
+        "assigneeName",
+        "assigneeRole",
+        "attendedAt",
+        "closedAt",
+        "completedAt",
+        "giveUpAt",
+        "rejectionReason",
+        "status",
+        "transferReason",
+        "transferredAt",
+        "unresolvedAt",
+    }
+
+    for field_name in protected_fields:
+        if existing_request and field_name in existing_request:
+            next_payload[field_name] = existing_request.get(field_name)
+        else:
+            next_payload.pop(field_name, None)
+
+    if not existing_request:
+        next_payload["requesterId"] = account.get("id") or ""
+        next_payload["requesterName"] = account.get("displayName") or account.get("fullName") or "Usuario"
+        next_payload["status"] = "pendente"
+
+    return next_payload
 
 
 def normalize_account_payload_for_storage(payload: dict[str, Any], current_account: dict, existing_account: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -230,6 +276,9 @@ def list_records(
     if collection_name == "accounts":
         return [sanitize_account(record) for record in records]
 
+    if collection_name == "accountRequests":
+        return [record for record in records if request_visible_to_account(record, account)]
+
     return records
 
 
@@ -272,6 +321,8 @@ def create_record(
     require_collection_access(account, collection_name, "action:create")
     if collection_name == "accounts":
         payload = normalize_account_payload_for_storage(payload, account)
+    if collection_name == "accountRequests":
+        payload = normalize_request_payload_for_storage(payload, account)
 
     created_record = service.repository.create_record(collection_name, payload)
     add_history_entry(
@@ -299,6 +350,9 @@ def update_record(
     if collection_name == "accounts":
         existing_record = service.repository.get_record(collection_name, record_id)
         payload = normalize_account_payload_for_storage(payload, account, existing_record)
+    elif collection_name == "accountRequests":
+        existing_record = service.repository.get_record(collection_name, record_id)
+        payload = normalize_request_payload_for_storage(payload, account, existing_record)
     else:
         existing_record = service.repository.get_record(collection_name, record_id)
 
@@ -328,6 +382,10 @@ def delete_record(
 ) -> dict[str, Any]:
     collection_name = ensure_collection_name(collection_name)
     require_collection_access(account, collection_name, "action:delete")
+
+    if collection_name == "accountRequests" and not is_request_manager(account):
+        raise HTTPException(status_code=403, detail="Somente DONO e DEV podem excluir solicitacoes.")
+
     deleted_record = service.repository.delete_record(collection_name, record_id)
 
     if not deleted_record:

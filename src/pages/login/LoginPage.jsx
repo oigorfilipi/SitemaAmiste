@@ -1,22 +1,74 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
 import TextArea from "../../components/atoms/TextArea.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import Modal from "../../components/molecules/Modal.jsx";
 
+const ACCOUNT_REQUEST_COOLDOWN_KEY = "amiste_erp_public_account_request_v1";
+const REQUEST_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 const REQUEST_INITIAL_STATE = {
-  document: "",
-  email: "",
+  description: "Necessitando de criacao de CONTA.",
   fullName: "",
-  phone: "",
-  reason: "",
 };
 
-const RESET_INITIAL_STATE = {
-  email: "",
-  phone: "",
-};
+function canUseLocalStorage() {
+  return typeof window !== "undefined" && Boolean(window.localStorage);
+}
+
+function readAccountRequestState() {
+  if (!canUseLocalStorage()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(window.localStorage.getItem(ACCOUNT_REQUEST_COOLDOWN_KEY) || "null");
+  } catch {
+    window.localStorage.removeItem(ACCOUNT_REQUEST_COOLDOWN_KEY);
+    return null;
+  }
+}
+
+function getOrCreateDeviceKey() {
+  if (!canUseLocalStorage()) {
+    return `device_${Date.now()}`;
+  }
+
+  const currentState = readAccountRequestState();
+
+  if (currentState?.deviceKey) {
+    return currentState.deviceKey;
+  }
+
+  const deviceKey = `device_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  window.localStorage.setItem(ACCOUNT_REQUEST_COOLDOWN_KEY, JSON.stringify({ deviceKey }));
+
+  return deviceKey;
+}
+
+function saveAccountRequestState(deviceKey) {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
+  window.localStorage.setItem(ACCOUNT_REQUEST_COOLDOWN_KEY, JSON.stringify({
+    deviceKey,
+    requestedAt: new Date().toISOString(),
+  }));
+}
+
+function isRequestCooldownActive() {
+  const currentState = readAccountRequestState();
+
+  if (!currentState?.requestedAt) {
+    return false;
+  }
+
+  const requestedAt = new Date(currentState.requestedAt);
+
+  return !Number.isNaN(requestedAt.getTime()) && Date.now() - requestedAt.getTime() < REQUEST_COOLDOWN_MS;
+}
 
 export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
   const [email, setEmail] = useState("");
@@ -25,9 +77,8 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
   const [requestData, setRequestData] = useState(REQUEST_INITIAL_STATE);
   const [requestMessage, setRequestMessage] = useState("");
   const [requestOpen, setRequestOpen] = useState(false);
-  const [resetData, setResetData] = useState(RESET_INITIAL_STATE);
-  const [resetMessage, setResetMessage] = useState("");
-  const [resetOpen, setResetOpen] = useState(false);
+  const [requestSent, setRequestSent] = useState(() => isRequestCooldownActive());
+  const deviceKey = useMemo(() => getOrCreateDeviceKey(), []);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -45,17 +96,18 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
     event.preventDefault();
     setRequestMessage("");
 
-    if (!requestData.fullName || !requestData.email || !requestData.document || !requestData.phone) {
-      setRequestMessage("Preencha nome, e-mail, CPF/RG e telefone.");
-      return;
-    }
-
     try {
-      await onRequestAccess({ ...requestData, requestType: "accountAccess" });
-      setRequestMessage("Solicitacao registrada. DONO e DEV poderao acompanhar o pedido em Gestao de Contas.");
+      await onRequestAccess({
+        description: requestData.description || REQUEST_INITIAL_STATE.description,
+        deviceKey,
+        fullName: requestData.fullName || "Novo Usuario",
+      });
+      saveAccountRequestState(deviceKey);
+      setRequestSent(true);
+      setRequestMessage("Pedido registrado. DONO e DEV receberam uma notificacao interna no sistema.");
       setRequestData(REQUEST_INITIAL_STATE);
-    } catch (error) {
-      setRequestMessage(error.message || "Nao foi possivel registrar a solicitacao.");
+    } catch (requestError) {
+      setRequestMessage(requestError.message || "Nao foi possivel registrar o pedido.");
     }
   }
 
@@ -65,37 +117,6 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
       [fieldName]: value,
     }));
     setRequestMessage("");
-  }
-
-  async function handlePasswordReset(event) {
-    event.preventDefault();
-    setResetMessage("");
-
-    if (!resetData.email) {
-      setResetMessage("Informe o e-mail corporativo.");
-      return;
-    }
-
-    try {
-      await onRequestAccess({
-        email: resetData.email,
-        phone: resetData.phone,
-        reason: "Usuario solicitou redefinicao de senha pelo login.",
-        requestType: "passwordReset",
-      });
-      setResetMessage("Pedido registrado. DONO ou DEV devera validar e gerar uma nova senha provisoria.");
-      setResetData(RESET_INITIAL_STATE);
-    } catch (error) {
-      setResetMessage(error.message || "Nao foi possivel registrar o pedido.");
-    }
-  }
-
-  function updateResetField(fieldName, value) {
-    setResetData((currentData) => ({
-      ...currentData,
-      [fieldName]: value,
-    }));
-    setResetMessage("");
   }
 
   return (
@@ -117,7 +138,7 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               <TextInput
                 autoComplete="email"
                 icon="user"
-                placeholder="usuario@amistecafe.local"
+                placeholder="usuario@empresa.com"
                 required
                 type="email"
                 value={email}
@@ -149,11 +170,16 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
             </Button>
           </form>
 
-          <div className="mt-5 flex flex-wrap justify-between gap-3 text-sm font-bold text-white/80">
-            <button type="button" onClick={() => setResetOpen(true)}>Esqueci minha senha</button>
-            <button type="button" onClick={() => setRequestOpen(true)}>
-              Nao Tenho Acesso? Solicitar Conta
-            </button>
+          <div className="mt-5 flex flex-wrap justify-end gap-3 text-sm font-bold text-white/80">
+            {requestSent ? (
+              <span className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-xs">
+                Pedido de conta enviado. O botao volta em ate 24h se voce ainda nao tiver acesso.
+              </span>
+            ) : (
+              <button type="button" onClick={() => setRequestOpen(true)}>
+                Pedido de Conta
+              </button>
+            )}
           </div>
         </div>
         <footer className="text-xs font-semibold text-white/65">
@@ -161,33 +187,19 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
         </footer>
 
         <Modal
-          description="A solicitacao fica registrada no ERP local e os disparos sao simulados para DONO e DEV."
+          description="O pedido vira uma solicitacao interna para DONO e DEV dentro do sistema."
           open={requestOpen}
-          title="Solicitar Conta"
+          title="Pedido de Conta"
           onClose={() => setRequestOpen(false)}
         >
           <form className="space-y-4" onSubmit={handleRequestAccess}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <label>
-                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Nome completo</span>
-                <TextInput required placeholder="Ex: Igor Filipi" value={requestData.fullName} onChange={(event) => updateRequestField("fullName", event.target.value)} />
-              </label>
-              <label>
-                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">E-mail</span>
-                <TextInput required placeholder="nome@empresa.com" type="email" value={requestData.email} onChange={(event) => updateRequestField("email", event.target.value)} />
-              </label>
-              <label>
-                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">CPF ou RG</span>
-                <TextInput required placeholder="000.000.000-00" value={requestData.document} onChange={(event) => updateRequestField("document", event.target.value)} />
-              </label>
-              <label>
-                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Telefone</span>
-                <TextInput required placeholder="(11) 99999-9999" value={requestData.phone} onChange={(event) => updateRequestField("phone", event.target.value)} />
-              </label>
-            </div>
             <label>
-              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Motivo da solicitacao</span>
-              <TextArea placeholder="Explique por que precisa de acesso ao sistema." value={requestData.reason} onChange={(event) => updateRequestField("reason", event.target.value)} />
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Nome</span>
+              <TextInput placeholder="Ex: Igor Filipi" value={requestData.fullName} onChange={(event) => updateRequestField("fullName", event.target.value)} />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Descricao</span>
+              <TextArea required placeholder="Descreva o acesso que precisa." value={requestData.description} onChange={(event) => updateRequestField("description", event.target.value)} />
             </label>
             {requestMessage ? (
               <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-bold text-amiste-gray">
@@ -198,39 +210,8 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               <Button variant="secondary" onClick={() => setRequestOpen(false)}>
                 Cancelar
               </Button>
-              <Button icon="userPlus" type="submit">
-                Enviar Solicitacao
-              </Button>
-            </footer>
-          </form>
-        </Modal>
-
-        <Modal
-          description="O pedido fica registrado para DONO e DEV validarem e criarem uma nova senha provisoria."
-          open={resetOpen}
-          title="Redefinir Senha"
-          onClose={() => setResetOpen(false)}
-        >
-          <form className="space-y-4" onSubmit={handlePasswordReset}>
-            <label>
-              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">E-mail corporativo</span>
-              <TextInput required placeholder="nome@empresa.com" type="email" value={resetData.email} onChange={(event) => updateResetField("email", event.target.value)} />
-            </label>
-            <label>
-              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Telefone para contato</span>
-              <TextInput placeholder="(11) 99999-9999" value={resetData.phone} onChange={(event) => updateResetField("phone", event.target.value)} />
-            </label>
-            {resetMessage ? (
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-bold text-amiste-gray">
-                {resetMessage}
-              </div>
-            ) : null}
-            <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-4">
-              <Button variant="secondary" onClick={() => setResetOpen(false)}>
-                Cancelar
-              </Button>
-              <Button icon="shield" type="submit">
-                Solicitar Redefinicao
+              <Button icon="fileClock" type="submit">
+                Enviar Pedido
               </Button>
             </footer>
           </form>

@@ -15,14 +15,11 @@ O sistema esta publicado com frontend na Vercel, backend FastAPI no Render, dado
 - Auditoria de criacao, edicao, exclusao, backup e restauracao.
 - Upload, preview/download e exclusao de arquivos de etiquetas via Supabase Storage privado.
 - Smoke test de producao para frontend, API, login, bloqueio de primeiro acesso e Storage quando houver conta operacional.
-- Fluxo de solicitacao de conta e redefinicao de senha registrado para DONO/DEV em Gestao de Contas.
+- Fluxo interno de solicitacoes, incluindo pedido de conta, visivel para DONO/DEV e usuarios conforme permissao.
+- Tema claro/escuro persistido por usuario.
 
 ## Bloqueios externos para 100% comercial
 
-- Configurar provedor real de e-mail transacional.
-- Configurar provedor real de WhatsApp/API oficial.
-- Configurar CAPTCHA real para substituir o checkbox visual "Nao sou robo".
-- Configurar 2FA real para substituir o estado visual atual.
 - Concluir o primeiro acesso das contas administrativas reais.
 - Depois que todas as contas antigas tiverem senha definitiva, desativar a tolerancia de senha legada `1234`.
 

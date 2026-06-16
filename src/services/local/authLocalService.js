@@ -183,34 +183,57 @@ export async function completeFirstLoginLocal(userId, payload) {
 }
 
 export async function requestAccountAccessLocal(payload) {
-  const accounts = await listRecords("accounts");
-  const requestType = payload.requestType || "accountAccess";
-  const relatedAccount = accounts.find((account) =>
-    account.status === "ativo" &&
-    String(account.email || "").trim().toLowerCase() === String(payload.email || "").trim().toLowerCase()
+  const requests = await listRecords("accountRequests");
+  const deviceKey = payload.deviceKey || "";
+  const existingRequest = requests.find((request) =>
+    request.requestType === "accountCreation" &&
+    request.deviceKey &&
+    request.deviceKey === deviceKey &&
+    ["pendente", "reativado", "atendendo", "analise", "aguardando-resposta"].includes(request.status)
   );
-  const recipients = accounts
-    .filter((account) => account.role === "DEV" || account.role === "CEO")
-    .map((account) => ({
-      email: account.email,
-      name: account.displayName,
-      phone: account.phone,
-      role: account.role,
-    }));
+  const now = new Date().toISOString();
+
+  if (existingRequest) {
+    return updateRecord("accountRequests", existingRequest.id, {
+      events: [
+        {
+          action: "Reenviou",
+          at: now,
+          details: "Pedido de conta reenviado pela tela de login.",
+          role: "PUBLICO",
+          userId: "",
+          userName: payload.fullName || "Novo Usuario",
+        },
+        ...(existingRequest.events || []),
+      ],
+      occurrenceCount: Number(existingRequest.occurrenceCount || 1) + 1,
+      status: existingRequest.status,
+    });
+  }
 
   return createRecord("accountRequests", {
-    ...payload,
-    dispatches: recipients.flatMap((recipient) => [
-      { channel: "email", recipient: recipient.email, status: "simulado" },
-      { channel: "whatsapp", recipient: recipient.phone, status: "simulado" },
-    ]),
-    fullName: payload.fullName || relatedAccount?.fullName || "",
-    relatedAccountId: relatedAccount?.id || "",
-    requestTitle: requestType === "passwordReset" ? "Redefinicao de senha" : "Solicitacao de conta",
-    requestType,
-    recipients,
-    requestedAt: new Date().toISOString(),
+    category: "Conta",
+    description: payload.description || "Necessitando de criacao de CONTA.",
+    deviceKey,
+    events: [{
+      action: "Criou",
+      at: now,
+      details: "Pedido de conta aberto pela tela de login.",
+      role: "PUBLICO",
+      userId: "",
+      userName: payload.fullName || "Novo Usuario",
+    }],
+    isGeneral: false,
+    occurrenceCount: 1,
+    pageId: "accounts",
+    priority: "Media",
+    problemType: "Criacao de Conta",
+    requestedAt: now,
+    requesterId: "",
+    requesterName: payload.fullName || "Novo Usuario",
+    requestType: "accountCreation",
     status: "pendente",
+    title: "Criacao de Conta",
   });
 }
 

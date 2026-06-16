@@ -112,40 +112,61 @@ def complete_first_login(repository: ErpRecordRepository, account: dict[str, Any
 
 
 def request_account_access(repository: ErpRecordRepository, payload: dict[str, Any]) -> dict[str, Any]:
-    request_type = payload.get("requestType") or "accountAccess"
-    required_fields = ["email"] if request_type == "passwordReset" else ["fullName", "email", "document", "phone"]
-    missing_fields = [field for field in required_fields if not str(payload.get(field, "")).strip()]
+    device_key = str(payload.get("deviceKey", "")).strip()
+    similar_request = next(
+        (
+            request for request in repository.list_records("accountRequests")
+            if request.get("requestType") == "accountCreation"
+            and request.get("deviceKey")
+            and request.get("deviceKey") == device_key
+            and request.get("status") in {"pendente", "reativado", "atendendo", "analise", "aguardando-resposta"}
+        ),
+        None,
+    )
+    now = datetime.now(UTC).isoformat()
 
-    if missing_fields:
-        detail = "Informe o e-mail corporativo." if request_type == "passwordReset" else "Preencha nome, e-mail, CPF/RG e telefone."
-        raise HTTPException(status_code=422, detail=detail)
-
-    related_account = _find_active_account_by_email(repository, payload.get("email", ""))
-    request_title = "Redefinicao de senha" if request_type == "passwordReset" else "Solicitacao de conta"
-
-    recipients = [
-        {
-            "email": account.get("email"),
-            "name": account.get("displayName"),
-            "phone": account.get("phone"),
-            "role": account.get("role"),
-        }
-        for account in repository.list_records("accounts")
-        if account.get("role") in {"DEV", "CEO"} and account.get("status") == "ativo"
-    ]
+    if similar_request:
+        occurrence_count = int(similar_request.get("occurrenceCount") or 1) + 1
+        events = similar_request.get("events") if isinstance(similar_request.get("events"), list) else []
+        return repository.update_record("accountRequests", similar_request["id"], {
+            "events": [
+                {
+                    "action": "Reenviou",
+                    "at": now,
+                    "details": "Pedido de conta reenviado pela tela de login.",
+                    "role": "PUBLICO",
+                    "userId": "",
+                    "userName": payload.get("fullName") or "Novo Usuario",
+                },
+                *events,
+            ],
+            "occurrenceCount": occurrence_count,
+            "requestedAt": similar_request.get("requestedAt") or now,
+            "status": "reativado" if similar_request.get("status") == "encerrado" else similar_request.get("status", "pendente"),
+            "updatedAt": now,
+        }) or similar_request
 
     return repository.create_record("accountRequests", {
-        **payload,
-        "dispatches": [
-            {"channel": channel, "recipient": recipient.get("email") if channel == "email" else recipient.get("phone"), "status": "pendente"}
-            for recipient in recipients
-            for channel in ["email", "whatsapp"]
-        ],
-        "fullName": payload.get("fullName") or related_account.get("fullName") if related_account else payload.get("fullName") or "",
-        "relatedAccountId": related_account.get("id") if related_account else "",
-        "requestType": request_type,
-        "requestTitle": request_title,
-        "recipients": recipients,
-        "requestedAt": datetime.now(UTC).isoformat(),
+        "category": "Conta",
+        "description": payload.get("description") or "Necessitando de criacao de CONTA.",
+        "deviceKey": device_key,
+        "events": [{
+            "action": "Criou",
+            "at": now,
+            "details": "Pedido de conta aberto pela tela de login.",
+            "role": "PUBLICO",
+            "userId": "",
+            "userName": payload.get("fullName") or "Novo Usuario",
+        }],
+        "isGeneral": False,
+        "occurrenceCount": 1,
+        "pageId": "accounts",
+        "priority": "Media",
+        "problemType": "Criacao de Conta",
+        "requestType": "accountCreation",
+        "requestedAt": now,
+        "requesterId": "",
+        "requesterName": payload.get("fullName") or "Novo Usuario",
         "status": "pendente",
+        "title": "Criacao de Conta",
     })

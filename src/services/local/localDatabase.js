@@ -10,7 +10,7 @@ const STORAGE_COMPACT_HISTORY_LIMIT = 40;
 
 const COLLECTION_LABELS = {
   accounts: "Contas",
-  accountRequests: "Solicitacoes de Conta",
+  accountRequests: "Solicitacoes",
   inventoryCounts: "Historico de Contagem",
   inventoryLocations: "Estoques Separados",
   machineConfigs: "Configuracoes de Maquina",

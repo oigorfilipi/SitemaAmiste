@@ -11,6 +11,7 @@ export default function AppShell({
   activePage,
   activeAccessLevel,
   canGoBack,
+  theme,
   user,
   realUser,
   previewUser,
@@ -20,6 +21,7 @@ export default function AppShell({
   onLogout,
   onPreviewUser,
   onSelectPage,
+  onToggleTheme,
   onToggleSidebar,
 }) {
   return (
@@ -46,6 +48,8 @@ export default function AppShell({
         onExitPreview={onExitPreview}
         onLogout={onLogout}
         onSelectPage={onSelectPage}
+        onToggleTheme={onToggleTheme}
+        theme={theme}
       />
 
       {/* --- SECAO: AREA DE CONTEUDO --- */}

@@ -422,7 +422,7 @@ export const erpSeed = {
       closedAt: "",
       estimatedValue: 390,
       approvedByClient: false,
-      notes: "Enviar aprovacao por WhatsApp antes de trocar a resistencia.",
+      notes: "Enviar aprovacao interna antes de trocar a resistencia.",
       timeline: [
         { at: "2026-05-30T13:20:00.000Z", label: "Entrada registrada", by: "Administrativo Interno" },
         { at: "2026-05-31T10:10:00.000Z", label: "Movido para Orcamento / Aprovacao", by: "Andre" },

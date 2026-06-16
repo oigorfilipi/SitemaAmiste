@@ -14,7 +14,6 @@ describe("profileService security normalization", () => {
         profilePhotoUrl: "",
         securityConfirmPassword: "",
         securityNewPassword: "",
-        twoFactorEnabled: false,
       },
       {
         displayName: "Igor",
