@@ -75,3 +75,13 @@ No modo API, arquivos de etiquetas sao enviados pelo backend para o Supabase Sto
 Contas com `mustChangePassword=true` conseguem apenas autenticar e concluir `/api/auth/first-login`. As rotas operacionais de dados e arquivos recusam o acesso ate que senha definitiva, nome de exibicao e foto de perfil sejam preenchidos.
 
 Senhas novas e senhas provisorias precisam ter pelo menos 8 caracteres, incluindo letra maiuscula, letra minuscula e numero.
+
+## 9. Smoke test de producao
+
+Depois de cada deploy, rode:
+
+```bash
+SMOKE_EMAIL="usuario@empresa.com" SMOKE_PASSWORD="senha" npm run smoke:production
+```
+
+Sem credenciais, o script valida apenas frontend e health do banco. Com uma conta pendente de primeiro acesso, ele confirma que o login funciona e que rotas operacionais ficam bloqueadas. Com uma conta operacional, ele valida snapshot, backup DEV quando aplicavel e upload/download/exclusao no Supabase Storage.
