@@ -125,6 +125,18 @@
   html[data-theme="dark"] .shadow-amiste-soft {
     box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34) !important;
   }
+
+  .auth-light-fields input,
+  html[data-theme="dark"] .auth-light-fields input {
+    background-color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    color: #0f0f0f !important;
+  }
+
+  .auth-light-fields input::placeholder,
+  html[data-theme="dark"] .auth-light-fields input::placeholder {
+    color: rgba(46, 46, 46, 0.62) !important;
+  }
 }
 
 @layer utilities {

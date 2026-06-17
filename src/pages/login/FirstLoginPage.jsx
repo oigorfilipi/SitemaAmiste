@@ -77,7 +77,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
   const previewPhoto = profilePhotoDataUrl || profilePhotoUrl;
 
   return (
-    <main className="grid min-h-screen grid-cols-1 bg-amiste-white lg:grid-cols-2">
+    <main className="auth-light-fields grid min-h-screen grid-cols-1 bg-amiste-white lg:grid-cols-2">
       {/* --- SECAO: PRIMEIRO ACESSO --- */}
       <section className="flex min-h-screen flex-col justify-between bg-amiste-red px-8 py-10 text-white">
         <div />
