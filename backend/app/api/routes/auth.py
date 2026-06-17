@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from app.api.dependencies import get_current_account, get_repository
 from app.core.security import sanitize_account
 from app.repositories.repository_factory import ErpRecordRepository
-from app.services.auth_service import complete_first_login, login, request_account_access
+from app.services.auth_service import change_password, complete_first_login, login, request_account_access
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -48,6 +48,14 @@ def complete_first_login_route(
     repository: ErpRecordRepository = Depends(get_repository),
 ) -> dict[str, Any]:
     return complete_first_login(repository, account, payload)
+
+
+@router.post("/change-password")
+def change_password_route(
+    payload: dict[str, Any],
+    repository: ErpRecordRepository = Depends(get_repository),
+) -> dict[str, str]:
+    return change_password(repository, payload)
 
 
 @router.post("/request-account")

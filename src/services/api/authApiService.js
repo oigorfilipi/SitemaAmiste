@@ -66,6 +66,14 @@ export async function completeFirstLoginApi(userId, payload) {
   return user;
 }
 
+export async function changePasswordApi(payload) {
+  return apiRequest("/api/auth/change-password", {
+    auth: false,
+    body: JSON.stringify(payload),
+    method: "POST",
+  });
+}
+
 export async function requestAccountAccessApi(payload) {
   return apiRequest("/api/auth/request-account", {
     auth: false,

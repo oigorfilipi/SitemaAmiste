@@ -3,12 +3,14 @@ import {
   getLoginAccountsLocal,
   getSidebarUsersLocal,
   completeFirstLoginLocal,
+  changePasswordLocal,
   loginWithUserLocal,
   logoutCurrentUserLocal,
   requestAccountAccessLocal,
 } from "./local/authLocalService.js";
 import {
   completeFirstLoginApi,
+  changePasswordApi,
   getCurrentUserApi,
   getLoginAccountsApi,
   getSidebarUsersApi,
@@ -60,6 +62,14 @@ export async function completeFirstLogin(userId, payload) {
   }
 
   return completeFirstLoginLocal(userId, payload);
+}
+
+export async function changePassword(payload) {
+  if (isApiDataSource()) {
+    return changePasswordApi(payload);
+  }
+
+  return changePasswordLocal(payload);
 }
 
 export async function requestAccountAccess(payload) {

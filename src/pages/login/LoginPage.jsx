@@ -14,6 +14,13 @@ const REQUEST_INITIAL_STATE = {
   fullName: "",
 };
 
+const CHANGE_PASSWORD_INITIAL_STATE = {
+  confirmPassword: "",
+  currentPassword: "",
+  email: "",
+  newPassword: "",
+};
+
 function canUseLocalStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage);
 }
@@ -85,7 +92,10 @@ function saveHasAccountHint() {
   }
 }
 
-export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
+export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequestAccess }) {
+  const [changePasswordData, setChangePasswordData] = useState(CHANGE_PASSWORD_INITIAL_STATE);
+  const [changePasswordMessage, setChangePasswordMessage] = useState("");
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [password, setPassword] = useState("");
@@ -136,6 +146,38 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
       [fieldName]: value,
     }));
     setRequestMessage("");
+  }
+
+  async function handleChangePassword(event) {
+    event.preventDefault();
+    setChangePasswordMessage("");
+
+    if (changePasswordData.newPassword !== changePasswordData.confirmPassword) {
+      setChangePasswordMessage("A confirmacao da nova senha nao confere.");
+      return;
+    }
+
+    try {
+      const result = await onChangePassword(changePasswordData);
+      setChangePasswordMessage(result?.message || "Senha alterada com sucesso.");
+      setChangePasswordData(CHANGE_PASSWORD_INITIAL_STATE);
+      setPassword("");
+    } catch (changeError) {
+      setChangePasswordMessage(changeError.message || "Nao foi possivel alterar a senha.");
+    }
+  }
+
+  function updateChangePasswordField(fieldName, value) {
+    setChangePasswordData((currentData) => ({
+      ...currentData,
+      [fieldName]: value,
+    }));
+    setChangePasswordMessage("");
+  }
+
+  function openChangePassword() {
+    handleHasAccount();
+    setChangePasswordOpen(true);
   }
 
   function handleHasAccount() {
@@ -201,7 +243,10 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
             </Button>
           </form>
 
-          <div className="mt-5 flex flex-wrap justify-end gap-3 text-sm font-bold text-white/80">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm font-bold text-white/80">
+            <button className="transition hover:text-white" type="button" onClick={() => setChangePasswordOpen(true)}>
+              Alterar senha
+            </button>
             {requestSent ? (
               <span className="rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-xs">
                 Pedido de conta enviado. O botao volta em ate 24h se voce ainda nao tiver acesso.
@@ -244,6 +289,13 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               >
                 Ja tenho conta
               </button>
+              <button
+                className="mt-2 block w-full text-xs font-black text-white/70 underline decoration-white/25 underline-offset-4 transition hover:text-white"
+                type="button"
+                onClick={openChangePassword}
+              >
+                Alterar senha
+              </button>
             </div>
           </div>
         ) : null}
@@ -278,6 +330,75 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               </Button>
               <Button icon="fileClock" type="submit">
                 Enviar Pedido
+              </Button>
+            </footer>
+          </form>
+        </Modal>
+
+        <Modal
+          description="Informe sua senha atual para definir uma nova senha de acesso."
+          open={changePasswordOpen}
+          title="Alterar senha"
+          onClose={() => setChangePasswordOpen(false)}
+        >
+          <form className="space-y-4" onSubmit={handleChangePassword}>
+            <label>
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">E-mail corporativo</span>
+              <TextInput
+                autoComplete="email"
+                placeholder="usuario@empresa.com"
+                required
+                type="email"
+                value={changePasswordData.email}
+                onChange={(event) => updateChangePasswordField("email", event.target.value)}
+              />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Senha atual</span>
+              <TextInput
+                autoComplete="current-password"
+                placeholder="Digite sua senha atual"
+                required
+                type="password"
+                value={changePasswordData.currentPassword}
+                onChange={(event) => updateChangePasswordField("currentPassword", event.target.value)}
+              />
+            </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label>
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Nova senha</span>
+                <TextInput
+                  autoComplete="new-password"
+                  placeholder="Min. 8 caracteres"
+                  required
+                  type="password"
+                  value={changePasswordData.newPassword}
+                  onChange={(event) => updateChangePasswordField("newPassword", event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Confirmar nova senha</span>
+                <TextInput
+                  autoComplete="new-password"
+                  placeholder="Repita a nova senha"
+                  required
+                  type="password"
+                  value={changePasswordData.confirmPassword}
+                  onChange={(event) => updateChangePasswordField("confirmPassword", event.target.value)}
+                />
+              </label>
+            </div>
+            {changePasswordMessage ? (
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-bold text-amiste-gray">
+                {changePasswordMessage}
+              </div>
+            ) : null}
+            <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-4">
+              <Button variant="secondary" onClick={() => setChangePasswordOpen(false)}>
+                Voltar
+              </Button>
+              <Button icon="shield" type="submit">
+                Salvar nova senha
               </Button>
             </footer>
           </form>

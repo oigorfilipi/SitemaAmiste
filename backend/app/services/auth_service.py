@@ -111,6 +111,40 @@ def complete_first_login(repository: ErpRecordRepository, account: dict[str, Any
     }
 
 
+def change_password(repository: ErpRecordRepository, payload: dict[str, Any]) -> dict[str, str]:
+    account = _find_active_account_by_email(repository, payload.get("email", ""))
+
+    if not account:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-mail ou senha atual invalidos.")
+
+    password_matches, _used_legacy_password = _password_matches(account, payload.get("currentPassword", ""))
+
+    if not password_matches:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-mail ou senha atual invalidos.")
+
+    new_password = str(payload.get("newPassword", "")).strip()
+
+    if not new_password:
+        raise HTTPException(status_code=422, detail="Informe a nova senha.")
+
+    validate_password_strength(new_password)
+
+    if str(payload.get("confirmPassword", "")).strip() != new_password:
+        raise HTTPException(status_code=422, detail="A confirmacao da nova senha nao confere.")
+
+    if _password_matches(account, new_password)[0]:
+        raise HTTPException(status_code=422, detail="A nova senha precisa ser diferente da senha atual.")
+
+    repository.update_record("accounts", account["id"], {
+        "accessHistory": _build_access_history(account, "Senha alterada pelo login"),
+        "password": "",
+        "passwordHash": hash_password(new_password),
+        "temporaryPassword": "",
+    })
+
+    return {"message": "Senha alterada com sucesso. Use a nova senha para entrar no sistema."}
+
+
 def request_account_access(repository: ErpRecordRepository, payload: dict[str, Any]) -> dict[str, Any]:
     device_key = str(payload.get("deviceKey", "")).strip()
     similar_request = next(

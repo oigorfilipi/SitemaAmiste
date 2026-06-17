@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  changePassword,
   completeFirstLogin,
   getCurrentUser,
   getLoginAccounts,
@@ -73,5 +74,9 @@ export function useCurrentUser() {
     await requestAccountAccess(payload);
   }, []);
 
-  return { completeFirstAccess, data, error, isLoading, login, logout, refresh, requestAccess };
+  const updatePassword = useCallback(async (payload) => {
+    return changePassword(payload);
+  }, []);
+
+  return { completeFirstAccess, data, error, isLoading, login, logout, refresh, requestAccess, updatePassword };
 }

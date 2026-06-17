@@ -182,6 +182,52 @@ export async function completeFirstLoginLocal(userId, payload) {
   );
 }
 
+export async function changePasswordLocal(payload) {
+  const account = await findActiveAccountByEmail(payload.email);
+
+  if (!account) {
+    throw new Error("E-mail ou senha atual invalidos.");
+  }
+
+  const expectedPassword = account.password || account.temporaryPassword || LOCAL_DEFAULT_PASSWORD;
+
+  if (String(payload.currentPassword || "") !== String(expectedPassword)) {
+    throw new Error("E-mail ou senha atual invalidos.");
+  }
+
+  const passwordError = validatePasswordStrength(payload.newPassword);
+
+  if (passwordError) {
+    throw new Error(passwordError);
+  }
+
+  if (String(payload.confirmPassword || "") !== String(payload.newPassword || "")) {
+    throw new Error("A confirmacao da nova senha nao confere.");
+  }
+
+  if (String(payload.newPassword || "") === String(expectedPassword)) {
+    throw new Error("A nova senha precisa ser diferente da senha atual.");
+  }
+
+  await updateRecord(
+    "accounts",
+    account.id,
+    {
+      accessHistory: buildAccessHistory(account, "Senha alterada pelo login local"),
+      password: payload.newPassword,
+      temporaryPassword: "",
+    },
+    {
+      action: "Alterou Senha",
+      details: "Senha alterada pela tela de login.",
+      module: "Sessao",
+      title: account.displayName,
+    }
+  );
+
+  return { message: "Senha alterada com sucesso. Use a nova senha para entrar no sistema." };
+}
+
 export async function requestAccountAccessLocal(payload) {
   const requests = await listRecords("accountRequests");
   const deviceKey = payload.deviceKey || "";

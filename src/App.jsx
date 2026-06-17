@@ -26,6 +26,7 @@ export default function App() {
     login,
     logout,
     requestAccess,
+    updatePassword,
   } = useCurrentUser();
   const { data: navigation } = useNavigation();
 
@@ -153,6 +154,7 @@ export default function App() {
         accounts={userContext.loginAccounts}
         isLoading={isUserLoading}
         onLogin={login}
+        onChangePassword={updatePassword}
         onRequestAccess={requestAccess}
       />
     );
