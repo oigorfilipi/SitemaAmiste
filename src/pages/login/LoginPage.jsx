@@ -21,6 +21,8 @@ const CHANGE_PASSWORD_INITIAL_STATE = {
   newPassword: "",
 };
 
+const AUTH_INPUT_CLASS = "[&_input]:!border-white/35 [&_input]:!bg-white [&_input]:!text-amiste-black [&_input]:placeholder:!text-amiste-gray/70";
+
 function canUseLocalStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage);
 }
@@ -203,7 +205,7 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
               <span className="mb-2 block text-xs font-black uppercase text-white/70">E-mail Corporativo</span>
               <TextInput
                 autoComplete="email"
-                className="[&_input]:border-white/35 [&_input]:bg-white [&_input]:text-amiste-black [&_input]:placeholder:text-amiste-gray/45"
+                className={AUTH_INPUT_CLASS}
                 icon="user"
                 placeholder="usuario@empresa.com"
                 required
@@ -217,7 +219,7 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Senha</span>
               <TextInput
                 autoComplete="current-password"
-                className="[&_input]:border-white/35 [&_input]:bg-white [&_input]:text-amiste-black [&_input]:placeholder:text-amiste-gray/45"
+                className={AUTH_INPUT_CLASS}
                 icon="shield"
                 placeholder="Digite sua senha"
                 required
@@ -234,7 +236,7 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
             ) : null}
 
             <Button
-              className="mt-3 w-full border-white bg-white font-black !text-amiste-black hover:border-white hover:bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
+              className="mt-3 w-full border-white !bg-white font-black !text-amiste-black hover:border-white hover:!bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
               disabled={isLoading}
               icon="shield"
               type="submit"

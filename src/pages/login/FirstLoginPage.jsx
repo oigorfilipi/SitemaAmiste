@@ -5,6 +5,8 @@ import TextInput from "../../components/atoms/TextInput.jsx";
 import { assertInlineImageFile } from "../../services/imageUploadValidationService.js";
 import { validatePasswordStrength } from "../../services/passwordPolicyService.js";
 
+const AUTH_INPUT_CLASS = "[&_input]:!border-white/35 [&_input]:!bg-white [&_input]:!text-amiste-black [&_input]:placeholder:!text-amiste-gray/70";
+
 function readFileAsDataUrl(file) {
   assertInlineImageFile(file);
 
@@ -88,19 +90,19 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Nova Senha</span>
-              <TextInput required placeholder="Digite a nova senha" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <TextInput className={AUTH_INPUT_CLASS} required placeholder="Digite a nova senha" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Confirmar Senha</span>
-              <TextInput required placeholder="Repita a nova senha" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+              <TextInput className={AUTH_INPUT_CLASS} required placeholder="Repita a nova senha" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Nome de Exibicao</span>
-              <TextInput required placeholder="Ex: Igor" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+              <TextInput className={AUTH_INPUT_CLASS} required placeholder="Ex: Igor" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">URL da Foto</span>
-              <TextInput placeholder="https://..." value={profilePhotoUrl} onChange={(event) => setProfilePhotoUrl(event.target.value)} />
+              <TextInput className={AUTH_INPUT_CLASS} placeholder="https://..." value={profilePhotoUrl} onChange={(event) => setProfilePhotoUrl(event.target.value)} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Foto de Perfil</span>
@@ -109,7 +111,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
                   <AppIcon name="upload" size={17} />
                   <span className="truncate">{profilePhotoFileName || "Escolher foto de perfil"}</span>
                 </span>
-                <span className="shrink-0 rounded-xl bg-white px-3 py-1 text-xs font-black text-amiste-black">
+                <span className="shrink-0 rounded-xl !bg-white px-3 py-1 text-xs font-black !text-amiste-black">
                   Procurar
                 </span>
               </span>
@@ -122,7 +124,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
             </label>
 
             {previewPhoto ? (
-              <img alt={displayName || "Foto de perfil"} className="h-28 w-28 rounded-2xl border border-white/30 bg-white object-cover" src={previewPhoto} />
+              <img alt={displayName || "Foto de perfil"} className="h-28 w-28 rounded-2xl border border-white/30 !bg-white object-cover" src={previewPhoto} />
             ) : null}
 
             {error ? (
@@ -131,14 +133,16 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
               </div>
             ) : null}
 
-            <Button
-              className="w-full border-white bg-white font-black !text-amiste-black hover:border-white hover:bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
-              disabled={isLoading}
-              icon="shield"
-              type="submit"
-            >
-              Concluir Acesso
-            </Button>
+            <div className="pt-3">
+              <Button
+                className="w-full border-white !bg-white font-black !text-amiste-black hover:border-white hover:!bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
+                disabled={isLoading}
+                icon="shield"
+                type="submit"
+              >
+                Concluir Acesso
+              </Button>
+            </div>
             <Button
               className="w-full border-white/40 !bg-transparent !text-white hover:!bg-white/10 hover:!text-white [&_span]:!text-white [&_svg]:!text-white"
               disabled={isLoading}
