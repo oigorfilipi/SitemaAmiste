@@ -191,7 +191,12 @@ export default function LoginPage({ isLoading, onLogin, onRequestAccess }) {
               </div>
             ) : null}
 
-            <Button className="mt-3 w-full border-white bg-white font-black text-amiste-red hover:border-white hover:bg-zinc-100 hover:text-red-900" disabled={isLoading} icon="shield" type="submit">
+            <Button
+              className="mt-3 w-full border-white bg-white font-black !text-amiste-black hover:border-white hover:bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
+              disabled={isLoading}
+              icon="shield"
+              type="submit"
+            >
               Entrar no Sistema
             </Button>
           </form>
