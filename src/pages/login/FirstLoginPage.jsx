@@ -23,6 +23,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
   const [error, setError] = useState("");
   const [password, setPassword] = useState("");
   const [profilePhotoDataUrl, setProfilePhotoDataUrl] = useState(user?.profilePhotoDataUrl || "");
+  const [profilePhotoFileName, setProfilePhotoFileName] = useState("");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(user?.profilePhotoUrl || "");
 
   async function handlePhotoChange(event) {
@@ -34,9 +35,11 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
 
     try {
       setProfilePhotoDataUrl(await readFileAsDataUrl(file));
+      setProfilePhotoFileName(file.name);
       setError("");
     } catch (photoError) {
       setError(photoError.message || "Nao foi possivel carregar a foto.");
+      setProfilePhotoFileName("");
       event.target.value = "";
     }
   }
@@ -101,9 +104,18 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Foto de Perfil</span>
+              <span className="flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-white/30 bg-white/10 px-3 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-white/15">
+                <span className="flex min-w-0 items-center gap-2">
+                  <AppIcon name="upload" size={17} />
+                  <span className="truncate">{profilePhotoFileName || "Escolher foto de perfil"}</span>
+                </span>
+                <span className="shrink-0 rounded-xl bg-white px-3 py-1 text-xs font-black text-amiste-black">
+                  Procurar
+                </span>
+              </span>
               <input
                 accept="image/*"
-                className="block h-9 w-full rounded-xl border border-white/25 bg-white px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-xl file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white"
+                className="sr-only"
                 type="file"
                 onChange={handlePhotoChange}
               />
@@ -119,10 +131,20 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
               </div>
             ) : null}
 
-            <Button className="w-full border-white bg-white font-black text-amiste-red hover:border-white hover:bg-zinc-100 hover:text-red-900" disabled={isLoading} icon="shield" type="submit">
+            <Button
+              className="w-full border-white bg-white font-black !text-amiste-black hover:border-white hover:bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
+              disabled={isLoading}
+              icon="shield"
+              type="submit"
+            >
               Concluir Acesso
             </Button>
-            <Button className="w-full border-white/40 bg-transparent text-white hover:bg-white/10" disabled={isLoading} variant="secondary" onClick={onLogout}>
+            <Button
+              className="w-full border-white/40 !bg-transparent !text-white hover:!bg-white/10 hover:!text-white [&_span]:!text-white [&_svg]:!text-white"
+              disabled={isLoading}
+              variant="secondary"
+              onClick={onLogout}
+            >
               Sair
             </Button>
           </form>
