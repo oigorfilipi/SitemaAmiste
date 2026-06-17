@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "reset:dev-first-login": "node scripts/reset-dev-first-login.mjs",
     "reset:production-clean:api": "node scripts/bootstrap-clean-production-api.mjs",
     "reset:production-clean": "node scripts/clean-production-supabase.mjs",
     "smoke:production": "node scripts/smoke-production.mjs",
