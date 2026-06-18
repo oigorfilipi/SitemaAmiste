@@ -11,14 +11,14 @@ import {
   filterQuickAccessByRole,
   getPageAccess,
 } from "./services/permissionService.js";
-import { applyTheme, getStoredTheme, saveStoredTheme, toggleTheme } from "./services/themeService.js";
+import { THEMES, applyTheme, getStoredTheme, saveStoredTheme, toggleTheme } from "./services/themeService.js";
 
 export default function App() {
   const [activePage, setActivePage] = useState("home");
   const [pageHistory, setPageHistory] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewUserId, setPreviewUserId] = useState("");
-  const [theme, setTheme] = useState(() => getStoredTheme(null));
+  const [theme, setTheme] = useState(THEMES.LIGHT);
   const {
     completeFirstAccess,
     data: userContext,
@@ -74,6 +74,12 @@ export default function App() {
   }, [activePageAllowed]);
 
   useEffect(() => {
+    if (!userContext.user) {
+      setTheme(THEMES.LIGHT);
+      applyTheme(THEMES.LIGHT);
+      return;
+    }
+
     const nextTheme = getStoredTheme(userContext.user);
     setTheme(nextTheme);
     applyTheme(nextTheme);

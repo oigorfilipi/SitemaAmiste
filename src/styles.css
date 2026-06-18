@@ -137,6 +137,49 @@
   html[data-theme="dark"] .auth-light-fields input::placeholder {
     color: rgba(46, 46, 46, 0.62) !important;
   }
+
+  .auth-primary-button,
+  html[data-theme="dark"] .auth-primary-button {
+    background-color: #ffffff !important;
+    border-color: #ffffff !important;
+    color: #0f0f0f !important;
+  }
+
+  .auth-primary-button span,
+  .auth-primary-button svg,
+  html[data-theme="dark"] .auth-primary-button span,
+  html[data-theme="dark"] .auth-primary-button svg {
+    color: #0f0f0f !important;
+    stroke: #0f0f0f !important;
+  }
+
+  .auth-primary-button:hover,
+  html[data-theme="dark"] .auth-primary-button:hover {
+    background-color: #f4f4f5 !important;
+    border-color: #ffffff !important;
+    color: #0f0f0f !important;
+  }
+
+  .auth-secondary-button,
+  html[data-theme="dark"] .auth-secondary-button {
+    background-color: transparent !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    color: #ffffff !important;
+  }
+
+  .auth-secondary-button span,
+  .auth-secondary-button svg,
+  html[data-theme="dark"] .auth-secondary-button span,
+  html[data-theme="dark"] .auth-secondary-button svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+  }
+
+  .auth-secondary-button:hover,
+  html[data-theme="dark"] .auth-secondary-button:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+  }
 }
 
 @layer utilities {

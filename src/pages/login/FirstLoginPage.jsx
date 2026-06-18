@@ -124,7 +124,9 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
             </label>
 
             {previewPhoto ? (
-              <img alt={displayName || "Foto de perfil"} className="h-28 w-28 rounded-2xl border border-white/30 !bg-white object-cover" src={previewPhoto} />
+              <div className="pt-2">
+                <img alt={displayName || "Foto de perfil"} className="h-28 w-28 rounded-2xl border border-white/30 !bg-white object-cover" src={previewPhoto} />
+              </div>
             ) : null}
 
             {error ? (
@@ -135,7 +137,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
 
             <div className="pt-3">
               <Button
-                className="w-full border-white !bg-white font-black !text-amiste-black hover:border-white hover:!bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
+                className="auth-primary-button w-full font-black"
                 disabled={isLoading}
                 icon="shield"
                 type="submit"
@@ -144,7 +146,7 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
               </Button>
             </div>
             <Button
-              className="w-full border-white/40 !bg-transparent !text-white hover:!bg-white/10 hover:!text-white [&_span]:!text-white [&_svg]:!text-white"
+              className="auth-secondary-button w-full"
               disabled={isLoading}
               variant="secondary"
               onClick={onLogout}

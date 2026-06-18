@@ -236,7 +236,7 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
             ) : null}
 
             <Button
-              className="mt-3 w-full border-white !bg-white font-black !text-amiste-black hover:border-white hover:!bg-zinc-100 hover:!text-amiste-black [&_span]:!text-amiste-black [&_svg]:!text-amiste-black"
+              className="auth-primary-button mt-3 w-full font-black"
               disabled={isLoading}
               icon="shield"
               type="submit"
