@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 COLLECTION_NAMES = [
     "accounts",
     "accountRequests",
+    "systemSettings",
     "inventoryCounts",
     "inventoryLocations",
     "machineConfigs",

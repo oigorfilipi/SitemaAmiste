@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
+import PasswordInput from "../../components/atoms/PasswordInput.jsx";
 import TextArea from "../../components/atoms/TextArea.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import Modal from "../../components/molecules/Modal.jsx";
+import PasswordStrengthMeter from "../../components/molecules/PasswordStrengthMeter.jsx";
 
 const ACCOUNT_REQUEST_COOLDOWN_KEY = "amiste_erp_public_account_request_v1";
 const HAS_ACCOUNT_HINT_KEY = "amiste_erp_has_account_hint_v1";
@@ -100,6 +102,9 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isRequestingAccess, setIsRequestingAccess] = useState(false);
   const [password, setPassword] = useState("");
   const [requestData, setRequestData] = useState(REQUEST_INITIAL_STATE);
   const [requestMessage, setRequestMessage] = useState("");
@@ -108,22 +113,32 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
   const [loginUnlocked, setLoginUnlocked] = useState(() => readHasAccountHint() || isRequestCooldownActive());
   const deviceKey = useMemo(() => getOrCreateDeviceKey(), []);
   const isLoginLocked = !loginUnlocked;
+  const loginBusy = isLoading || isLoggingIn;
+  const changePasswordMismatch = Boolean(
+    changePasswordData.newPassword &&
+    changePasswordData.confirmPassword &&
+    changePasswordData.newPassword !== changePasswordData.confirmPassword
+  );
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+    setIsLoggingIn(true);
 
     try {
       await onLogin({ email, password });
       setPassword("");
     } catch (loginError) {
       setError(loginError.message || "Nao foi possivel iniciar a sessao.");
+    } finally {
+      setIsLoggingIn(false);
     }
   }
 
   async function handleRequestAccess(event) {
     event.preventDefault();
     setRequestMessage("");
+    setIsRequestingAccess(true);
 
     try {
       await onRequestAccess({
@@ -139,6 +154,8 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
       setRequestData(REQUEST_INITIAL_STATE);
     } catch (requestError) {
       setRequestMessage(requestError.message || "Nao foi possivel registrar o pedido.");
+    } finally {
+      setIsRequestingAccess(false);
     }
   }
 
@@ -154,10 +171,12 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
     event.preventDefault();
     setChangePasswordMessage("");
 
-    if (changePasswordData.newPassword !== changePasswordData.confirmPassword) {
+    if (changePasswordMismatch) {
       setChangePasswordMessage("A confirmacao da nova senha nao confere.");
       return;
     }
+
+    setIsChangingPassword(true);
 
     try {
       const result = await onChangePassword(changePasswordData);
@@ -166,6 +185,8 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
       setPassword("");
     } catch (changeError) {
       setChangePasswordMessage(changeError.message || "Nao foi possivel alterar a senha.");
+    } finally {
+      setIsChangingPassword(false);
     }
   }
 
@@ -217,13 +238,12 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
 
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Senha</span>
-              <TextInput
+              <PasswordInput
                 autoComplete="current-password"
                 className={AUTH_INPUT_CLASS}
                 icon="shield"
                 placeholder="Digite sua senha"
                 required
-                type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
@@ -237,8 +257,9 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
 
             <Button
               className="auth-primary-button mt-3 w-full font-black"
-              disabled={isLoading}
+              disabled={loginBusy}
               icon="shield"
+              loading={loginBusy}
               type="submit"
             >
               Entrar no Sistema
@@ -330,7 +351,7 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
               <Button variant="secondary" onClick={() => setRequestOpen(false)}>
                 Cancelar
               </Button>
-              <Button icon="fileClock" type="submit">
+              <Button icon="fileClock" loading={isRequestingAccess} type="submit">
                 Enviar Pedido
               </Button>
             </footer>
@@ -357,11 +378,10 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
             </label>
             <label>
               <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Senha atual</span>
-              <TextInput
+              <PasswordInput
                 autoComplete="current-password"
                 placeholder="Digite sua senha atual"
                 required
-                type="password"
                 value={changePasswordData.currentPassword}
                 onChange={(event) => updateChangePasswordField("currentPassword", event.target.value)}
               />
@@ -369,25 +389,29 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
             <div className="grid gap-4 md:grid-cols-2">
               <label>
                 <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Nova senha</span>
-                <TextInput
+                <PasswordInput
                   autoComplete="new-password"
                   placeholder="Min. 8 caracteres"
                   required
-                  type="password"
                   value={changePasswordData.newPassword}
                   onChange={(event) => updateChangePasswordField("newPassword", event.target.value)}
                 />
+                <PasswordStrengthMeter password={changePasswordData.newPassword} />
               </label>
               <label>
                 <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Confirmar nova senha</span>
-                <TextInput
+                <PasswordInput
                   autoComplete="new-password"
                   placeholder="Repita a nova senha"
                   required
-                  type="password"
                   value={changePasswordData.confirmPassword}
                   onChange={(event) => updateChangePasswordField("confirmPassword", event.target.value)}
                 />
+                {changePasswordMismatch ? (
+                  <span className="mt-2 block text-xs font-bold text-amiste-red">
+                    As senhas nao conferem.
+                  </span>
+                ) : null}
               </label>
             </div>
             {changePasswordMessage ? (
@@ -399,7 +423,7 @@ export default function LoginPage({ isLoading, onChangePassword, onLogin, onRequ
               <Button variant="secondary" onClick={() => setChangePasswordOpen(false)}>
                 Voltar
               </Button>
-              <Button icon="shield" type="submit">
+              <Button icon="shield" loading={isChangingPassword} type="submit">
                 Salvar nova senha
               </Button>
             </footer>

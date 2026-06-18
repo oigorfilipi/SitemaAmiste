@@ -86,6 +86,15 @@ export const erpSeed = {
     },
   ],
   accountRequests: [],
+  systemSettings: [
+    {
+      id: "system_admin_password",
+      description: "Senha exigida para criar ou promover usuarios DON/DEV.",
+      key: "adminPassword",
+      name: "Senha ADM",
+      value: "AmisteADM2026",
+    },
+  ],
   inventoryCounts: [],
   inventoryLocations: [],
   machines: [

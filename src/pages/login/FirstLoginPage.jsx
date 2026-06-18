@@ -1,7 +1,9 @@
 import { useState } from "react";
 import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
+import PasswordInput from "../../components/atoms/PasswordInput.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
+import PasswordStrengthMeter from "../../components/molecules/PasswordStrengthMeter.jsx";
 import { assertInlineImageFile } from "../../services/imageUploadValidationService.js";
 import { validatePasswordStrength } from "../../services/passwordPolicyService.js";
 
@@ -23,6 +25,8 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
   const [confirmPassword, setConfirmPassword] = useState("");
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [error, setError] = useState("");
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const [password, setPassword] = useState("");
   const [profilePhotoDataUrl, setProfilePhotoDataUrl] = useState(user?.profilePhotoDataUrl || "");
   const [profilePhotoFileName, setProfilePhotoFileName] = useState("");
@@ -62,6 +66,8 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
       return;
     }
 
+    setIsCompleting(true);
+
     try {
       await onComplete({
         displayName,
@@ -71,10 +77,24 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
       });
     } catch (completionError) {
       setError(completionError.message || "Nao foi possivel concluir o primeiro acesso.");
+    } finally {
+      setIsCompleting(false);
+    }
+  }
+
+  async function handleLogout() {
+    setIsLeaving(true);
+
+    try {
+      await onLogout();
+    } finally {
+      setIsLeaving(false);
     }
   }
 
   const previewPhoto = profilePhotoDataUrl || profilePhotoUrl;
+  const passwordMismatch = Boolean(password && confirmPassword && password !== confirmPassword);
+  const completingBusy = isLoading || isCompleting;
 
   return (
     <main className="auth-light-fields grid min-h-screen grid-cols-1 bg-amiste-white lg:grid-cols-2">
@@ -90,11 +110,17 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Nova Senha</span>
-              <TextInput className={AUTH_INPUT_CLASS} required placeholder="Digite a nova senha" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <PasswordInput className={AUTH_INPUT_CLASS} required placeholder="Digite a nova senha" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <PasswordStrengthMeter password={password} />
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Confirmar Senha</span>
-              <TextInput className={AUTH_INPUT_CLASS} required placeholder="Repita a nova senha" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+              <PasswordInput className={AUTH_INPUT_CLASS} required placeholder="Repita a nova senha" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+              {passwordMismatch ? (
+                <span className="mt-2 block text-xs font-bold text-white">
+                  As senhas nao conferem.
+                </span>
+              ) : null}
             </label>
             <label>
               <span className="mb-2 block text-xs font-black uppercase text-white/70">Nome de Exibicao</span>
@@ -138,8 +164,9 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
             <div className="pt-3">
               <Button
                 className="auth-primary-button w-full font-black"
-                disabled={isLoading}
+                disabled={completingBusy}
                 icon="shield"
+                loading={completingBusy}
                 type="submit"
               >
                 Concluir Acesso
@@ -147,9 +174,10 @@ export default function FirstLoginPage({ isLoading, user, onComplete, onLogout }
             </div>
             <Button
               className="auth-secondary-button w-full"
-              disabled={isLoading}
+              disabled={isLoading || isLeaving}
+              loading={isLeaving}
               variant="secondary"
-              onClick={onLogout}
+              onClick={handleLogout}
             >
               Sair
             </Button>

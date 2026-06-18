@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Button from "../atoms/Button.jsx";
+import PasswordInput from "../atoms/PasswordInput.jsx";
 import TextInput from "../atoms/TextInput.jsx";
+import PasswordStrengthMeter from "../molecules/PasswordStrengthMeter.jsx";
 import { assertInlineImageFile } from "../../services/imageUploadValidationService.js";
 import { PROFILE_FORM_FIELDS } from "../../services/profileService.js";
 
@@ -37,6 +39,7 @@ export default function ProfileFormPanel({
   errorMessage,
   formData,
   isDirty,
+  isSaving = false,
   message,
   profile,
   onCancel,
@@ -68,6 +71,11 @@ export default function ProfileFormPanel({
   const activeSessions = formData.activeSessions || profile?.activeSessions || [];
   const accessHistory = profile?.accessHistory || [];
   const previewPhoto = formData.profilePhotoDataUrl || formData.profilePhotoUrl;
+  const passwordMismatch = Boolean(
+    formData.securityNewPassword &&
+    formData.securityConfirmPassword &&
+    formData.securityNewPassword !== formData.securityConfirmPassword
+  );
 
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -173,23 +181,27 @@ export default function ProfileFormPanel({
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <label>
               <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Alterar senha</span>
-              <TextInput
+              <PasswordInput
                 disabled={!canMutate}
                 placeholder="Digite a nova senha"
-                type="password"
                 value={formData.securityNewPassword || ""}
                 onChange={(event) => onChange("securityNewPassword", event.target.value)}
               />
+              {formData.securityNewPassword ? <PasswordStrengthMeter password={formData.securityNewPassword} /> : null}
             </label>
             <label>
               <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Confirmar senha</span>
-              <TextInput
+              <PasswordInput
                 disabled={!canMutate}
                 placeholder="Repita a nova senha"
-                type="password"
                 value={formData.securityConfirmPassword || ""}
                 onChange={(event) => onChange("securityConfirmPassword", event.target.value)}
               />
+              {passwordMismatch ? (
+                <span className="mt-2 block text-xs font-bold text-amiste-red">
+                  As senhas nao conferem.
+                </span>
+              ) : null}
             </label>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -243,10 +255,10 @@ export default function ProfileFormPanel({
         ) : null}
 
         <footer className="flex flex-wrap justify-end gap-3 border-t border-zinc-100 pt-5">
-          <Button disabled={!isDirty} variant="secondary" onClick={onCancel}>
+          <Button disabled={!isDirty || isSaving} variant="secondary" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button disabled={!canMutate || !isDirty} icon="pencil" type="submit">
+          <Button disabled={!canMutate || !isDirty || isSaving} icon="pencil" loading={isSaving} type="submit">
             Salvar Perfil
           </Button>
         </footer>

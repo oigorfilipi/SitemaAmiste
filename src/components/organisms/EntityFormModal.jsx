@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Button from "../atoms/Button.jsx";
+import PasswordInput from "../atoms/PasswordInput.jsx";
 import SelectInput from "../atoms/SelectInput.jsx";
 import TextArea from "../atoms/TextArea.jsx";
 import TextInput from "../atoms/TextInput.jsx";
 import FormSection from "../molecules/FormSection.jsx";
 import Modal from "../molecules/Modal.jsx";
+import PasswordStrengthMeter from "../molecules/PasswordStrengthMeter.jsx";
 import DocumentLivePreviewPanel from "./DocumentLivePreviewPanel.jsx";
 import { getLabelFile, saveLabelFile } from "../../services/labelFileStorageService.js";
 import { formatFileSize, resolveFileFormat } from "../../services/labelService.js";
@@ -67,6 +69,7 @@ function resolveFieldPlaceholder(field) {
   const fieldType = field.type || "";
 
   if (fieldType === "email" || label.includes("email")) return "nome@empresa.com";
+  if (fieldType === "password" || label.includes("senha")) return "Min. 8 caracteres";
   if (fieldType === "url" || label.includes("url") || label.includes("link")) return "https://...";
   if (fieldType === "currency" || label.includes("valor") || label.includes("preco") || label.includes("custo")) return "R$ 0,00";
   if (fieldType === "date" || label.includes("data")) return "dd/mm/aaaa";
@@ -112,6 +115,7 @@ function readFileAsDataUrl(file) {
 function ImageUploadControl({ disabled = false, field, formData, onChange }) {
   const [uploadError, setUploadError] = useState("");
   const previewUrl = formData[field.name] || formData[field.fallbackUrlField] || "";
+  const compactAvatar = field.previewVariant === "avatar";
 
   async function handleFileChange(event) {
     if (disabled) {
@@ -136,11 +140,17 @@ function ImageUploadControl({ disabled = false, field, formData, onChange }) {
   return (
     <div className="space-y-3">
       {previewUrl ? (
-        <div className="grid h-40 place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100">
-          <img alt="Preview" className="h-full w-full object-contain" src={previewUrl} />
+        <div className={compactAvatar
+          ? "mx-auto grid size-28 place-items-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-100"
+          : "grid h-40 place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100"}
+        >
+          <img alt="Preview" className={compactAvatar ? "h-full w-full object-cover" : "h-full w-full object-contain"} src={previewUrl} />
         </div>
       ) : (
-        <div className="grid h-28 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55">
+        <div className={compactAvatar
+          ? "mx-auto grid size-28 place-items-center rounded-full border border-dashed border-zinc-300 bg-zinc-50 px-4 text-center text-xs font-bold text-amiste-gray/55"
+          : "grid h-28 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55"}
+        >
           Nenhuma imagem selecionada
         </div>
       )}
@@ -427,6 +437,7 @@ function FieldControl({ canUpload, field, formData, snapshot, onChange }) {
   const options = buildOptions(field, snapshot);
   const isTextarea = field.type === "textarea";
   const isCheckbox = field.type === "checkbox";
+  const isPassword = field.type === "password";
   const isSelect = field.type === "select" || field.source || field.optionGroup || field.type === "inventoryItem";
   const disabled = Boolean(field.disabled || field.readOnly);
 
@@ -492,6 +503,22 @@ function FieldControl({ canUpload, field, formData, snapshot, onChange }) {
     );
   }
 
+  if (isPassword) {
+    return (
+      <>
+        <PasswordInput
+          disabled={disabled}
+          maxLength={field.maxLength}
+          placeholder={resolveFieldPlaceholder(field)}
+          required={field.required}
+          value={formData[field.name] || ""}
+          onChange={(event) => onChange(field.name, event.target.value)}
+        />
+        {field.showStrength ? <PasswordStrengthMeter password={formData[field.name] || ""} /> : null}
+      </>
+    );
+  }
+
   return (
     <TextInput
       disabled={disabled}
@@ -521,12 +548,19 @@ export default function EntityFormModal({
   validate,
   asideContent,
   canUpload = true,
+  primaryStepLabel = "Dados",
+  secondaryStepContent,
+  secondaryStepDescription,
+  secondaryStepLabel = "Permissoes",
   size,
   onClose,
   onSubmit,
 }) {
+  const hasSecondaryStep = Boolean(secondaryStepContent);
+  const [activeStep, setActiveStep] = useState("primary");
   const [formData, setFormData] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const modalTitle = editingRecord ? `Editar ${title}` : title;
   const hasLivePreview = Boolean(livePreviewDocumentType);
@@ -550,6 +584,7 @@ export default function EntityFormModal({
 
   useEffect(() => {
     if (open) {
+      setActiveStep("primary");
       setFormData(initialData);
       setErrorMessage("");
     }
@@ -568,51 +603,128 @@ export default function EntityFormModal({
     });
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-
+  function validateCurrentPayload() {
     const payload = normalizeSmartPayload(fields, formData, snapshot);
     const validationMessage = validate?.(payload, snapshot, editingRecord);
 
     if (validationMessage) {
       setErrorMessage(validationMessage);
+      return null;
+    }
+
+    return payload;
+  }
+
+  function handleAdvanceStep() {
+    const payload = validateCurrentPayload();
+
+    if (!payload) {
       return;
     }
+
+    setErrorMessage("");
+    setActiveStep("secondary");
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (hasSecondaryStep && activeStep === "primary") {
+      handleAdvanceStep();
+      return;
+    }
+
+    const payload = validateCurrentPayload();
+
+    if (!payload) {
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       await onSubmit(payload);
     } catch (error) {
       setErrorMessage(error.message || "Nao foi possivel salvar o registro.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
+  const stepHeader = hasSecondaryStep ? (
+    <div className="mb-4 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm">
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { id: "primary", label: primaryStepLabel },
+          { id: "secondary", label: secondaryStepLabel },
+        ].map((step, index) => (
+          <button
+            className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition ${
+              activeStep === step.id
+                ? "bg-amiste-red text-white"
+                : "bg-zinc-50 text-amiste-gray hover:bg-zinc-100"
+            }`}
+            key={step.id}
+            type="button"
+            onClick={() => {
+              if (step.id === "primary") {
+                setActiveStep("primary");
+                return;
+              }
+
+              handleAdvanceStep();
+            }}
+          >
+            <span className="grid size-5 place-items-center rounded-full bg-white/20 text-[10px]">{index + 1}</span>
+            {step.label}
+          </button>
+        ))}
+      </div>
+      {activeStep === "secondary" && secondaryStepDescription ? (
+        <p className="mt-3 text-xs font-semibold leading-5 text-amiste-gray/65">{secondaryStepDescription}</p>
+      ) : null}
+    </div>
+  ) : null;
+
   const formContent = (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      {/* --- SECAO: CAMPOS AGRUPADOS DO FORMULARIO --- */}
-      {fieldGroups.map((group) => (
-        <FormSection eyebrow={group.eyebrow} key={group.id} title={group.title}>
-          {group.description ? (
-            <p className="-mt-2 text-sm font-semibold leading-6 text-amiste-gray/65">{group.description}</p>
-          ) : null}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {group.fields.map((field) => (
-              <label className={field.full ? "md:col-span-2" : ""} key={field.name}>
-                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
-                  {field.label}
-                  {field.required ? <span className="text-amiste-red"> *</span> : null}
-                </span>
-                <FieldControl
-                  canUpload={canUpload}
-                  field={field}
-                  formData={formData}
-                  snapshot={snapshot}
-                  onChange={updateField}
-                />
-              </label>
-            ))}
-          </div>
-        </FormSection>
-      ))}
+      {stepHeader}
+
+      {activeStep === "primary" ? (
+        <>
+          {/* --- SECAO: CAMPOS AGRUPADOS DO FORMULARIO --- */}
+          {fieldGroups.map((group) => (
+            <FormSection eyebrow={group.eyebrow} key={group.id} title={group.title}>
+              {group.description ? (
+                <p className="-mt-2 text-sm font-semibold leading-6 text-amiste-gray/65">{group.description}</p>
+              ) : null}
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {group.fields.map((field) => (
+                  <label className={field.full ? "md:col-span-2" : ""} key={field.name}>
+                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
+                      {field.label}
+                      {field.required ? <span className="text-amiste-red"> *</span> : null}
+                    </span>
+                    <FieldControl
+                      canUpload={canUpload}
+                      field={field}
+                      formData={formData}
+                      snapshot={snapshot}
+                      onChange={updateField}
+                    />
+                  </label>
+                ))}
+              </div>
+            </FormSection>
+          ))}
+        </>
+      ) : (
+        secondaryStepContent?.({
+          formData,
+          previewRecord,
+          updateField,
+        })
+      )}
 
       {errorMessage ? (
         <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
@@ -622,11 +734,17 @@ export default function EntityFormModal({
 
       {/* --- SECAO: ACOES DO FORMULARIO --- */}
       <footer className="flex min-h-14 justify-end gap-3 border-t border-zinc-100 pt-4">
-        <Button variant="secondary" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button icon="plus" type="submit">
-          Salvar
+        {activeStep === "secondary" ? (
+          <Button disabled={isSubmitting} icon="chevronLeft" variant="secondary" onClick={() => setActiveStep("primary")}>
+            Voltar
+          </Button>
+        ) : (
+          <Button disabled={isSubmitting} variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+        )}
+        <Button icon={hasSecondaryStep && activeStep === "primary" ? "chevronRight" : "plus"} loading={isSubmitting} type="submit">
+          {hasSecondaryStep && activeStep === "primary" ? "Avancar" : "Salvar"}
         </Button>
       </footer>
     </form>

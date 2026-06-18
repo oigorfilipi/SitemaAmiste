@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
+import AdminPasswordPanel from "../../components/organisms/AdminPasswordPanel.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
 import ProfileAccessPanel from "../../components/organisms/ProfileAccessPanel.jsx";
 import ProfileFormPanel from "../../components/organisms/ProfileFormPanel.jsx";
@@ -12,11 +13,13 @@ import {
   normalizeProfilePayload,
   validateProfilePayload,
 } from "../../services/profileService.js";
+import { canManageAdminPassword } from "../../services/adminSecurityService.js";
 import { getRolePermissions } from "../../services/permissionService.js";
 
 export default function PerfilPage({ accessLevel, previewUser, user }) {
   const [formData, setFormData] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const { records, updateRecord } = useCollection("accounts");
   const profile = records.find((account) => account.id === user?.id) || user;
@@ -70,6 +73,8 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
 
     const payload = normalizeProfilePayload(formData, profile);
 
+    setIsSaving(true);
+
     try {
       await updateRecord(profile.id, payload, {
         action: "Editou",
@@ -80,6 +85,8 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
       setMessage("Perfil atualizado com sucesso.");
     } catch (error) {
       setErrorMessage(error.message || "Nao foi possivel atualizar o perfil.");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -110,12 +117,14 @@ export default function PerfilPage({ accessLevel, previewUser, user }) {
             errorMessage={errorMessage}
             formData={formData}
             isDirty={isDirty}
+            isSaving={isSaving}
             message={message}
             profile={profile}
             onCancel={handleCancel}
             onChange={handleChange}
             onSubmit={handleSubmit}
           />
+          {canManageAdminPassword(user) ? <AdminPasswordPanel user={user} /> : null}
         </div>
         <ProfileAccessPanel rows={accessRows} />
       </div>

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.dependencies import get_operational_account, get_repository
 from app.core.permissions import can_access_page, can_perform_action, get_collection_page
 from app.core.security import hash_password, sanitize_account, validate_password_strength
+from app.services.auth_service import get_admin_password
 from app.services.collection_service import CollectionService, ensure_collection_name
 
 router = APIRouter(tags=["collections"])
@@ -14,6 +15,7 @@ router = APIRouter(tags=["collections"])
 COLLECTION_LABELS = {
     "accounts": "Contas",
     "accountRequests": "Solicitacoes",
+    "systemSettings": "Configuracoes de Seguranca",
     "inventoryCounts": "Historico de Contagem",
     "inventoryLocations": "Estoques Separados",
     "machineConfigs": "Configuracoes de Maquina",
@@ -47,7 +49,11 @@ AUDIT_IGNORED_FIELDS = {
     "profilePhotoUrl",
     "temporaryPassword",
     "updatedAt",
+    "value",
 }
+
+CRITICAL_ACCOUNT_ROLES = {"DEV", "DON", "CEO"}
+ACCOUNT_MANAGER_ROLES = {"DEV", "DON", "CEO"}
 
 
 def get_service(repository = Depends(get_repository)) -> CollectionService:
@@ -111,14 +117,31 @@ def normalize_request_payload_for_storage(payload: dict[str, Any], account: dict
     return next_payload
 
 
-def normalize_account_payload_for_storage(payload: dict[str, Any], current_account: dict, existing_account: dict[str, Any] | None = None) -> dict[str, Any]:
+def normalize_account_payload_for_storage(
+    payload: dict[str, Any],
+    current_account: dict,
+    existing_account: dict[str, Any] | None = None,
+    repository = None,
+) -> dict[str, Any]:
     existing_role = existing_account.get("role") if existing_account else ""
     target_role = payload.get("role") or existing_role
 
-    if (target_role == "DEV" or existing_role == "DEV") and current_account.get("role") != "DEV":
-        raise HTTPException(status_code=403, detail="Somente DEV pode criar ou alterar contas DEV.")
+    if (target_role in CRITICAL_ACCOUNT_ROLES or existing_role in CRITICAL_ACCOUNT_ROLES) and current_account.get("role") not in ACCOUNT_MANAGER_ROLES:
+        raise HTTPException(status_code=403, detail="Somente DONO e DEV podem criar ou alterar contas criticas.")
+
+    requires_admin_password = target_role in CRITICAL_ACCOUNT_ROLES and (
+        not existing_account or existing_role != target_role
+    )
+
+    if requires_admin_password:
+        if not repository:
+            raise HTTPException(status_code=403, detail="Senha ADM obrigatoria para cargos criticos.")
+
+        if str(payload.get("adminPasswordConfirmation", "")).strip() != get_admin_password(repository):
+            raise HTTPException(status_code=403, detail="Senha ADM invalida para cargo critico.")
 
     next_payload = dict(payload)
+    next_payload.pop("adminPasswordConfirmation", None)
     provisional_password = next_payload.get("temporaryPassword") or next_payload.get("password")
 
     if not existing_account and not provisional_password:
@@ -137,6 +160,10 @@ def normalize_account_payload_for_storage(payload: dict[str, Any], current_accou
 def serialize_record(collection_name: str, record: dict[str, Any] | None):
     if collection_name == "accounts":
         return sanitize_account(record)
+
+    if collection_name == "systemSettings" and record:
+        if record.get("key") == "adminPassword":
+            return {**record, "value": ""}
 
     return record
 
@@ -279,6 +306,9 @@ def list_records(
     if collection_name == "accountRequests":
         return [record for record in records if request_visible_to_account(record, account)]
 
+    if collection_name == "systemSettings":
+        return [serialize_record(collection_name, record) for record in records]
+
     return records
 
 
@@ -292,7 +322,7 @@ def set_collection(
     collection_name = ensure_collection_name(collection_name)
     require_collection_access(account, collection_name, "action:update")
     if collection_name == "accounts":
-        records = [normalize_account_payload_for_storage(record, account) for record in records]
+        records = [normalize_account_payload_for_storage(record, account, repository=service.repository) for record in records]
 
     updated_records = service.repository.set_collection(collection_name, records)
     add_history_entry(
@@ -307,6 +337,9 @@ def set_collection(
     if collection_name == "accounts":
         return [sanitize_account(record) for record in updated_records]
 
+    if collection_name == "systemSettings":
+        return [serialize_record(collection_name, record) for record in updated_records]
+
     return updated_records
 
 
@@ -320,7 +353,7 @@ def create_record(
     collection_name = ensure_collection_name(collection_name)
     require_collection_access(account, collection_name, "action:create")
     if collection_name == "accounts":
-        payload = normalize_account_payload_for_storage(payload, account)
+        payload = normalize_account_payload_for_storage(payload, account, repository=service.repository)
     if collection_name == "accountRequests":
         payload = normalize_request_payload_for_storage(payload, account)
 
@@ -349,7 +382,7 @@ def update_record(
     require_collection_access(account, collection_name, "action:update")
     if collection_name == "accounts":
         existing_record = service.repository.get_record(collection_name, record_id)
-        payload = normalize_account_payload_for_storage(payload, account, existing_record)
+        payload = normalize_account_payload_for_storage(payload, account, existing_record, service.repository)
     elif collection_name == "accountRequests":
         existing_record = service.repository.get_record(collection_name, record_id)
         payload = normalize_request_payload_for_storage(payload, account, existing_record)

@@ -21,6 +21,7 @@ export function useErpSnapshot() {
     recipes: [],
     labels: [],
     options: [],
+    systemSettings: [],
     history: [],
   }));
 

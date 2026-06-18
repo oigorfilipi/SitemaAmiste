@@ -7,6 +7,9 @@ from app.core.security import create_access_token, hash_password, sanitize_accou
 from app.repositories.repository_factory import ErpRecordRepository
 
 LOCAL_DEFAULT_PASSWORD = "1234"
+ADMIN_PASSWORD_SETTING_ID = "system_admin_password"
+DEFAULT_ADMIN_PASSWORD = "AmisteADM2026"
+ADMIN_AUTHORIZED_ROLES = {"DEV", "DON", "CEO"}
 
 
 def _normalize_email(value: str) -> str:
@@ -31,6 +34,22 @@ def _find_active_account_by_email(repository: ErpRecordRepository, email: str) -
     )
 
 
+def _is_admin_security_manager(account: dict[str, Any]) -> bool:
+    return str(account.get("role") or "").upper() in ADMIN_AUTHORIZED_ROLES
+
+
+def get_admin_password(repository: ErpRecordRepository) -> str:
+    setting = next(
+        (
+            record for record in repository.list_records("systemSettings")
+            if record.get("id") == ADMIN_PASSWORD_SETTING_ID or record.get("key") == "adminPassword"
+        ),
+        None,
+    )
+
+    return setting.get("value") if setting and setting.get("value") else DEFAULT_ADMIN_PASSWORD
+
+
 def _legacy_password_matches(account: dict[str, Any], password: str) -> bool:
     candidates = [
         account.get("password"),
@@ -49,6 +68,79 @@ def _password_matches(account: dict[str, Any], password: str) -> tuple[bool, boo
 
     legacy_match = _legacy_password_matches(account, password)
     return legacy_match, legacy_match
+
+
+def _require_current_password(account: dict[str, Any], password: str) -> None:
+    password_matches, _used_legacy_password = _password_matches(account, password)
+
+    if not password_matches:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Senha de login invalida.")
+
+
+def reveal_admin_password(repository: ErpRecordRepository, account: dict[str, Any], payload: dict[str, Any]) -> dict[str, str]:
+    if not _is_admin_security_manager(account):
+        raise HTTPException(status_code=403, detail="Somente DONO e DEV podem visualizar a Senha ADM.")
+
+    _require_current_password(account, payload.get("loginPassword", ""))
+
+    return {"adminPassword": get_admin_password(repository)}
+
+
+def update_admin_password(repository: ErpRecordRepository, account: dict[str, Any], payload: dict[str, Any]) -> dict[str, str]:
+    if not _is_admin_security_manager(account):
+        raise HTTPException(status_code=403, detail="Somente DONO e DEV podem alterar a Senha ADM.")
+
+    _require_current_password(account, payload.get("loginPassword", ""))
+    new_admin_password = str(payload.get("newAdminPassword", "")).strip()
+
+    if not new_admin_password:
+        raise HTTPException(status_code=422, detail="Informe a nova Senha ADM.")
+
+    records = repository.list_records("systemSettings")
+    setting = next(
+        (
+            record for record in records
+            if record.get("id") == ADMIN_PASSWORD_SETTING_ID or record.get("key") == "adminPassword"
+        ),
+        None,
+    )
+    next_payload = {
+        "description": "Senha exigida para criar ou promover usuarios DON/DEV.",
+        "key": "adminPassword",
+        "name": "Senha ADM",
+        "value": new_admin_password,
+    }
+
+    if setting:
+        repository.update_record("systemSettings", setting["id"], next_payload)
+    else:
+        repository.create_record("systemSettings", {
+            **next_payload,
+            "id": ADMIN_PASSWORD_SETTING_ID,
+        })
+
+    repository.create_record("history", {
+        "action": "Alterou Senha ADM",
+        "date": datetime.now(UTC).isoformat(),
+        "details": "Senha ADM atualizada por usuario autorizado.",
+        "module": "Seguranca",
+        "role": account.get("role") or "SYS",
+        "title": "Senha ADM",
+        "userId": account.get("id") or "",
+        "userName": account.get("displayName") or account.get("fullName") or "Sistema",
+    })
+
+    return {"adminPassword": new_admin_password}
+
+
+def verify_admin_password(repository: ErpRecordRepository, account: dict[str, Any], payload: dict[str, Any]) -> dict[str, bool]:
+    if not _is_admin_security_manager(account):
+        raise HTTPException(status_code=403, detail="Somente DONO e DEV podem confirmar a Senha ADM.")
+
+    if str(payload.get("adminPassword", "")).strip() != get_admin_password(repository):
+        raise HTTPException(status_code=403, detail="Senha ADM invalida.")
+
+    return {"ok": True}
 
 
 def login(repository: ErpRecordRepository, email: str, password: str) -> dict[str, Any]:

@@ -16,6 +16,13 @@ def ensure_collection_name(collection_name: str) -> str:
     raise HTTPException(status_code=404, detail=f"Colecao desconhecida: {collection_name}")
 
 
+def sanitize_system_setting(record: dict[str, Any]) -> dict[str, Any]:
+    if record.get("key") == "adminPassword":
+        return {**record, "value": ""}
+
+    return record
+
+
 class CollectionService:
     def __init__(self, repository: RecordRepository):
         self.repository = repository
@@ -31,6 +38,10 @@ class CollectionService:
 
         if not include_sensitive_accounts:
             snapshot["accounts"] = [sanitize_account(account) for account in snapshot.get("accounts", [])]
+            snapshot["systemSettings"] = [
+                sanitize_system_setting(record)
+                for record in snapshot.get("systemSettings", [])
+            ]
 
         return snapshot
 

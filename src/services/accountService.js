@@ -5,6 +5,7 @@ import {
   getAccessLabel,
   getRolePermissions,
 } from "./permissionService.js";
+import { getAdminPasswordSetting, isCriticalAccountRole } from "./adminSecurityService.js";
 import { validatePasswordStrength } from "./passwordPolicyService.js";
 
 export const ACCOUNT_TABS = [
@@ -109,8 +110,17 @@ export const ACCOUNT_FORM_FIELDS = [
     defaultValue: "Nao informado",
     section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" },
   },
-  { name: "temporaryPassword", label: "Senha provisoria", type: "password", section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" } },
+  { name: "temporaryPassword", label: "Senha provisoria", type: "password", showStrength: true, section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" } },
   { name: "role", label: "Cargo", type: "select", options: ROLE_OPTIONS, required: true, section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" } },
+  {
+    name: "adminPasswordConfirmation",
+    label: "Senha ADM",
+    type: "password",
+    full: true,
+    section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" },
+    visibleWhen: (data) => isCriticalAccountRole(data.role),
+    helpText: "Obrigatoria para criar ou promover usuarios com cargo DON/DEV.",
+  },
   {
     name: "status",
     label: "Status",
@@ -123,7 +133,7 @@ export const ACCOUNT_FORM_FIELDS = [
     section: { id: "system", eyebrow: "Sistema", title: "Acesso e permissoes" },
   },
   { name: "profilePhotoUrl", label: "URL da foto de perfil", section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
-  { name: "profilePhotoDataUrl", label: "Upload de foto", type: "imageUpload", full: true, fallbackUrlField: "profilePhotoUrl", section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
+  { name: "profilePhotoDataUrl", label: "Upload de foto", type: "imageUpload", full: true, fallbackUrlField: "profilePhotoUrl", previewVariant: "avatar", section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
   { name: "avatarInitials", label: "Iniciais", maxLength: 3, section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
   { name: "internalNotes", label: "Observacoes internas", type: "textarea", full: true, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
 ];
@@ -237,7 +247,7 @@ export function buildAccountMetrics(rows) {
       icon: "shield",
       label: "Admins totais",
       value: devRows.length,
-      detail: "DEV/CEO ativos",
+      detail: "DON/DEV ativos",
       tone: devRows.length > 2 ? "yellow" : "green",
     },
     {
@@ -329,8 +339,9 @@ export function normalizeAccountPayload(payload, editingRecord) {
   const now = new Date().toISOString();
   const displayName = payload.displayName || payload.fullName || "Usuario";
   const passwordChanged = Boolean(payload.temporaryPassword) && payload.temporaryPassword !== editingRecord?.temporaryPassword;
+  const { adminPasswordConfirmation: _adminPasswordConfirmation, ...safePayload } = payload;
   const normalizedPayload = {
-    ...payload,
+    ...safePayload,
     avatarInitials: payload.avatarInitials || buildInitials(displayName),
     createdAt: editingRecord?.createdAt || now,
     firstLoginCompletedAt: passwordChanged ? "" : editingRecord?.firstLoginCompletedAt || "",
@@ -373,6 +384,24 @@ export function validateAccountPayload(payload, snapshot, editingRecord) {
 
   if (!payload.cpfDocument?.trim()) {
     return "Informe CPF ou RG do colaborador.";
+  }
+
+  const existingRole = editingRecord?.role || "";
+  const creatingOrPromotingCriticalRole = isCriticalAccountRole(payload.role) && (
+    !editingRecord || existingRole !== payload.role
+  );
+
+  if (creatingOrPromotingCriticalRole) {
+    const adminPasswordSetting = getAdminPasswordSetting(snapshot.systemSettings || []);
+    const expectedAdminPassword = adminPasswordSetting?.value || "";
+
+    if (!payload.adminPasswordConfirmation) {
+      return "Informe a Senha ADM para cadastrar cargo DON/DEV.";
+    }
+
+    if (expectedAdminPassword && payload.adminPasswordConfirmation !== expectedAdminPassword) {
+      return "Informe a Senha ADM correta para cadastrar cargo DON/DEV.";
+    }
   }
 
   const duplicateEmail = (snapshot.accounts || []).some((account) =>

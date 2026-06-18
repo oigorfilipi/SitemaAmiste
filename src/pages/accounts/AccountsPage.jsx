@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
+import PasswordInput from "../../components/atoms/PasswordInput.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import EntityGroupTabs from "../../components/molecules/EntityGroupTabs.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
@@ -23,6 +24,7 @@ import {
   normalizeAccountPayload,
   validateAccountPayload,
 } from "../../services/accountService.js";
+import { isCriticalAccountRole, verifyAdminPassword } from "../../services/adminSecurityService.js";
 import { getRolePermissions, updateRolePermission } from "../../services/permissionService.js";
 
 export default function AccountsPage({ accessLevel = "OC", user }) {
@@ -32,9 +34,14 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pendingPermissionChange, setPendingPermissionChange] = useState(null);
   const [permissionVersion, setPermissionVersion] = useState(0);
+  const [rbacAdminPassword, setRbacAdminPassword] = useState("");
+  const [rbacSecurityLoading, setRbacSecurityLoading] = useState(false);
+  const [rbacSecurityMessage, setRbacSecurityMessage] = useState("");
   const { records, createRecord, updateRecord } = useCollection("accounts");
   const { records: optionRecords } = useCollection("options");
+  const { records: systemSettings } = useCollection("systemSettings");
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [permissionVersion, user?.role]);
   const rbacModuleAccess = rolePermissions["module:accounts.rbac"] || "OC";
   const canManageAccounts = accessLevel === "AC" && rolePermissions["action:user.protectedEdit"] === "AC";
@@ -163,25 +170,151 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
   }
 
+  function applyPermissionChange(role, resourceId, access) {
+    updateRolePermission(role, resourceId, access);
+    setPermissionVersion((currentVersion) => currentVersion + 1);
+  }
+
   function handlePermissionChange(role, resourceId, access) {
     if (!canEditPermissions) {
       return;
     }
 
-    updateRolePermission(role, resourceId, access);
-    setPermissionVersion((currentVersion) => currentVersion + 1);
+    if (role === "DEV") {
+      setPendingPermissionChange({ access, resourceId, role });
+      setRbacAdminPassword("");
+      setRbacSecurityMessage("Confirme a Senha ADM para alterar permissoes criticas do DEV.");
+      return;
+    }
+
+    applyPermissionChange(role, resourceId, access);
+  }
+
+  async function confirmCriticalPermissionChange() {
+    if (!pendingPermissionChange) {
+      return;
+    }
+
+    setRbacSecurityLoading(true);
+
+    try {
+      await verifyAdminPassword({
+        adminPassword: rbacAdminPassword,
+        currentUser: user,
+        settingsRecords: systemSettings,
+      });
+      applyPermissionChange(
+        pendingPermissionChange.role,
+        pendingPermissionChange.resourceId,
+        pendingPermissionChange.access
+      );
+      setPendingPermissionChange(null);
+      setRbacAdminPassword("");
+      setRbacSecurityMessage("Permissao critica do DEV atualizada.");
+    } catch (error) {
+      setRbacSecurityMessage(error.message || "Nao foi possivel confirmar a Senha ADM.");
+    } finally {
+      setRbacSecurityLoading(false);
+    }
+  }
+
+  function cancelCriticalPermissionChange() {
+    setPendingPermissionChange(null);
+    setRbacAdminPassword("");
+    setRbacSecurityMessage("");
+  }
+
+  function renderRbacSecurityPanel() {
+    if (!pendingPermissionChange && !rbacSecurityMessage) {
+      return null;
+    }
+
+    return (
+      <div className="rounded-2xl border border-amiste-yellow/40 bg-amiste-yellow/10 p-4">
+        <strong className="block text-sm font-black text-amiste-black">Confirmacao de seguranca</strong>
+        <p className="mt-1 text-sm font-semibold text-amiste-gray/70">{rbacSecurityMessage}</p>
+        {pendingPermissionChange ? (
+          <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-center">
+            <PasswordInput
+              className="md:w-72"
+              icon="shield"
+              placeholder="Senha ADM"
+              value={rbacAdminPassword}
+              onChange={(event) => setRbacAdminPassword(event.target.value)}
+            />
+            <Button icon="shield" loading={rbacSecurityLoading} onClick={confirmCriticalPermissionChange}>
+              Confirmar
+            </Button>
+            <Button disabled={rbacSecurityLoading} variant="secondary" onClick={cancelCriticalPermissionChange}>
+              Cancelar
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  function renderAccountPermissionStep({ formData }) {
+    const selectedRole = formData.role || roles[0] || "VEN";
+    const roleLabel = roleOptions.find((role) => role.value === selectedRole)?.label || selectedRole;
+    const selectedRoleList = [selectedRole];
+
+    return (
+      <div className="space-y-4">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <span className="text-xs font-black uppercase text-amiste-red">Etapa 2</span>
+          <h3 className="mt-1 font-display text-lg font-black text-amiste-black">Permissoes para {roleLabel}</h3>
+          <p className="mt-2 text-sm font-semibold leading-6 text-amiste-gray/70">
+            Revise o acesso do cargo selecionado antes de salvar o colaborador. Alteracoes feitas aqui
+            atualizam a matriz do cargo e passam a valer para usuarios com essa mesma funcao.
+          </p>
+        </section>
+
+        <section className="space-y-3">
+          <div>
+            <h4 className="font-display text-base font-black text-amiste-black">Matriz RBAC Geral</h4>
+            <p className="mt-1 text-xs font-semibold text-amiste-gray/60">
+              Paginas, abas, modulos e acoes principais.
+            </p>
+          </div>
+          <RolePermissionMatrix
+            editable={canEditPermissions}
+            matrix={buildRoleMatrixByScope("base", selectedRoleList, roleOptions)}
+            roles={selectedRoleList}
+            onChange={handlePermissionChange}
+          />
+        </section>
+
+        <section className="space-y-3">
+          <div>
+            <h4 className="font-display text-base font-black text-amiste-black">Matriz RBAC Granular</h4>
+            <p className="mt-1 text-xs font-semibold text-amiste-gray/60">
+              Secoes, campos sensiveis e acoes especificas dentro das paginas.
+            </p>
+          </div>
+          <RolePermissionMatrix
+            editable={canEditPermissions}
+            matrix={buildRoleMatrixByScope("granular", selectedRoleList, roleOptions)}
+            roles={selectedRoleList}
+            onChange={handlePermissionChange}
+          />
+        </section>
+
+        {renderRbacSecurityPanel()}
+      </div>
+    );
   }
 
   function canManageAccountTarget(account) {
-    return account?.role !== "DEV" || user?.role === "DEV";
+    return !isCriticalAccountRole(account?.role) || isCriticalAccountRole(user?.role);
   }
 
   function canManageAccountPayload(payload) {
-    if (editingRecord?.role === "DEV" && user?.role !== "DEV") {
+    if (isCriticalAccountRole(editingRecord?.role) && !isCriticalAccountRole(user?.role)) {
       return false;
     }
 
-    return payload?.role !== "DEV" || user?.role === "DEV";
+    return !isCriticalAccountRole(payload?.role) || isCriticalAccountRole(user?.role);
   }
 
   return (
@@ -209,7 +342,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
 
       {activeVisibleTab !== "matriz" && activeVisibleTab !== "granular" ? (
         <>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <TextInput
               className="w-96"
               icon="search"
@@ -217,11 +350,6 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
-            {canCreate ? (
-              <Button icon="userPlus" onClick={openCreateModal}>
-                Cadastrar
-              </Button>
-            ) : null}
           </div>
 
           <AccountRosterTable
@@ -259,6 +387,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
               roles={roles}
               onChange={handlePermissionChange}
             />
+            {renderRbacSecurityPanel()}
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-xs italic text-amiste-gray/70">
               {canEditPermissions
                 ? "Alteracoes salvas localmente e aplicadas imediatamente a paginas, abas, modulos e acoes."
@@ -275,8 +404,12 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
         editingRecord={editingRecord}
         fields={accountFormFields}
         open={modalOpen}
+        primaryStepLabel="Dados do colaborador"
+        secondaryStepContent={renderAccountPermissionStep}
+        secondaryStepDescription="Defina ou revise as permissoes do cargo antes de concluir o cadastro."
+        secondaryStepLabel="Permissoes"
         size="fullscreen"
-        snapshot={{ accounts: records }}
+        snapshot={{ accounts: records, systemSettings }}
         title="Registro de Colaborador"
         validate={validateAccountPayload}
         asideContent={(

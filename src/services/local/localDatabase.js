@@ -11,6 +11,7 @@ const STORAGE_COMPACT_HISTORY_LIMIT = 40;
 const COLLECTION_LABELS = {
   accounts: "Contas",
   accountRequests: "Solicitacoes",
+  systemSettings: "Configuracoes de Seguranca",
   inventoryCounts: "Historico de Contagem",
   inventoryLocations: "Estoques Separados",
   machineConfigs: "Configuracoes de Maquina",
@@ -383,15 +384,16 @@ function addHistoryEntry(database, collectionName, action, title, details = "", 
   }
 
   const actor = resolveHistoryActor(database, overrides);
+  const sensitiveSettings = collectionName === "systemSettings";
   const entry = {
     id: buildId("history"),
     date: new Date().toISOString(),
     module: overrides.module || COLLECTION_LABELS[collectionName] || collectionName,
     action,
-    title,
+    title: sensitiveSettings ? "Configuracao de seguranca" : title,
     userName: actor.userName,
     role: actor.role,
-    details,
+    details: sensitiveSettings ? "Configuracao sensivel atualizada por usuario autorizado." : details,
   };
 
   database.history = [entry, ...(database.history || [])].slice(0, 120);

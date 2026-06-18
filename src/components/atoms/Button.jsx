@@ -12,24 +12,30 @@ const VARIANTS = {
 
 export default function Button({
   children,
+  disabled = false,
   icon,
+  loading = false,
   variant = "primary",
   className = "",
   type = "button",
   ...props
 }) {
+  const isDisabled = Boolean(disabled || loading);
+
   return (
     <button
+      aria-busy={loading ? "true" : undefined}
       className={cn(
         "inline-flex h-9 items-center justify-center gap-2 rounded-xl border px-3.5 text-[13px] font-bold shadow-sm transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amiste-red/20 active:translate-y-0 active:scale-[0.99]",
         VARIANTS[variant],
-        props.disabled ? "cursor-not-allowed opacity-45 hover:translate-y-0" : "",
+        isDisabled ? "cursor-not-allowed opacity-45 hover:translate-y-0" : "",
         className
       )}
+      disabled={isDisabled}
       type={type}
       {...props}
     >
-      {icon ? <AppIcon name={icon} size={17} /> : null}
+      {loading ? <AppIcon className="animate-spin" name="loader" size={17} /> : icon ? <AppIcon name={icon} size={17} /> : null}
       <span>{children}</span>
     </button>
   );

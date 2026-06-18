@@ -118,6 +118,7 @@ ROLE_PERMISSIONS = {
 COLLECTION_PAGE_MAP = {
     "accounts": "accounts",
     "accountRequests": "solicitacoes",
+    "systemSettings": "accounts",
     "accessories": "acessorios",
     "checklists": "checklists",
     "clients": "clientes",
