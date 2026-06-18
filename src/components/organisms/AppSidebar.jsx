@@ -28,7 +28,7 @@ export default function AppSidebar({
     >
       {/* --- SECAO: MARCA E CONTROLE --- */}
       <div className="flex items-center justify-between gap-3 px-1">
-        <BrandMark compact={collapsed} />
+        <BrandMark compact={collapsed} onClick={() => onSelectPage("home")} />
         {!collapsed ? (
           <IconButton
             className="border-white/10 bg-white/5 text-white hover:bg-white hover:text-amiste-red"
