@@ -10,6 +10,48 @@ const AUDIT_EXPORT_COLUMNS = [
   { key: "details", label: "Detalhes" },
 ];
 
+export const AUDIT_EVENT_CATALOG = [
+  {
+    id: "auth",
+    title: "Acesso e seguranca",
+    events: [
+      "Login e logout",
+      "Primeiro acesso concluido",
+      "Alteracao de senha",
+      "Alteracao da Senha ADM",
+    ],
+  },
+  {
+    id: "accounts",
+    title: "Equipe e permissoes",
+    events: [
+      "Criacao, edicao e desativacao de colaboradores",
+      "Alteracoes na Matriz RBAC",
+      "Alteracoes na Matriz Granular",
+      "Criacao e edicao de cargos/funcoes",
+    ],
+  },
+  {
+    id: "operations",
+    title: "Operacao do ERP",
+    events: [
+      "Criacao, edicao e exclusao de cadastros",
+      "Movimentacoes de estoque e contagens",
+      "Finalizacao de checklists e consertos",
+      "Uploads, downloads, impressoes e exports relevantes",
+    ],
+  },
+  {
+    id: "system",
+    title: "Sistema",
+    events: [
+      "Backups e restauracoes",
+      "Alteracoes de configuracoes globais",
+      "Acoes automaticas com impacto em dados",
+    ],
+  },
+];
+
 function formatDateTime(value) {
   const date = new Date(value);
 

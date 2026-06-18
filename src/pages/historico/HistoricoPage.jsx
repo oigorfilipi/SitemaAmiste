@@ -9,6 +9,7 @@ import AuditTimeline from "../../components/organisms/AuditTimeline.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import {
+  AUDIT_EVENT_CATALOG,
   buildAuditMetrics,
   buildAuditModuleTabs,
   buildAuditRows,
@@ -67,6 +68,35 @@ export default function HistoricoPage({ user }) {
 
       {/* --- SECAO: INDICADORES DE AUDITORIA --- */}
       <MetricsGrid metrics={metrics} />
+
+      {/* --- SECAO: EVENTOS AUDITADOS --- */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span className="text-xs font-black uppercase text-amiste-red">Politica de auditoria</span>
+            <h2 className="mt-1 font-display text-xl font-black text-amiste-black">Eventos registrados no Historico Geral</h2>
+          </div>
+          <p className="max-w-2xl text-sm font-semibold leading-6 text-amiste-gray/70">
+            O log mostra quem executou a acao, cargo, modulo, data, registro afetado e detalhes
+            do que mudou. Dados sensiveis como senhas e imagens nao sao exibidos nos detalhes.
+          </p>
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-4">
+          {AUDIT_EVENT_CATALOG.map((group) => (
+            <div className="rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4" key={group.id}>
+              <strong className="block text-sm font-black text-amiste-black">{group.title}</strong>
+              <ul className="mt-3 space-y-2 text-xs font-semibold leading-5 text-amiste-gray/70">
+                {group.events.map((eventName) => (
+                  <li className="flex gap-2" key={eventName}>
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amiste-red" />
+                    <span>{eventName}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* --- SECAO: FILTROS DO LOG --- */}
       <div className="space-y-4">
