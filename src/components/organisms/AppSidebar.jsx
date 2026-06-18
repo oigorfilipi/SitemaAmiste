@@ -17,7 +17,7 @@ export default function AppSidebar({
   onSelectPage,
   onToggle,
 }) {
-  const canManageAccounts = realUser?.role === "DEV" || realUser?.role === "CEO";
+  const canManageAccounts = ["DEV", "DON", "CEO"].includes(realUser?.role);
 
   return (
     <aside

@@ -54,6 +54,10 @@ const OPTION_GROUP_GUIDANCE = {
     description: "Ferramentas exigidas para instalacao, retirada, teste ou manutencao.",
     usage: "Aparece na secao Preparacao e Testes do Checklist.",
   },
+  Funcoes: {
+    description: "Cargos e perfis que podem ser usados no cadastro de colaboradores.",
+    usage: "Aparece em Equipe, Registro de Colaborador, Perfil e Matrizes RBAC.",
+  },
   "Grupos de Opcoes": {
     description: "Referencia para organizar grupos de opcoes existentes.",
     usage: "Ajuda na administracao da propria pagina Adicionar Opcoes.",

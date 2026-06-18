@@ -67,6 +67,11 @@ ALL_PERMISSION_RESOURCES = [
 
 ROLE_PERMISSIONS = {
     "DEV": {resource: ACCESS["AC"] for resource in ALL_PERMISSION_RESOURCES},
+    "DON": {
+        **{resource: ACCESS["AC"] for resource in ALL_PERMISSION_RESOURCES},
+        "configuracoes": ACCESS["OC"],
+        "action:rbac.edit": ACCESS["VIS"],
+    },
     "CEO": {
         **{resource: ACCESS["AC"] for resource in ALL_PERMISSION_RESOURCES},
         "configuracoes": ACCESS["OC"],

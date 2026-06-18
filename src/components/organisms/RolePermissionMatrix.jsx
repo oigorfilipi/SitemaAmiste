@@ -20,11 +20,14 @@ function accessTone(access) {
 }
 
 export default function RolePermissionMatrix({ editable = false, matrix, roles, onChange }) {
+  const gridTemplateColumns = `minmax(220px,1.3fr) repeat(${Math.max(roles.length, 1)}, minmax(120px,1fr))`;
+  const minWidth = `${260 + Math.max(roles.length, 1) * 140}px`;
+
   return (
     <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <div className="min-w-[980px]">
-          <div className="grid grid-cols-[1.3fr_repeat(6,1fr)] gap-2 border-b border-zinc-100 bg-zinc-50/80 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+        <div style={{ minWidth }}>
+          <div className="grid gap-2 border-b border-zinc-100 bg-zinc-50/80 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60" style={{ gridTemplateColumns }}>
             <span>Rota</span>
             {roles.map((role) => (
               <span key={role}>{role}</span>
@@ -32,8 +35,9 @@ export default function RolePermissionMatrix({ editable = false, matrix, roles, 
           </div>
           {matrix.map((row) => (
             <div
-              className="grid grid-cols-[1.3fr_repeat(6,1fr)] items-center gap-2 border-b border-zinc-100 px-4 py-3 transition hover:bg-amiste-red/5 last:border-b-0"
+              className="grid items-center gap-2 border-b border-zinc-100 px-4 py-3 transition hover:bg-amiste-red/5 last:border-b-0"
               key={row.pageId}
+              style={{ gridTemplateColumns }}
             >
               <div>
                 <strong className="block text-sm text-amiste-black">{row.pageLabel}</strong>

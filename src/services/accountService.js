@@ -17,6 +17,7 @@ export const ACCOUNT_TABS = [
 export const ROLE_LABELS = {
   ADM: "Administrativo",
   CEO: "Dono",
+  DON: "Dono",
   DEV: "Desenvolvedor",
   FIN: "Financeiro",
   TEC: "Tecnico",
@@ -25,12 +26,68 @@ export const ROLE_LABELS = {
 
 export const ROLE_OPTIONS = [
   { label: "Desenvolvedor", value: "DEV" },
-  { label: "Dono", value: "CEO" },
+  { label: "Dono", value: "DON" },
   { label: "Vendedor", value: "VEN" },
   { label: "Administrativo", value: "ADM" },
   { label: "Tecnico", value: "TEC" },
   { label: "Financeiro", value: "FIN" },
 ];
+
+function normalizeRoleValue(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function roleOptionFromValue(value) {
+  const role = normalizeRoleValue(value);
+
+  if (!role) {
+    return null;
+  }
+
+  return {
+    label: ROLE_LABELS[role] || role,
+    value: role,
+  };
+}
+
+function dedupeRoleOptions(options) {
+  const seen = new Set();
+
+  return options.filter((option) => {
+    const value = normalizeRoleValue(option?.value);
+
+    if (!value || seen.has(value)) {
+      return false;
+    }
+
+    seen.add(value);
+    option.value = value;
+    return true;
+  });
+}
+
+export function buildRoleOptions(optionRecords = [], accounts = []) {
+  const functionOptions = optionRecords
+    .filter((option) => option.group === "Funcoes")
+    .map((option) => ({
+      label: option.name || option.value,
+      value: option.value || option.name,
+    }));
+  const accountRoleOptions = accounts
+    .map((account) => roleOptionFromValue(account.role))
+    .filter(Boolean);
+  const sourceOptions = functionOptions.length ? functionOptions : ROLE_OPTIONS;
+
+  return dedupeRoleOptions([...sourceOptions, ...accountRoleOptions])
+    .sort((first, second) => first.label.localeCompare(second.label));
+}
+
+function resolveRoleLabel(role, roleOptions = ROLE_OPTIONS) {
+  const normalizedRole = normalizeRoleValue(role);
+  const dynamicLabel = roleOptions.find((option) => option.value === normalizedRole)?.label;
+
+  return dynamicLabel || ROLE_LABELS[normalizedRole] || normalizedRole;
+}
 
 export const ACCOUNT_FORM_FIELDS = [
   { name: "fullName", label: "Nome completo", required: true, section: { id: "personal", eyebrow: "Dados pessoais", title: "Identificacao do colaborador" } },
@@ -70,6 +127,12 @@ export const ACCOUNT_FORM_FIELDS = [
   { name: "avatarInitials", label: "Iniciais", maxLength: 3, section: { id: "photo", eyebrow: "Foto", title: "Imagem do colaborador" } },
   { name: "internalNotes", label: "Observacoes internas", type: "textarea", full: true, section: { id: "validation", eyebrow: "Validacoes", title: "Confirmacoes do cadastro" } },
 ];
+
+export function buildAccountFormFields(roleOptions = ROLE_OPTIONS) {
+  return ACCOUNT_FORM_FIELDS.map((field) =>
+    field.name === "role" ? { ...field, options: roleOptions } : field
+  );
+}
 
 export const PAGE_LABELS = {
   "action:create": "Acao: Criar registros",
@@ -139,12 +202,12 @@ function countAccess(role, accessType) {
   return ALL_PERMISSION_RESOURCES.filter((pageId) => permissions[pageId] === accessType).length;
 }
 
-export function buildAccountRows(accounts) {
+export function buildAccountRows(accounts, roleOptions = ROLE_OPTIONS) {
   return accounts.map((account) => ({
     ...account,
     accessFullCount: countAccess(account.role, "AC"),
     accessHiddenCount: countAccess(account.role, "OC"),
-    roleLabel: ROLE_LABELS[account.role] || account.role,
+    roleLabel: resolveRoleLabel(account.role, roleOptions),
   })).sort((first, second) => {
     if (first.status !== second.status) {
       return first.status === "ativo" ? -1 : 1;
@@ -157,7 +220,7 @@ export function buildAccountRows(accounts) {
 export function buildAccountMetrics(rows) {
   const activeRows = rows.filter((account) => account.status === "ativo");
   const inactiveRows = rows.filter((account) => account.status !== "ativo");
-  const devRows = activeRows.filter((account) => account.role === "DEV" || account.role === "CEO");
+  const devRows = activeRows.filter((account) => ["DEV", "DON", "CEO"].includes(account.role));
   const fullAccessGrants = activeRows.reduce((total, account) => total + account.accessFullCount, 0);
 
   return [
@@ -214,9 +277,7 @@ export function filterAccountRows(rows, tabId, searchTerm = "") {
   );
 }
 
-export function buildRoleMatrix() {
-  const roles = Object.keys(ROLE_PERMISSIONS);
-
+export function buildRoleMatrix(roles = Object.keys(ROLE_PERMISSIONS), roleOptions = ROLE_OPTIONS) {
   return ALL_PERMISSION_RESOURCES.map((pageId) => ({
     pageId,
     pageLabel: PAGE_LABELS[pageId] || pageId,
@@ -229,23 +290,23 @@ export function buildRoleMatrix() {
         access,
         accessLabel: getAccessLabel(access),
         role,
-        roleLabel: ROLE_LABELS[role] || role,
+        roleLabel: resolveRoleLabel(role, roleOptions),
       };
     }),
   }));
 }
 
-export function buildRoleMatrixByScope(scope = "base") {
+export function buildRoleMatrixByScope(scope = "base", roles, roleOptions = ROLE_OPTIONS) {
   const granularPrefixes = ["section:", "field:", "action:requests."];
   const isGranularResource = (resourceId) => granularPrefixes.some((prefix) => resourceId.startsWith(prefix));
 
-  return buildRoleMatrix().filter((row) => scope === "granular"
+  return buildRoleMatrix(roles, roleOptions).filter((row) => scope === "granular"
     ? isGranularResource(row.pageId)
     : !isGranularResource(row.pageId)
   );
 }
 
-export function buildRoleSummary(role) {
+export function buildRoleSummary(role, roleOptions = ROLE_OPTIONS) {
   const permissions = getRolePermissions(role) || {};
 
   return {
@@ -253,7 +314,7 @@ export function buildRoleSummary(role) {
     accessHiddenCount: countAccess(role, "OC"),
     accessPartialCount: countAccess(role, "UP"),
     accessViewCount: countAccess(role, "VIS"),
-    label: ROLE_LABELS[role] || role,
+    label: resolveRoleLabel(role, roleOptions),
     modules: ALL_PERMISSION_RESOURCES.map((pageId) => ({
       access: permissions[pageId] || "OC",
       accessLabel: getAccessLabel(permissions[pageId] || "OC"),

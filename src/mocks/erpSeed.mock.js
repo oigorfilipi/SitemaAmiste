@@ -717,6 +717,12 @@ export const erpSeed = {
     { id: "opt_check_drink_chocolate", group: "Bebidas da Maquina", name: "Chocolate", value: "Chocolate" },
     { id: "opt_check_tag_coffee", group: "Tags de Insumos", name: "Cafe em Graos", value: "Cafe em Graos" },
     { id: "opt_check_tag_disposable", group: "Tags de Insumos", name: "Descartaveis", value: "Descartaveis" },
+    { id: "opt_role_dev", group: "Funcoes", name: "Desenvolvedor", value: "DEV" },
+    { id: "opt_role_don", group: "Funcoes", name: "Dono", value: "DON" },
+    { id: "opt_role_ven", group: "Funcoes", name: "Vendedor", value: "VEN" },
+    { id: "opt_role_adm", group: "Funcoes", name: "Administrativo", value: "ADM" },
+    { id: "opt_role_tec", group: "Funcoes", name: "Tecnico", value: "TEC" },
+    { id: "opt_role_fin", group: "Funcoes", name: "Financeiro", value: "FIN" },
   ],
   history: [
     {

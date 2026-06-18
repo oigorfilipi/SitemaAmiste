@@ -71,6 +71,11 @@ const PERMISSION_OVERRIDE_KEY = "amiste_erp_permission_overrides_v1";
 
 const ROLE_PERMISSIONS = {
   DEV: ALL_PERMISSION_RESOURCES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
+  DON: {
+    ...ALL_PERMISSION_RESOURCES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
+    configuracoes: ACCESS.OC,
+    "action:rbac.edit": ACCESS.VIS,
+  },
   CEO: {
     ...ALL_PERMISSION_RESOURCES.reduce((permissions, pageId) => ({ ...permissions, [pageId]: ACCESS.AC }), {}),
     configuracoes: ACCESS.OC,
@@ -197,6 +202,7 @@ const ROLE_PERMISSIONS = {
 const SCOPED_COLLECTION_PERMISSIONS = {
   inventory: {
     DEV: { machines: ACCESS.AC, supplies: ACCESS.AC, accessories: ACCESS.AC },
+    DON: { machines: ACCESS.AC, supplies: ACCESS.AC, accessories: ACCESS.AC },
     CEO: { machines: ACCESS.AC, supplies: ACCESS.AC, accessories: ACCESS.AC },
     VEN: { machines: ACCESS.AC, supplies: ACCESS.VIS, accessories: ACCESS.VIS },
     ADM: { machines: ACCESS.VIS, supplies: ACCESS.AC, accessories: ACCESS.AC },
@@ -205,6 +211,7 @@ const SCOPED_COLLECTION_PERMISSIONS = {
   },
   pricing: {
     DEV: { machines: ACCESS.AC, supplies: ACCESS.AC, accessories: ACCESS.AC },
+    DON: { machines: ACCESS.AC, supplies: ACCESS.AC, accessories: ACCESS.AC },
     CEO: { machines: ACCESS.AC, supplies: ACCESS.AC, accessories: ACCESS.AC },
     VEN: { machines: ACCESS.AC, supplies: ACCESS.VIS, accessories: ACCESS.VIS },
     ADM: { machines: ACCESS.VIS, supplies: ACCESS.AC, accessories: ACCESS.AC },
@@ -270,11 +277,11 @@ function resolveFallbackAccess(role, resourceId, permissions) {
   }
 
   if (resourceId === "action:user.protectedEdit") {
-    return role === "DEV" || role === "CEO" ? ACCESS.AC : ACCESS.OC;
+    return role === "DEV" || role === "DON" || role === "CEO" ? ACCESS.AC : ACCESS.OC;
   }
 
   if (resourceId.startsWith("action:")) {
-    return role === "DEV" || role === "CEO" ? ACCESS.AC : ACCESS.UP;
+    return role === "DEV" || role === "DON" || role === "CEO" ? ACCESS.AC : ACCESS.UP;
   }
 
   return ACCESS.OC;
@@ -288,8 +295,9 @@ function normalizeRolePermissions(role, permissions = {}) {
 }
 
 export function getRolePermissions(role) {
-  const normalizedRole = ROLE_PERMISSIONS[role] ? role : "VEN";
-  const basePermissions = normalizeRolePermissions(normalizedRole, ROLE_PERMISSIONS[normalizedRole]);
+  const normalizedRole = String(role || "VEN").trim() || "VEN";
+  const templateRole = ROLE_PERMISSIONS[normalizedRole] ? normalizedRole : "VEN";
+  const basePermissions = normalizeRolePermissions(normalizedRole, ROLE_PERMISSIONS[templateRole]);
   const overrides = readPermissionOverrides()[normalizedRole] || {};
 
   return normalizeRolePermissions(normalizedRole, {
@@ -316,19 +324,21 @@ export function getScopedCollectionAccess(role, scope, collectionName) {
 }
 
 export function updateRolePermission(role, resourceId, access) {
-  if (!ROLE_PERMISSIONS[role] || !ALL_PERMISSION_RESOURCES.includes(resourceId) || !ACCESS[access]) {
-    return getRolePermissions(role);
+  const normalizedRole = String(role || "").trim();
+
+  if (!normalizedRole || !ALL_PERMISSION_RESOURCES.includes(resourceId) || !ACCESS[access]) {
+    return getRolePermissions(normalizedRole);
   }
 
   if (!canUseLocalStorage()) {
-    return getRolePermissions(role);
+    return getRolePermissions(normalizedRole);
   }
 
   const overrides = readPermissionOverrides();
   const nextOverrides = {
     ...overrides,
-    [role]: {
-      ...(overrides[role] || {}),
+    [normalizedRole]: {
+      ...(overrides[normalizedRole] || {}),
       [resourceId]: access,
     },
   };
@@ -336,7 +346,7 @@ export function updateRolePermission(role, resourceId, access) {
   window.localStorage.setItem(PERMISSION_OVERRIDE_KEY, JSON.stringify(nextOverrides));
   emitPermissionChange();
 
-  return getRolePermissions(role);
+  return getRolePermissions(normalizedRole);
 }
 
 export function resetRolePermissionOverrides() {

@@ -2,6 +2,7 @@ import { cn } from "../../utils/cn.js";
 
 const TAG_STYLES = {
   CEO: "bg-amiste-red text-white",
+  DON: "bg-amiste-red text-white",
   DEV: "bg-amiste-purple text-white",
   VEN: "bg-amiste-green text-white",
   ADM: "bg-amiste-yellow text-amiste-black",

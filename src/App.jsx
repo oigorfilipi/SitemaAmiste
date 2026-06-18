@@ -42,7 +42,7 @@ export default function App() {
       return userContext.sidebarUsers;
     }
 
-    if (userContext.user?.role === "CEO") {
+    if (userContext.user?.role === "DON" || userContext.user?.role === "CEO") {
       return userContext.sidebarUsers.filter((sidebarUser) => sidebarUser.role !== "DEV");
     }
 
@@ -127,11 +127,11 @@ export default function App() {
       return;
     }
 
-    if (realUser.role !== "DEV" && realUser.role !== "CEO") {
+    if (!["DEV", "DON", "CEO"].includes(realUser.role)) {
       return;
     }
 
-    if (realUser.role === "CEO" && targetUser.role === "DEV") {
+    if ((realUser.role === "DON" || realUser.role === "CEO") && targetUser.role === "DEV") {
       setPreviewUserId("");
       return;
     }

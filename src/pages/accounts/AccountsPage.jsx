@@ -12,18 +12,18 @@ import RoleSummaryPanel from "../../components/organisms/RoleSummaryPanel.jsx";
 import TableEmptyState from "../../components/molecules/TableEmptyState.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import {
-  ACCOUNT_FORM_FIELDS,
   ACCOUNT_TABS,
-  ROLE_OPTIONS,
+  buildAccountFormFields,
   buildAccountMetrics,
   buildAccountRows,
+  buildRoleOptions,
   buildRoleMatrixByScope,
   buildRoleSummary,
   filterAccountRows,
   normalizeAccountPayload,
   validateAccountPayload,
 } from "../../services/accountService.js";
-import { ROLE_PERMISSIONS, getRolePermissions, updateRolePermission } from "../../services/permissionService.js";
+import { getRolePermissions, updateRolePermission } from "../../services/permissionService.js";
 
 export default function AccountsPage({ accessLevel = "OC", user }) {
   const [activeTab, setActiveTab] = useState("ativas");
@@ -34,6 +34,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [permissionVersion, setPermissionVersion] = useState(0);
   const { records, createRecord, updateRecord } = useCollection("accounts");
+  const { records: optionRecords } = useCollection("options");
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [permissionVersion, user?.role]);
   const rbacModuleAccess = rolePermissions["module:accounts.rbac"] || "OC";
   const canManageAccounts = accessLevel === "AC" && rolePermissions["action:user.protectedEdit"] === "AC";
@@ -41,7 +42,10 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const canUpdate = canManageAccounts && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canUpload = rolePermissions["action:upload"] !== "OC";
   const canEditPermissions = accessLevel === "AC" && rbacModuleAccess === "AC" && rolePermissions["action:rbac.edit"] === "AC";
-  const rows = useMemo(() => buildAccountRows(records), [records]);
+  const roleOptions = useMemo(() => buildRoleOptions(optionRecords, records), [optionRecords, records]);
+  const roles = useMemo(() => roleOptions.map((role) => role.value), [roleOptions]);
+  const accountFormFields = useMemo(() => buildAccountFormFields(roleOptions), [roleOptions]);
+  const rows = useMemo(() => buildAccountRows(records, roleOptions), [records, roleOptions]);
   const metrics = useMemo(() => buildAccountMetrics(rows), [rows]);
   const accountTabs = useMemo(
     () => ACCOUNT_TABS.filter((tab) => !["matriz", "granular"].includes(tab.id) || rbacModuleAccess !== "OC"),
@@ -54,10 +58,9 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     () => filterAccountRows(rows, activeVisibleTab, searchTerm),
     [activeVisibleTab, rows, searchTerm]
   );
-  const roleMatrix = useMemo(() => buildRoleMatrixByScope("base"), [permissionVersion]);
-  const granularMatrix = useMemo(() => buildRoleMatrixByScope("granular"), [permissionVersion]);
-  const roleSummary = useMemo(() => buildRoleSummary(activeRole), [activeRole, permissionVersion]);
-  const roles = Object.keys(ROLE_PERMISSIONS);
+  const roleMatrix = useMemo(() => buildRoleMatrixByScope("base", roles, roleOptions), [permissionVersion, roleOptions, roles]);
+  const granularMatrix = useMemo(() => buildRoleMatrixByScope("granular", roles, roleOptions), [permissionVersion, roleOptions, roles]);
+  const roleSummary = useMemo(() => buildRoleSummary(activeRole, roleOptions), [activeRole, permissionVersion, roleOptions]);
 
   useEffect(() => {
     function refreshPermissionVersion() {
@@ -76,6 +79,12 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
       setActiveTab(accountTabs[0]?.id || "ativas");
     }
   }, [accountTabs, activeTab]);
+
+  useEffect(() => {
+    if (roles.length && !roles.includes(activeRole)) {
+      setActiveRole(roles[0]);
+    }
+  }, [activeRole, roles]);
 
   if (!canManageAccounts) {
     return (
@@ -233,7 +242,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
                 : "Matriz RBAC principal: controle acesso por paginas, abas, modulos e acoes globais."}
             </div>
             <div className="flex flex-wrap gap-2">
-              {ROLE_OPTIONS.map((role) => (
+              {roleOptions.map((role) => (
                 <Button
                   className="h-9 px-3 text-xs"
                   key={role.value}
@@ -264,7 +273,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
         canUpload={canUpload}
         description="Dados de colaborador, perfil e status da conta."
         editingRecord={editingRecord}
-        fields={ACCOUNT_FORM_FIELDS}
+        fields={accountFormFields}
         open={modalOpen}
         size="fullscreen"
         snapshot={{ accounts: records }}

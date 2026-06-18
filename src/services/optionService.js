@@ -30,6 +30,7 @@ export const OPTION_GROUPS = [
   "Coisas Necessarias",
   "Bebidas da Maquina",
   "Tags de Insumos",
+  "Funcoes",
 ];
 
 export const OPTION_GROUP_CHOICES = OPTION_GROUPS.map((group) => ({
