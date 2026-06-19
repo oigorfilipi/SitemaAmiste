@@ -4,6 +4,7 @@ import {
   ROLE_PERMISSIONS,
   getAccessLabel,
   getRolePermissions,
+  isDevPermissionLocked,
 } from "./permissionService.js";
 import { getAdminPasswordSetting, isCriticalAccountRole } from "./adminSecurityService.js";
 import { validatePasswordStrength } from "./passwordPolicyService.js";
@@ -80,6 +81,22 @@ export function buildRoleOptions(optionRecords = [], accounts = []) {
   const sourceOptions = functionOptions.length ? functionOptions : ROLE_OPTIONS;
 
   return dedupeRoleOptions([...sourceOptions, ...accountRoleOptions])
+    .sort((first, second) => first.label.localeCompare(second.label));
+}
+
+export function buildAssignedRoleOptions(accounts = [], roleOptions = ROLE_OPTIONS, fallbackRoles = []) {
+  const assignedRoleValues = [
+    ...accounts.map((account) => account.role),
+    ...fallbackRoles,
+  ]
+    .map(normalizeRoleValue)
+    .filter(Boolean);
+
+  const assignedOptions = assignedRoleValues
+    .map((role) => roleOptions.find((option) => option.value === role) || roleOptionFromValue(role))
+    .filter(Boolean);
+
+  return dedupeRoleOptions(assignedOptions)
     .sort((first, second) => first.label.localeCompare(second.label));
 }
 
@@ -299,6 +316,7 @@ export function buildRoleMatrix(roles = Object.keys(ROLE_PERMISSIONS), roleOptio
       return {
         access,
         accessLabel: getAccessLabel(access),
+        locked: isDevPermissionLocked(role, pageId),
         role,
         roleLabel: resolveRoleLabel(role, roleOptions),
       };

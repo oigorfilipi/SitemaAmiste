@@ -10,6 +10,11 @@ const AUDIT_EXPORT_COLUMNS = [
   { key: "details", label: "Detalhes" },
 ];
 
+const MODULE_LABEL_OVERRIDES = {
+  Contas: "Gestao de Contas",
+  accounts: "Gestao de Contas",
+};
+
 export const AUDIT_EVENT_CATALOG = [
   {
     id: "auth",
@@ -76,19 +81,51 @@ function uniqueValues(rows, key) {
     .sort((first, second) => String(first).localeCompare(String(second)));
 }
 
-export function buildAuditRows(records) {
-  return records.map((record) => ({
-    ...record,
-    ...formatDateTime(record.date),
-    searchable: [
-      record.module,
-      record.action,
-      record.title,
-      record.userName,
-      record.role,
-      record.details,
-    ].join(" ").toLowerCase(),
-  })).sort((first, second) => String(second.date).localeCompare(String(first.date)));
+function normalizeModuleLabel(moduleName) {
+  return MODULE_LABEL_OVERRIDES[moduleName] || moduleName;
+}
+
+function looksLikeTechnicalUserId(value) {
+  return /^usr[_-]/i.test(String(value || "").trim());
+}
+
+function resolveAuditUserName(record, accounts = []) {
+  const candidateIds = [record.userId, record.userName]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const account = accounts.find((currentAccount) => candidateIds.includes(currentAccount.id));
+
+  if (account?.displayName || account?.fullName) {
+    return account.displayName || account.fullName;
+  }
+
+  if (looksLikeTechnicalUserId(record.userName)) {
+    return "Usuario do sistema";
+  }
+
+  return record.userName || "Sistema";
+}
+
+export function buildAuditRows(records, accounts = []) {
+  return records.map((record) => {
+    const module = normalizeModuleLabel(record.module);
+    const userName = resolveAuditUserName(record, accounts);
+
+    return {
+      ...record,
+      module,
+      userName,
+      ...formatDateTime(record.date),
+      searchable: [
+        module,
+        record.action,
+        record.title,
+        userName,
+        record.role,
+        record.details,
+      ].join(" ").toLowerCase(),
+    };
+  }).sort((first, second) => String(second.date).localeCompare(String(first.date)));
 }
 
 export function buildAuditModuleTabs(rows) {

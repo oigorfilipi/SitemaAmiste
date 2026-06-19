@@ -9,7 +9,7 @@ const AUTH_SESSION_KEY = "amiste_erp_auth_session_v1";
 const STORAGE_COMPACT_HISTORY_LIMIT = 40;
 
 const COLLECTION_LABELS = {
-  accounts: "Contas",
+  accounts: "Gestao de Contas",
   accountRequests: "Solicitacoes",
   systemSettings: "Configuracoes de Seguranca",
   inventoryCounts: "Historico de Contagem",
@@ -364,17 +364,33 @@ function buildChangeDetails(previousRecord = {}, nextRecord = {}) {
   return changes.slice(0, 12).join("\n");
 }
 
+function resolveAccountDisplayName(account) {
+  return account?.displayName || account?.fullName || account?.name || "";
+}
+
+function looksLikeTechnicalUserId(value) {
+  return /^usr[_-]/i.test(String(value || "").trim());
+}
+
 function resolveHistoryActor(database, overrides = {}) {
   const session = readAuthSession();
-  const account = (database.accounts || []).find((record) => record.id === session?.userId);
+  const overrideUserName = String(overrides.userName || "").trim();
+  const overrideUserId = String(overrides.userId || "").trim();
+  const accounts = database.accounts || [];
+  const overrideAccount = accounts.find((record) =>
+    [overrideUserId, overrideUserName].filter(Boolean).includes(record.id)
+  );
+  const account = accounts.find((record) => record.id === session?.userId);
+  const overrideDisplayName = resolveAccountDisplayName(overrideAccount);
+  const safeOverrideUserName = looksLikeTechnicalUserId(overrideUserName) ? "" : overrideUserName;
 
   /* --- SECAO: ATOR DA AUDITORIA ---
    * O historico usa a sessao local atual para evitar que acoes de qualquer perfil
    * sejam registradas como DEV. Overrides continuam disponiveis para eventos de sistema.
    */
   return {
-    userName: overrides.userName || account?.displayName || account?.name || "Sistema Local",
-    role: overrides.role || account?.role || "SYS",
+    userName: overrideDisplayName || safeOverrideUserName || resolveAccountDisplayName(account) || "Sistema Local",
+    role: overrides.role || overrideAccount?.role || account?.role || "SYS",
   };
 }
 

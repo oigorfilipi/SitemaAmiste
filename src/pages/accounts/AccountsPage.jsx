@@ -17,6 +17,7 @@ import {
   buildAccountFormFields,
   buildAccountMetrics,
   buildAccountRows,
+  buildAssignedRoleOptions,
   buildRoleOptions,
   buildRoleMatrixByScope,
   buildRoleSummary,
@@ -25,7 +26,7 @@ import {
   validateAccountPayload,
 } from "../../services/accountService.js";
 import { isCriticalAccountRole, verifyAdminPassword } from "../../services/adminSecurityService.js";
-import { getRolePermissions, updateRolePermission } from "../../services/permissionService.js";
+import { getRolePermissions, isDevPermissionLocked, updateRolePermission } from "../../services/permissionService.js";
 
 export default function AccountsPage({ accessLevel = "OC", user }) {
   const [activeTab, setActiveTab] = useState("ativas");
@@ -50,7 +51,11 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const canUpload = rolePermissions["action:upload"] !== "OC";
   const canEditPermissions = accessLevel === "AC" && rbacModuleAccess === "AC" && rolePermissions["action:rbac.edit"] === "AC";
   const roleOptions = useMemo(() => buildRoleOptions(optionRecords, records), [optionRecords, records]);
-  const roles = useMemo(() => roleOptions.map((role) => role.value), [roleOptions]);
+  const matrixRoleOptions = useMemo(
+    () => buildAssignedRoleOptions(records, roleOptions, [user?.role]),
+    [records, roleOptions, user?.role]
+  );
+  const roles = useMemo(() => matrixRoleOptions.map((role) => role.value), [matrixRoleOptions]);
   const accountFormFields = useMemo(() => buildAccountFormFields(roleOptions), [roleOptions]);
   const rows = useMemo(() => buildAccountRows(records, roleOptions), [records, roleOptions]);
   const metrics = useMemo(() => buildAccountMetrics(rows), [rows]);
@@ -177,6 +182,13 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
 
   function handlePermissionChange(role, resourceId, access) {
     if (!canEditPermissions) {
+      return;
+    }
+
+    if (isDevPermissionLocked(role, resourceId)) {
+      setPendingPermissionChange(null);
+      setRbacAdminPassword("");
+      setRbacSecurityMessage("O perfil DEV e protegido e permanece com acesso completo para evitar bloqueio do sistema.");
       return;
     }
 
@@ -370,7 +382,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
                 : "Matriz RBAC principal: controle acesso por paginas, abas, modulos e acoes globais."}
             </div>
             <div className="flex flex-wrap gap-2">
-              {roleOptions.map((role) => (
+              {matrixRoleOptions.map((role) => (
                 <Button
                   className="h-9 px-3 text-xs"
                   key={role.value}

@@ -50,6 +50,7 @@ export default function RolePermissionMatrix({ editable = false, matrix, roles, 
                   {editable ? (
                     <SelectInput
                       className="h-8 bg-white text-xs font-black"
+                      disabled={permission.locked}
                       value={permission.access}
                       onChange={(event) => onChange?.(permission.role, row.pageId, event.target.value)}
                     >
@@ -67,7 +68,7 @@ export default function RolePermissionMatrix({ editable = false, matrix, roles, 
                     />
                   )}
                   <span className="mt-1 block text-[10px] font-semibold text-amiste-gray/55">
-                    {permission.accessLabel}
+                    {permission.locked ? "DEV protegido" : permission.accessLabel}
                   </span>
                 </div>
               ))}

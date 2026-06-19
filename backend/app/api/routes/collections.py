@@ -13,7 +13,7 @@ from app.services.collection_service import CollectionService, ensure_collection
 router = APIRouter(tags=["collections"])
 
 COLLECTION_LABELS = {
-    "accounts": "Contas",
+    "accounts": "Gestao de Contas",
     "accountRequests": "Solicitacoes",
     "systemSettings": "Configuracoes de Seguranca",
     "inventoryCounts": "Historico de Contagem",

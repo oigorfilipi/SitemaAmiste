@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ALL_PERMISSION_RESOURCES,
   getRolePermissions,
+  isDevPermissionLocked,
   resetRolePermissionOverrides,
   updateRolePermission,
 } from "../permissionService.js";
@@ -23,6 +24,12 @@ describe("permissionService action matrix", () => {
     resetRolePermissionOverrides();
 
     expect(getRolePermissions("VEN")["action:upload"]).toBe("UP");
+  });
+
+  it("keeps DEV permissions locked to prevent losing system access", () => {
+    expect(isDevPermissionLocked("DEV", "accounts")).toBe(true);
+    expect(updateRolePermission("DEV", "accounts", "OC").accounts).toBe("AC");
+    expect(getRolePermissions("DEV").accounts).toBe("AC");
   });
 
   it("separates granular section and field permissions from the base matrix", () => {

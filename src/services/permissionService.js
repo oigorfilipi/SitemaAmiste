@@ -237,6 +237,12 @@ function readPermissionOverrides() {
   }
 }
 
+export function isDevPermissionLocked(role, resourceId = "") {
+  const normalizedRole = String(role || "").trim().toUpperCase();
+
+  return normalizedRole === "DEV" && ALL_PERMISSION_RESOURCES.includes(resourceId);
+}
+
 function emitPermissionChange() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("amiste-permissions-change"));
@@ -295,10 +301,10 @@ function normalizeRolePermissions(role, permissions = {}) {
 }
 
 export function getRolePermissions(role) {
-  const normalizedRole = String(role || "VEN").trim() || "VEN";
+  const normalizedRole = String(role || "VEN").trim().toUpperCase() || "VEN";
   const templateRole = ROLE_PERMISSIONS[normalizedRole] ? normalizedRole : "VEN";
   const basePermissions = normalizeRolePermissions(normalizedRole, ROLE_PERMISSIONS[templateRole]);
-  const overrides = readPermissionOverrides()[normalizedRole] || {};
+  const overrides = normalizedRole === "DEV" ? {} : readPermissionOverrides()[normalizedRole] || {};
 
   return normalizeRolePermissions(normalizedRole, {
     ...basePermissions,
@@ -324,9 +330,13 @@ export function getScopedCollectionAccess(role, scope, collectionName) {
 }
 
 export function updateRolePermission(role, resourceId, access) {
-  const normalizedRole = String(role || "").trim();
+  const normalizedRole = String(role || "").trim().toUpperCase();
 
   if (!normalizedRole || !ALL_PERMISSION_RESOURCES.includes(resourceId) || !ACCESS[access]) {
+    return getRolePermissions(normalizedRole);
+  }
+
+  if (isDevPermissionLocked(normalizedRole, resourceId)) {
     return getRolePermissions(normalizedRole);
   }
 

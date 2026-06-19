@@ -27,8 +27,13 @@ export default function HistoricoPage({ user }) {
   const [selectedEntryId, setSelectedEntryId] = useState("");
   const { records } = useCollection("history");
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
+  const canReadAccounts = rolePermissions.accounts !== "OC";
+  const { records: accountRecords } = useCollection(canReadAccounts ? "accounts" : "history");
   const canDownload = rolePermissions["action:download"] !== "OC";
-  const rows = useMemo(() => buildAuditRows(records), [records]);
+  const rows = useMemo(
+    () => buildAuditRows(records, canReadAccounts ? accountRecords : []),
+    [accountRecords, canReadAccounts, records]
+  );
   const moduleTabs = useMemo(() => buildAuditModuleTabs(rows), [rows]);
   const actionOptions = useMemo(() => buildAuditSelectOptions(rows, "action"), [rows]);
   const roleOptions = useMemo(() => buildAuditSelectOptions(rows, "role"), [rows]);

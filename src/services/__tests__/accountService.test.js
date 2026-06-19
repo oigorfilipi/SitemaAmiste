@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { normalizeAccountPayload, validateAccountPayload } from "../accountService.js";
+import {
+  buildAssignedRoleOptions,
+  normalizeAccountPayload,
+  validateAccountPayload,
+} from "../accountService.js";
 
 describe("accountService collaborator payload normalization", () => {
   it("does not inject a default password when editing an existing collaborator without password changes", () => {
@@ -70,5 +74,18 @@ describe("accountService collaborator payload normalization", () => {
     );
 
     expect(normalizedPayload.password).toBeUndefined();
+  });
+
+  it("shows only roles assigned to existing accounts in account matrices", () => {
+    const assignedRoles = buildAssignedRoleOptions(
+      [{ id: "usr_igor", role: "DEV" }],
+      [
+        { label: "Desenvolvedor", value: "DEV" },
+        { label: "Dono", value: "DON" },
+        { label: "Financeiro", value: "FIN" },
+      ],
+    );
+
+    expect(assignedRoles).toEqual([{ label: "Desenvolvedor", value: "DEV" }]);
   });
 });

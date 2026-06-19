@@ -65,12 +65,6 @@ export default function AuditDetailPanel({ entry }) {
         </p>
       </div>
 
-      <div className="mt-5 rounded-2xl border border-zinc-200 p-4">
-        <span className="text-xs font-black uppercase text-amiste-gray/55">ID do evento</span>
-        <code className="mt-2 block break-all rounded-xl bg-amiste-black px-3 py-2 text-xs font-bold text-white">
-          {entry.id}
-        </code>
-      </div>
     </section>
   );
 }
