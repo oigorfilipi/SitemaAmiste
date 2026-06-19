@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../atoms/Button.jsx";
 import PasswordInput from "../atoms/PasswordInput.jsx";
 import SelectInput from "../atoms/SelectInput.jsx";
@@ -561,8 +561,11 @@ export default function EntityFormModal({
   const [formData, setFormData] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const previousOpenRef = useRef(false);
+  const previousRecordKeyRef = useRef("");
 
   const modalTitle = editingRecord ? `Editar ${title}` : title;
+  const recordKey = editingRecord?.id || (editingRecord ? "__editing__" : "__new__");
   const hasLivePreview = Boolean(livePreviewDocumentType);
   const fieldGroups = useMemo(() => groupSmartFields(fields, formData, snapshot), [fields, formData, snapshot]);
   const previewRecord = useMemo(() => {
@@ -577,18 +580,19 @@ export default function EntityFormModal({
   );
   const hasSmartSidePanel = Boolean(smartSummary || insights.length);
 
-  const initialData = useMemo(
-    () => buildInitialSmartFormData(fields, editingRecord, snapshot),
-    [editingRecord, fields, snapshot]
-  );
-
   useEffect(() => {
-    if (open) {
+    const isOpening = open && !previousOpenRef.current;
+    const recordChanged = open && previousRecordKeyRef.current !== recordKey;
+
+    if (isOpening || recordChanged) {
       setActiveStep("primary");
-      setFormData(initialData);
+      setFormData(buildInitialSmartFormData(fields, editingRecord, snapshot));
       setErrorMessage("");
     }
-  }, [initialData, open]);
+
+    previousOpenRef.current = open;
+    previousRecordKeyRef.current = open ? recordKey : "";
+  }, [editingRecord, fields, open, recordKey, snapshot]);
 
   function updateField(fieldName, value) {
     setFormData((currentData) => {

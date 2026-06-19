@@ -57,6 +57,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   );
   const roles = useMemo(() => matrixRoleOptions.map((role) => role.value), [matrixRoleOptions]);
   const accountFormFields = useMemo(() => buildAccountFormFields(roleOptions), [roleOptions]);
+  const accountFormSnapshot = useMemo(() => ({ accounts: records, systemSettings }), [records, systemSettings]);
   const rows = useMemo(() => buildAccountRows(records, roleOptions), [records, roleOptions]);
   const metrics = useMemo(() => buildAccountMetrics(rows), [rows]);
   const accountTabs = useMemo(
@@ -421,7 +422,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
         secondaryStepDescription="Defina ou revise as permissoes do cargo antes de concluir o cadastro."
         secondaryStepLabel="Permissoes"
         size="fullscreen"
-        snapshot={{ accounts: records, systemSettings }}
+        snapshot={accountFormSnapshot}
         title="Registro de Colaborador"
         validate={validateAccountPayload}
         asideContent={(
