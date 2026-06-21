@@ -16,11 +16,13 @@ function resolveFormatIcon(format) {
 export default function LabelRepositoryGrid({
   canDelete,
   canDownload = true,
+  canEdit = false,
   canPrint = true,
   labels,
   selectedId,
   onDelete,
   onDownload,
+  onEdit,
   onPreview,
   onPrint,
 }) {
@@ -39,7 +41,7 @@ export default function LabelRepositoryGrid({
       {labels.map((label) => (
         <article
           className={cn(
-            "cursor-pointer rounded-2xl border bg-white p-3.5 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amiste-red/50 hover:shadow-amiste-soft",
+            "cursor-pointer rounded-2xl border bg-white p-3 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amiste-red/50 hover:shadow-amiste-soft",
             selectedId === label.id ? "border-amiste-red ring-2 ring-amiste-red/15" : "border-zinc-200"
           )}
           key={label.id}
@@ -48,8 +50,8 @@ export default function LabelRepositoryGrid({
           {/* --- SECAO: IDENTIDADE DO ARQUIVO --- */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-amiste-red/15 bg-amiste-red/10 text-amiste-red">
-                <AppIcon name={resolveFormatIcon(label.format)} size={19} />
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-amiste-red/15 bg-amiste-red/10 text-amiste-red">
+                <AppIcon name={resolveFormatIcon(label.format)} size={18} />
               </span>
               <div className="min-w-0">
                 <h2 className="truncate font-display text-[15px] font-black text-amiste-black">{label.name}</h2>
@@ -59,27 +61,37 @@ export default function LabelRepositoryGrid({
             <StatusPill label={label.format} status={label.hasFile ? "ativo" : "pendente"} />
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-2">
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-xs">
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-1.5">
               <span className="block font-black uppercase text-amiste-gray/50">Categoria</span>
               <strong className="mt-1 block truncate text-amiste-black">{label.category || "-"}</strong>
             </div>
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-2">
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-1.5">
               <span className="block font-black uppercase text-amiste-gray/50">Tamanho</span>
               <strong className="mt-1 block text-amiste-black">{label.fileSizeLabel}</strong>
             </div>
-            <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-2">
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-1.5">
               <span className="block font-black uppercase text-amiste-gray/50">Tipo</span>
               <strong className="mt-1 block text-amiste-black">{label.format}</strong>
             </div>
           </div>
 
           {label.description ? (
-            <p className="mt-3 line-clamp-2 text-xs font-semibold leading-5 text-amiste-gray/70">{label.description}</p>
+            <p className="mt-2 overflow-hidden whitespace-normal break-words text-xs font-semibold leading-5 text-amiste-gray/70 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+              {label.description}
+            </p>
           ) : null}
 
-          <footer className="mt-3 flex min-h-9 justify-end gap-2 border-t border-zinc-100 pt-3" onClick={(event) => event.stopPropagation()}>
-            <IconButton icon="fileText" label={`Visualizar ${label.name}`} onClick={() => onPreview(label)} />
+          {label.hasFile && !label.canPrint ? (
+            <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-bold leading-4 text-amber-800">
+              Impressao direta indisponivel para {label.format}. Baixe para imprimir no aplicativo adequado.
+            </p>
+          ) : null}
+
+          <footer className="mt-2 flex min-h-8 justify-end gap-1.5 border-t border-zinc-100 pt-2" onClick={(event) => event.stopPropagation()}>
+            {canEdit ? (
+              <IconButton icon="pencil" label={`Editar ${label.name}`} onClick={() => onEdit(label)} />
+            ) : null}
             <IconButton
               disabled={!canDownload || !label.hasFile}
               icon="download"
@@ -89,7 +101,10 @@ export default function LabelRepositoryGrid({
             <IconButton
               disabled={!canPrint || !label.canPrint}
               icon="printer"
-              label={`Imprimir ${label.name}`}
+              label={label.canPrint
+                ? `Imprimir ${label.name}`
+                : `Impressao direta indisponivel para ${label.format}. Baixe o arquivo para imprimir.`
+              }
               onClick={() => onPrint(label)}
             />
             {canDelete ? (

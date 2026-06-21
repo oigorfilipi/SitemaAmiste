@@ -148,6 +148,10 @@ export default function LabelFilePreviewPanel({ canDownload = true, canPrint = t
           <Button
             disabled={!canPrint || !label.canPrint}
             icon="printer"
+            title={label.canPrint
+              ? `Imprimir ${label.name}`
+              : `Impressao direta indisponivel para ${label.format}. Baixe o arquivo para imprimir.`
+            }
             onClick={() => {
               if (canPrint) {
                 onPrint(label);

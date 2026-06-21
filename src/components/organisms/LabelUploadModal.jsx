@@ -12,25 +12,33 @@ import {
   resolveFileFormat,
 } from "../../services/labelService.js";
 
-export default function LabelUploadModal({ existingLabels = [], open, snapshot, onClose, onUpload }) {
+export default function LabelUploadModal({ editingLabel = null, existingLabels = [], open, snapshot, onClose, onUpload }) {
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState("");
+  const isEditing = Boolean(editingLabel?.id);
   const categoryOptions = useMemo(() => buildLabelCategoryOptions(snapshot), [snapshot]);
+  const availableCategoryOptions = useMemo(() => {
+    if (!editingLabel?.category || categoryOptions.some((option) => option.value === editingLabel.category)) {
+      return categoryOptions;
+    }
+
+    return [{ label: `Atual: ${editingLabel.category}`, value: editingLabel.category }, ...categoryOptions];
+  }, [categoryOptions, editingLabel]);
 
   useEffect(() => {
     if (open) {
-      setCategory("");
-      setDescription("");
+      setCategory(editingLabel?.category || "");
+      setDescription(editingLabel?.description || "");
       setErrorMessage("");
       setFile(null);
       setIsSubmitting(false);
-      setName("");
+      setName(editingLabel?.name || "");
     }
-  }, [open]);
+  }, [editingLabel, open]);
 
   function handleClose() {
     if (!isSubmitting) {
@@ -49,7 +57,10 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
     setIsSubmitting(true);
 
     try {
-      const duplicate = existingLabels.some((label) => label.name.trim().toLowerCase() === name.trim().toLowerCase());
+      const duplicate = existingLabels.some((label) =>
+        label.id !== editingLabel?.id &&
+        String(label.name || "").trim().toLowerCase() === name.trim().toLowerCase()
+      );
 
       if (duplicate) {
         throw new Error("Ja existe uma etiqueta com este nome.");
@@ -70,9 +81,12 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
 
   return (
     <Modal
-      description="Envie arquivos externos de etiquetas e vincule cada item a uma categoria operacional."
+      description={isEditing
+        ? "Atualize os metadados da etiqueta ou substitua o arquivo salvo."
+        : "Envie arquivos externos de etiquetas e vincule cada item a uma categoria operacional."
+      }
       open={open}
-      title="Enviar Arquivo de Etiqueta"
+      title={isEditing ? "Editar Etiqueta" : "Enviar Arquivo de Etiqueta"}
       onClose={handleClose}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
@@ -96,7 +110,7 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
               </span>
               <SelectInput required value={category} onChange={(event) => setCategory(event.target.value)}>
                 <option value="">Selecione</option>
-                {categoryOptions.map((option) => (
+                {availableCategoryOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
@@ -106,15 +120,20 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
 
             <label className="md:col-span-2">
               <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
-                Arquivo <span className="text-amiste-red">*</span>
+                {isEditing ? "Substituir arquivo" : "Arquivo"} {!isEditing ? <span className="text-amiste-red">*</span> : null}
               </span>
               <input
                 accept={LABEL_FILE_ACCEPT}
                 className="block h-9 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-xl file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white focus:border-amiste-red focus:bg-white focus:outline-none focus:ring-2 focus:ring-amiste-red/10"
-                required
+                required={!isEditing}
                 type="file"
                 onChange={(event) => setFile(event.target.files?.[0] || null)}
               />
+              {isEditing && !file ? (
+                <span className="mt-1.5 block text-xs font-semibold text-amiste-gray/60">
+                  Arquivo atual: {editingLabel.originalFileName || "arquivo salvo"}. Se nao escolher outro, ele sera mantido.
+                </span>
+              ) : null}
             </label>
           </div>
         </FormSection>
@@ -157,8 +176,8 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
           <Button disabled={isSubmitting} variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button icon="upload" loading={isSubmitting} type="submit">
-            Enviar Arquivo
+          <Button icon={isEditing ? "pencil" : "upload"} loading={isSubmitting} type="submit">
+            {isEditing ? "Salvar Alteracao" : "Enviar Arquivo"}
           </Button>
         </footer>
       </form>

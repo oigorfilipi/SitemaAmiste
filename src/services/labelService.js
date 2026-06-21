@@ -192,6 +192,44 @@ export async function buildUploadedLabelPayload({ category, description = "", fi
   };
 }
 
+export async function buildUpdatedLabelPayload({ category, description = "", file, name }, existingLabel = {}) {
+  if (!name?.trim()) {
+    throw new Error("Informe o nome do arquivo/etiqueta.");
+  }
+
+  if (!category?.trim()) {
+    throw new Error("Selecione uma categoria ou vinculo.");
+  }
+
+  const payload = {
+    category,
+    description,
+    name: name.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (!file) {
+    return payload;
+  }
+
+  if (file.size > LABEL_FILE_SIZE_LIMIT) {
+    throw new Error(`Arquivo muito grande. Limite atual: ${formatFileSize(LABEL_FILE_SIZE_LIMIT)}.`);
+  }
+
+  const fileStorageKey = buildLabelFileStorageKey(`${existingLabel.id || buildLocalLabelId()}_${Date.now()}`);
+  const storageResult = await saveLabelFile(fileStorageKey, file);
+
+  return {
+    ...payload,
+    fileStorageKey: storageResult?.storageKey || fileStorageKey,
+    fileStorageProvider: storageResult?.storageProvider || existingLabel.fileStorageProvider || "local",
+    fileSize: file.size,
+    format: resolveFileFormat(file),
+    mimeType: file.type || "application/octet-stream",
+    originalFileName: file.name,
+  };
+}
+
 export function buildLabelRows(records) {
   return records
     .map((label) => {

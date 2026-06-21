@@ -13,6 +13,7 @@ import { useErpSnapshot } from "../../hooks/useErpSnapshot.js";
 import {
   buildLabelMetrics,
   buildLabelRows,
+  buildUpdatedLabelPayload,
   buildUploadedLabelPayload,
   deleteStoredLabelFile,
   downloadLabelFile,
@@ -27,8 +28,9 @@ export default function EtiquetasPage({ accessLevel, user }) {
   const [selectedId, setSelectedId] = useState("");
   const [pendingDeleteLabel, setPendingDeleteLabel] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [editingLabel, setEditingLabel] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const { records, createRecord, deleteRecord } = useCollection("labels");
+  const { records, createRecord, updateRecord, deleteRecord } = useCollection("labels");
   const { snapshot } = useErpSnapshot();
   const config = moduleConfigs.labels;
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
@@ -36,6 +38,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
   const canUseLabelFiles = labelFilesAccess !== "OC";
   const canMutate = accessLevel === "AC" && labelFilesAccess === "AC";
   const canUpload = canMutate && ["AC", "UP"].includes(rolePermissions["action:upload"]);
+  const canEdit = canMutate && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
   const canDownload = canUseLabelFiles && rolePermissions["action:download"] !== "OC";
   const canPrint = canUseLabelFiles && rolePermissions["action:print"] !== "OC";
@@ -83,6 +86,25 @@ export default function EtiquetasPage({ accessLevel, user }) {
   }
 
   async function handleUpload(uploadData) {
+    if (editingLabel) {
+      if (!canEdit) {
+        return;
+      }
+
+      setErrorMessage("");
+      const payload = await buildUpdatedLabelPayload(uploadData, editingLabel);
+      const updatedLabel = await updateRecord(editingLabel.id, payload);
+
+      if (uploadData.file && payload.fileStorageKey && payload.fileStorageKey !== editingLabel.fileStorageKey) {
+        await deleteStoredLabelFile(editingLabel);
+      }
+
+      setSelectedId(updatedLabel.id);
+      setEditingLabel(null);
+      setUploadOpen(false);
+      return;
+    }
+
     if (!canUpload) {
       return;
     }
@@ -93,6 +115,27 @@ export default function EtiquetasPage({ accessLevel, user }) {
 
     setSelectedId(createdLabel.id);
     setUploadOpen(false);
+  }
+
+  function openUploadModal() {
+    setEditingLabel(null);
+    setErrorMessage("");
+    setUploadOpen(true);
+  }
+
+  function openEditModal(label) {
+    if (!canEdit) {
+      return;
+    }
+
+    setEditingLabel(label);
+    setErrorMessage("");
+    setUploadOpen(true);
+  }
+
+  function closeUploadModal() {
+    setUploadOpen(false);
+    setEditingLabel(null);
   }
 
   async function handleDelete(label) {
@@ -139,7 +182,7 @@ export default function EtiquetasPage({ accessLevel, user }) {
         description={config.description}
         icon={config.icon}
         title={config.title}
-        onAction={() => setUploadOpen(true)}
+        onAction={openUploadModal}
       />
 
       {/* --- SECAO: FILTROS E EXPORTACAO --- */}
@@ -170,11 +213,13 @@ export default function EtiquetasPage({ accessLevel, user }) {
         <LabelRepositoryGrid
           canDelete={canDelete}
           canDownload={canDownload}
+          canEdit={canEdit}
           canPrint={canPrint}
           labels={filteredLabels}
           selectedId={selectedLabel?.id || ""}
           onDelete={handleDelete}
           onDownload={downloadLabelFile}
+          onEdit={openEditModal}
           onPreview={handlePreview}
           onPrint={printLabelFile}
         />
@@ -188,10 +233,11 @@ export default function EtiquetasPage({ accessLevel, user }) {
       </div>
 
       <LabelUploadModal
+        editingLabel={editingLabel}
         existingLabels={labels}
         open={uploadOpen}
         snapshot={snapshot}
-        onClose={() => setUploadOpen(false)}
+        onClose={closeUploadModal}
         onUpload={handleUpload}
       />
       <ConfirmDialog
