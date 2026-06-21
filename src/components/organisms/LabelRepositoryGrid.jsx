@@ -37,11 +37,11 @@ export default function LabelRepositoryGrid({
   }
 
   return (
-    <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+    <section className="grid auto-rows-max grid-cols-1 items-start gap-3 xl:grid-cols-2">
       {labels.map((label) => (
         <article
           className={cn(
-            "cursor-pointer rounded-2xl border bg-white p-3 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amiste-red/50 hover:shadow-amiste-soft",
+            "h-fit cursor-pointer rounded-2xl border bg-white p-3 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amiste-red/50 hover:shadow-amiste-soft",
             selectedId === label.id ? "border-amiste-red ring-2 ring-amiste-red/15" : "border-zinc-200"
           )}
           key={label.id}
