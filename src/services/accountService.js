@@ -16,6 +16,19 @@ export const ACCOUNT_TABS = [
   { id: "granular", label: "Matriz Granular" },
 ];
 
+export const RBAC_ACCESS_OPTIONS = [
+  { label: "AC", value: "AC" },
+  { label: "VIS", value: "VIS" },
+  { label: "OC", value: "OC" },
+];
+
+export const GRANULAR_ACCESS_OPTIONS = [
+  { label: "AC", value: "AC" },
+  { label: "VIS", value: "VIS" },
+  { label: "UP", value: "UP" },
+  { label: "OC", value: "OC" },
+];
+
 export const ROLE_LABELS = {
   ADM: "Administrativo",
   CEO: "Dono",
@@ -180,7 +193,7 @@ export const PAGE_LABELS = {
   financeiro: "Financeiro",
   solicitacoes: "Solicitacoes",
   historico: "Historico Geral",
-  home: "Home",
+  home: "Dashboard",
   insumos: "Catalogo de Insumos",
   machines: "Maquinas",
   opcoes: "Adicionar Opcoes",
@@ -212,6 +225,17 @@ export const PAGE_LABELS = {
   "action:requests.close": "Acao: Solicitações / Encerrar",
   vendas: "Vendas",
 };
+
+function resolveResourceType(resourceId) {
+  if (ALL_PAGES.includes(resourceId)) return "pagina";
+  if (resourceId.startsWith("tab:")) return "aba";
+  if (resourceId.startsWith("module:")) return "modulo";
+  if (resourceId.startsWith("section:")) return "secao";
+  if (resourceId.startsWith("field:")) return "campo";
+  if (resourceId.startsWith("action:")) return "acao";
+
+  return "recurso";
+}
 
 function buildInitials(value) {
   return String(value || "")
@@ -304,18 +328,19 @@ export function filterAccountRows(rows, tabId, searchTerm = "") {
   );
 }
 
-export function buildRoleMatrix(roles = Object.keys(ROLE_PERMISSIONS), roleOptions = ROLE_OPTIONS) {
-  return ALL_PERMISSION_RESOURCES.map((pageId) => ({
+export function buildRoleMatrix(roles = Object.keys(ROLE_PERMISSIONS), roleOptions = ROLE_OPTIONS, resources = ALL_PERMISSION_RESOURCES) {
+  return resources.map((pageId) => ({
     pageId,
     pageLabel: PAGE_LABELS[pageId] || pageId,
-    resourceType: pageId.includes(":") ? pageId.split(":")[0] : "pagina",
+    resourceType: resolveResourceType(pageId),
     permissions: roles.map((role) => {
       const rolePermissions = getRolePermissions(role);
       const access = rolePermissions[pageId] || "OC";
+      const matrixAccess = ALL_PAGES.includes(pageId) && access === "UP" ? "VIS" : access;
 
       return {
-        access,
-        accessLabel: getAccessLabel(access),
+        access: matrixAccess,
+        accessLabel: getAccessLabel(matrixAccess),
         locked: isDevPermissionLocked(role, pageId),
         role,
         roleLabel: resolveRoleLabel(role, roleOptions),
@@ -325,13 +350,11 @@ export function buildRoleMatrix(roles = Object.keys(ROLE_PERMISSIONS), roleOptio
 }
 
 export function buildRoleMatrixByScope(scope = "base", roles, roleOptions = ROLE_OPTIONS) {
-  const granularPrefixes = ["section:", "field:", "action:requests."];
-  const isGranularResource = (resourceId) => granularPrefixes.some((prefix) => resourceId.startsWith(prefix));
+  const resources = scope === "granular"
+    ? ALL_PERMISSION_RESOURCES.filter((resourceId) => !ALL_PAGES.includes(resourceId))
+    : ALL_PAGES;
 
-  return buildRoleMatrix(roles, roleOptions).filter((row) => scope === "granular"
-    ? isGranularResource(row.pageId)
-    : !isGranularResource(row.pageId)
-  );
+  return buildRoleMatrix(roles, roleOptions, resources);
 }
 
 export function buildRoleSummary(role, roleOptions = ROLE_OPTIONS) {

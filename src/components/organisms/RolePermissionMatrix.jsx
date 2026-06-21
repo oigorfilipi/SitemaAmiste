@@ -19,7 +19,14 @@ function accessTone(access) {
   return tones[access] || "automatico";
 }
 
-export default function RolePermissionMatrix({ editable = false, matrix, roles, onChange }) {
+export default function RolePermissionMatrix({
+  accessOptions = ACCESS_OPTIONS,
+  editable = false,
+  matrix,
+  resourceHeaderLabel = "Recurso",
+  roles,
+  onChange,
+}) {
   const gridTemplateColumns = `minmax(220px,1.3fr) repeat(${Math.max(roles.length, 1)}, minmax(120px,1fr))`;
   const minWidth = `${260 + Math.max(roles.length, 1) * 140}px`;
 
@@ -28,7 +35,7 @@ export default function RolePermissionMatrix({ editable = false, matrix, roles, 
       <div className="overflow-x-auto">
         <div style={{ minWidth }}>
           <div className="grid gap-2 border-b border-zinc-100 bg-zinc-50/80 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60" style={{ gridTemplateColumns }}>
-            <span>Rota</span>
+            <span>{resourceHeaderLabel}</span>
             {roles.map((role) => (
               <span key={role}>{role}</span>
             ))}
@@ -54,7 +61,7 @@ export default function RolePermissionMatrix({ editable = false, matrix, roles, 
                       value={permission.access}
                       onChange={(event) => onChange?.(permission.role, row.pageId, event.target.value)}
                     >
-                      {ACCESS_OPTIONS.map((option) => (
+                      {accessOptions.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
                         </option>

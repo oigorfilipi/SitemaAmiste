@@ -14,6 +14,8 @@ import TableEmptyState from "../../components/molecules/TableEmptyState.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import {
   ACCOUNT_TABS,
+  GRANULAR_ACCESS_OPTIONS,
+  RBAC_ACCESS_OPTIONS,
   buildAccountFormFields,
   buildAccountMetrics,
   buildAccountRows,
@@ -35,14 +37,16 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [pendingPermissionChange, setPendingPermissionChange] = useState(null);
   const [permissionVersion, setPermissionVersion] = useState(0);
   const [rbacAdminPassword, setRbacAdminPassword] = useState("");
   const [rbacSecurityLoading, setRbacSecurityLoading] = useState(false);
   const [rbacSecurityMessage, setRbacSecurityMessage] = useState("");
-  const { records, createRecord, updateRecord } = useCollection("accounts");
-  const { records: optionRecords } = useCollection("options");
-  const { records: systemSettings } = useCollection("systemSettings");
+  const { records, createRecord, updateRecord, isLoading: accountsLoading } = useCollection("accounts");
+  const { records: optionRecords, isLoading: optionsLoading } = useCollection("options");
+  const { records: systemSettings, isLoading: settingsLoading } = useCollection("systemSettings");
+  const isSynchronizing = accountsLoading || optionsLoading || settingsLoading;
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [permissionVersion, user?.role]);
   const rbacModuleAccess = rolePermissions["module:accounts.rbac"] || "OC";
   const canManageAccounts = accessLevel === "AC" && rolePermissions["action:user.protectedEdit"] === "AC";
@@ -115,6 +119,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
 
     setErrorMessage("");
+    setSuccessMessage("");
     setEditingRecord(null);
     setModalOpen(true);
   }
@@ -126,6 +131,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
 
     setErrorMessage("");
+    setSuccessMessage("");
     setEditingRecord(records.find((record) => record.id === account.id) || account);
     setModalOpen(true);
   }
@@ -137,6 +143,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
 
     const normalizedPayload = normalizeAccountPayload(payload, editingRecord);
+    const isEditing = Boolean(editingRecord);
 
     if (!canManageAccountPayload(normalizedPayload)) {
       setErrorMessage("Somente DEV pode criar ou atribuir o perfil DEV.");
@@ -144,16 +151,26 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
 
     try {
-      if (editingRecord) {
-        await updateRecord(editingRecord.id, normalizedPayload);
+      let savedAccount = null;
+
+      if (isEditing) {
+        savedAccount = await updateRecord(editingRecord.id, normalizedPayload);
       } else {
-        await createRecord(normalizedPayload);
+        savedAccount = await createRecord(normalizedPayload);
       }
 
       setModalOpen(false);
       setEditingRecord(null);
+      setActiveTab("ativas");
+      setActiveRole(savedAccount?.role || normalizedPayload.role || activeRole);
+      setErrorMessage("");
+      setSuccessMessage(isEditing
+        ? "Colaborador atualizado. Lista e matriz estao sincronizando em segundo plano."
+        : "Colaborador criado. Lista de ativos e matriz RBAC foram atualizadas."
+      );
     } catch (error) {
       setErrorMessage(error.message || "Nao foi possivel salvar o colaborador.");
+      setSuccessMessage("");
       throw error;
     }
   }
@@ -165,6 +182,7 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
     }
 
     setErrorMessage("");
+    setSuccessMessage("");
 
     try {
       await updateRecord(account.id, {
@@ -287,12 +305,14 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
           <div>
             <h4 className="font-display text-base font-black text-amiste-black">Matriz RBAC Geral</h4>
             <p className="mt-1 text-xs font-semibold text-amiste-gray/60">
-              Paginas, abas, modulos e acoes principais.
+              Apenas acesso as paginas do sistema.
             </p>
           </div>
           <RolePermissionMatrix
+            accessOptions={RBAC_ACCESS_OPTIONS}
             editable={canEditPermissions}
             matrix={buildRoleMatrixByScope("base", selectedRoleList, roleOptions)}
+            resourceHeaderLabel="Pagina"
             roles={selectedRoleList}
             onChange={handlePermissionChange}
           />
@@ -302,12 +322,14 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
           <div>
             <h4 className="font-display text-base font-black text-amiste-black">Matriz RBAC Granular</h4>
             <p className="mt-1 text-xs font-semibold text-amiste-gray/60">
-              Secoes, campos sensiveis e acoes especificas dentro das paginas.
+              Acoes, abas, modulos, secoes e campos especificos dentro das paginas.
             </p>
           </div>
           <RolePermissionMatrix
+            accessOptions={GRANULAR_ACCESS_OPTIONS}
             editable={canEditPermissions}
             matrix={buildRoleMatrixByScope("granular", selectedRoleList, roleOptions)}
+            resourceHeaderLabel="Acao ou secao"
             roles={selectedRoleList}
             onChange={handlePermissionChange}
           />
@@ -344,6 +366,19 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
       {/* --- SECAO: INDICADORES DE EQUIPE --- */}
       <MetricsGrid metrics={metrics} />
 
+      {isSynchronizing ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-amiste-blue/20 bg-amiste-blue/10 px-4 py-3 text-sm font-bold text-amiste-blue">
+          <AppIcon className="animate-spin" name="loader" size={17} />
+          Sincronizando colaboradores, funcoes e permissoes...
+        </div>
+      ) : null}
+
+      {successMessage ? (
+        <div className="rounded-2xl border border-amiste-green/20 bg-amiste-green/10 px-4 py-3 text-sm font-bold text-amiste-green">
+          {successMessage}
+        </div>
+      ) : null}
+
       {errorMessage ? (
         <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
           {errorMessage}
@@ -379,8 +414,8 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
           <div className="space-y-4">
             <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-amiste-gray shadow-sm">
               {activeVisibleTab === "granular"
-                ? "Matriz RBAC Granular: controle secoes, campos sensiveis e acoes especificas dentro das paginas."
-                : "Matriz RBAC principal: controle acesso por paginas, abas, modulos e acoes globais."}
+                ? "Matriz Granular: controle acoes, abas, modulos, secoes e campos dentro das paginas."
+                : "Matriz RBAC: controle somente quais paginas cada cargo pode acessar."}
             </div>
             <div className="flex flex-wrap gap-2">
               {matrixRoleOptions.map((role) => (
@@ -395,8 +430,10 @@ export default function AccountsPage({ accessLevel = "OC", user }) {
               ))}
             </div>
             <RolePermissionMatrix
+              accessOptions={activeVisibleTab === "granular" ? GRANULAR_ACCESS_OPTIONS : RBAC_ACCESS_OPTIONS}
               editable={canEditPermissions}
               matrix={activeVisibleTab === "granular" ? granularMatrix : roleMatrix}
+              resourceHeaderLabel={activeVisibleTab === "granular" ? "Acao ou secao" : "Pagina"}
               roles={roles}
               onChange={handlePermissionChange}
             />

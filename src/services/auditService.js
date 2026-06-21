@@ -1,18 +1,60 @@
-import { exportRecordsToCsv } from "./exportService.js";
-
-const AUDIT_EXPORT_COLUMNS = [
-  { key: "date", label: "Data" },
-  { key: "module", label: "Modulo" },
-  { key: "action", label: "Acao" },
-  { key: "title", label: "Registro" },
-  { key: "userName", label: "Usuario" },
-  { key: "role", label: "Cargo" },
-  { key: "details", label: "Detalhes" },
-];
-
 const MODULE_LABEL_OVERRIDES = {
   Contas: "Gestao de Contas",
   accounts: "Gestao de Contas",
+  Home: "Dashboard",
+  Sessao: "Acesso",
+};
+
+const MODULE_ENTITY_LABELS = {
+  Acesso: "acesso",
+  Acessorios: "acessorio",
+  "Adicionar Opcoes": "opcao",
+  Checklists: "checklist",
+  Clientes: "cliente",
+  Configuracoes: "configuracao",
+  "Configuracoes de Seguranca": "configuracao de seguranca",
+  "Contagem de Estoque": "estoque",
+  Dashboard: "dashboard",
+  Etiquetas: "etiqueta",
+  Financeiro: "registro financeiro",
+  "Gestao de Contas": "conta",
+  "Historico Geral": "evento",
+  Insumos: "insumo",
+  Maquinas: "maquina",
+  Perfil: "perfil",
+  Portfolios: "portfolio",
+  Precos: "preco",
+  Receitas: "receita",
+  Solicitacoes: "solicitacao",
+  Vendas: "venda",
+  Wiki: "wiki",
+};
+
+const FIELD_LABELS = {
+  assigneeName: "Atendente",
+  comments: "Comentarios",
+  displayName: "Nome de exibicao",
+  email: "E-mail",
+  events: "Historico interno",
+  fullName: "Nome completo",
+  managerInboxHidden: "Caixa de entrada",
+  role: "Cargo",
+  status: "Status",
+};
+
+const VALUE_LABELS = {
+  "aguardando-resposta": "Aguardando Resposta",
+  analise: "Em Analise",
+  atendendo: "Atendendo",
+  concluido: "Concluido",
+  desistido: "Desistido",
+  encerrado: "Encerrado",
+  false: "Nao",
+  "nao-resolvido": "Nao resolvido",
+  pendente: "Pendente",
+  reativado: "Reativado",
+  rejeitado: "Rejeitado",
+  true: "Sim",
 };
 
 export const AUDIT_EVENT_CATALOG = [
@@ -89,6 +131,120 @@ function looksLikeTechnicalUserId(value) {
   return /^usr[_-]/i.test(String(value || "").trim());
 }
 
+function looksLikeTechnicalRecordId(value) {
+  return /^[a-z]+_\d{10,}_[a-z0-9]+$/i.test(String(value || "").trim()) ||
+    /^[a-z]+_[a-z0-9]+_[a-z0-9]+$/i.test(String(value || "").trim());
+}
+
+function articleForEntity(entity) {
+  const feminineEndings = ["a", "ao"];
+  const normalizedEntity = String(entity || "").toLowerCase();
+
+  return feminineEndings.some((ending) => normalizedEntity.endsWith(ending)) ? "uma" : "um";
+}
+
+function titleCaseAction(value = "") {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    || "Registrou";
+}
+
+function resolveHumanTitle(record, module) {
+  const action = titleCaseAction(record.action);
+  const entity = MODULE_ENTITY_LABELS[module] || "registro";
+  const article = articleForEntity(entity);
+  const title = String(record.title || "").trim();
+  const details = String(record.details || "");
+  const context = `${title} ${details}`.toLowerCase();
+
+  if (context.includes("matriz") || context.includes("permiss")) return "Alterou Permissoes";
+  if (action === "Login") return "Realizou login";
+  if (action === "Logout") return "Realizou logout";
+  if (action === "Primeiro Login") return "Concluiu primeiro acesso";
+  if (action === "Alterou Senha") return "Alterou senha";
+  if (action === "Restaurou") return "Restaurou backup";
+  if (action === "Backup") return "Gerou backup";
+  if (action === "Criou") return `Criou ${article} ${entity}`;
+  if (action === "Editou") return `Editou ${article} ${entity}`;
+  if (action === "Atualizou") return `Atualizou ${article} ${entity}`;
+  if (action === "Excluiu") return `Excluiu ${article} ${entity}`;
+  if (action === "Finalizou") return `Concluiu ${article} ${entity}`;
+
+  if (!looksLikeTechnicalRecordId(title)) {
+    return title || `${action} em ${module}`;
+  }
+
+  return `${action} em ${module}`;
+}
+
+function formatAuditValue(value = "") {
+  const normalizedValue = String(value || "").trim();
+
+  return VALUE_LABELS[normalizedValue] || normalizedValue || "-";
+}
+
+function parseItemCount(value = "") {
+  return Number(String(value).match(/^(\d+)\s+item/)?.[1] || 0);
+}
+
+function humanizeChangeLine(line = "") {
+  const match = String(line).match(/^([^:]+):\s*(.*?)\s*->\s*(.*)$/);
+
+  if (!match) {
+    return line;
+  }
+
+  const [, rawField, previousValue, nextValue] = match;
+  const fieldName = rawField.trim();
+  const label = FIELD_LABELS[fieldName] || fieldName;
+
+  if (fieldName === "comments") {
+    return parseItemCount(nextValue) > parseItemCount(previousValue)
+      ? "Comentario adicionado."
+      : "Comentarios atualizados.";
+  }
+
+  if (fieldName === "events") {
+    return "Historico interno da solicitacao atualizado.";
+  }
+
+  if (fieldName === "status") {
+    return `Status alterado de "${formatAuditValue(previousValue)}" para "${formatAuditValue(nextValue)}".`;
+  }
+
+  if (fieldName === "managerInboxHidden") {
+    return "Solicitacao removida da caixa principal de finalizados.";
+  }
+
+  return `${label} alterado de "${formatAuditValue(previousValue)}" para "${formatAuditValue(nextValue)}".`;
+}
+
+function resolveHumanDetails(details = "") {
+  const text = String(details || "").trim();
+
+  if (!text) {
+    return "Nenhum detalhe adicional foi registrado.";
+  }
+
+  if (/^Registro criado\.?\s*ID:/i.test(text)) {
+    return "Registro criado com sucesso.";
+  }
+
+  if (/^Registro excluido\.?\s*ID:/i.test(text)) {
+    return "Registro excluido do sistema.";
+  }
+
+  if (/^Registro salvo sem alteracoes/i.test(text)) {
+    return "Registro salvo sem mudancas relevantes.";
+  }
+
+  return text
+    .split("\n")
+    .map(humanizeChangeLine)
+    .join("\n");
+}
+
 function resolveAuditUserName(record, accounts = []) {
   const candidateIds = [record.userId, record.userName]
     .map((value) => String(value || "").trim())
@@ -114,15 +270,19 @@ export function buildAuditRows(records, accounts = []) {
     return {
       ...record,
       module,
+      displayTitle: resolveHumanTitle(record, module),
+      humanDetails: resolveHumanDetails(record.details),
       userName,
       ...formatDateTime(record.date),
       searchable: [
         module,
         record.action,
         record.title,
+        resolveHumanTitle(record, module),
         userName,
         record.role,
         record.details,
+        resolveHumanDetails(record.details),
       ].join(" ").toLowerCase(),
     };
   }).sort((first, second) => String(second.date).localeCompare(String(first.date)));
@@ -175,7 +335,7 @@ export function buildAuditMetrics(rows) {
       icon: "history",
       label: "Eventos",
       value: rows.length,
-      detail: "ultimos registros locais",
+      detail: "registros de auditoria",
       tone: "blue",
     },
     {
@@ -203,13 +363,4 @@ export function buildAuditMetrics(rows) {
       tone: criticalActions.length ? "red" : "green",
     },
   ];
-}
-
-export function exportAuditRows(rows) {
-  exportRecordsToCsv({
-    columns: AUDIT_EXPORT_COLUMNS,
-    filename: "historico-geral",
-    records: rows,
-    snapshot: {},
-  });
 }

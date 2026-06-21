@@ -82,6 +82,8 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
   const [filterStatus, setFilterStatus] = useState("ativas");
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [message, setMessage] = useState("");
+  const [messageTone, setMessageTone] = useState("info");
+  const [pendingActions, setPendingActions] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [transferTargetById, setTransferTargetById] = useState({});
   const [transferReasonById, setTransferReasonById] = useState({});
@@ -141,6 +143,36 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
       [fieldName]: value,
     }));
     setMessage("");
+    setMessageTone("info");
+  }
+
+  function isActionPending(actionKey) {
+    return Boolean(pendingActions[actionKey]);
+  }
+
+  async function runRequestAction(actionKey, successMessage, callback) {
+    if (isActionPending(actionKey)) {
+      return;
+    }
+
+    setPendingActions((currentActions) => ({ ...currentActions, [actionKey]: true }));
+    setMessage("");
+    setMessageTone("info");
+
+    try {
+      await callback();
+      setMessage(successMessage);
+      setMessageTone("success");
+    } catch (error) {
+      setMessage(error.message || "Nao foi possivel concluir a acao.");
+      setMessageTone("error");
+    } finally {
+      setPendingActions((currentActions) => {
+        const nextActions = { ...currentActions };
+        delete nextActions[actionKey];
+        return nextActions;
+      });
+    }
   }
 
   async function handleAttachmentChange(event) {
@@ -156,6 +188,7 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
       updateForm("attachmentType", file.type);
     } catch (error) {
       setMessage(error.message || "Nao foi possivel carregar a imagem.");
+      setMessageTone("error");
       event.target.value = "";
     }
   }
@@ -165,74 +198,86 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
 
     if (!formData.title.trim() || !formData.description.trim()) {
       setMessage("Informe nome e descricao da solicitacao.");
+      setMessageTone("error");
       return;
     }
 
-    const createdPayload = buildRequestPayload(formData, user);
+    await runRequestAction("create", "Solicitacao criada e registrada internamente.", async () => {
+      const createdPayload = buildRequestPayload(formData, user);
 
-    await createRecord({
-      ...createdPayload,
-      similarityKey: [
-        createdPayload.pageId,
-        createdPayload.category,
-        createdPayload.problemType,
-        createdPayload.description.toLowerCase().slice(0, 90),
-      ].join("|"),
+      await createRecord({
+        ...createdPayload,
+        similarityKey: [
+          createdPayload.pageId,
+          createdPayload.category,
+          createdPayload.problemType,
+          createdPayload.description.toLowerCase().slice(0, 90),
+        ].join("|"),
+      });
+      setFormData(INITIAL_FORM);
     });
-    setFormData(INITIAL_FORM);
-    setMessage("Solicitacao criada e registrada internamente.");
   }
 
   async function handleAttend(request) {
-    const update = buildActionUpdate(request, user, REQUEST_STATUSES.ATTENDING, "Atendeu", {
-      assigneeId: user?.id || "",
-      assigneeName: user?.displayName || user?.fullName || "",
-      assigneeRole: user?.role || "",
-      attendedAt: new Date().toISOString(),
-      eventDetails: "Solicitacao assumida para atendimento.",
+    await runRequestAction(`attend:${request.id}`, "Solicitacao assumida para atendimento.", async () => {
+      const update = buildActionUpdate(request, user, REQUEST_STATUSES.ATTENDING, "Atendeu", {
+        assigneeId: user?.id || "",
+        assigneeName: user?.displayName || user?.fullName || "",
+        assigneeRole: user?.role || "",
+        attendedAt: new Date().toISOString(),
+        eventDetails: "Solicitacao assumida para atendimento.",
+      });
+
+      await updateRecord(request.id, update);
+
+      if (request.problemType === "Criacao de Conta") {
+        onSelectPage?.("accounts");
+      }
+
+      if (request.problemType === "Deletar Conta") {
+        onSelectPage?.("accounts");
+      }
     });
-
-    await updateRecord(request.id, update);
-
-    if (request.problemType === "Criacao de Conta") {
-      onSelectPage?.("accounts");
-    }
-
-    if (request.problemType === "Deletar Conta") {
-      onSelectPage?.("accounts");
-    }
   }
 
   async function handleReject(request) {
     const reason = rejectionReasonById[request.id] || REJECTION_REASONS[0];
 
-    await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.REJECTED, "Rejeitou", {
-      closedAt: new Date().toISOString(),
-      eventDetails: `Motivo: ${reason}`,
-      rejectionReason: reason,
-    }));
+    await runRequestAction(`reject:${request.id}`, "Solicitacao rejeitada.", async () => {
+      await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.REJECTED, "Rejeitou", {
+        closedAt: new Date().toISOString(),
+        eventDetails: `Motivo: ${reason}`,
+        rejectionReason: reason,
+      }));
+    });
   }
 
   async function handleComplete(request, status, action) {
     const now = new Date().toISOString();
 
-    await updateRecord(request.id, buildActionUpdate(request, user, status, action, {
-      closedAt: now,
-      completedAt: status === REQUEST_STATUSES.COMPLETED ? now : request.completedAt || "",
-      giveUpAt: status === REQUEST_STATUSES.GIVE_UP ? now : request.giveUpAt || "",
-      unresolvedAt: status === REQUEST_STATUSES.UNRESOLVED ? now : request.unresolvedAt || "",
-    }));
+    await runRequestAction(`${status}:${request.id}`, "Status da solicitacao atualizado.", async () => {
+      await updateRecord(request.id, buildActionUpdate(request, user, status, action, {
+        closedAt: now,
+        completedAt: status === REQUEST_STATUSES.COMPLETED ? now : request.completedAt || "",
+        giveUpAt: status === REQUEST_STATUSES.GIVE_UP ? now : request.giveUpAt || "",
+        unresolvedAt: status === REQUEST_STATUSES.UNRESOLVED ? now : request.unresolvedAt || "",
+      }));
+    });
   }
 
   async function handleReactivate(request) {
-    await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.REACTIVATED, "Reativou", {
-      reactivatedAt: new Date().toISOString(),
-      closedAt: "",
-    }));
+    await runRequestAction(`reactivate:${request.id}`, "Solicitacao reativada.", async () => {
+      await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.REACTIVATED, "Reativou", {
+        reactivatedAt: new Date().toISOString(),
+        closedAt: "",
+      }));
+    });
   }
 
   async function handleAnalysis(request) {
-    await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.ANALYSIS, "Colocou em analise"));
+    await runRequestAction(`analysis:${request.id}`, "Solicitacao marcada como Em Analise.", async () => {
+      await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.ANALYSIS, "Colocou em analise"));
+    });
   }
 
   async function handleTransfer(request) {
@@ -241,19 +286,22 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
 
     if (!target) {
       setMessage("Selecione o novo atendente.");
+      setMessageTone("error");
       return;
     }
 
     const reason = transferReasonById[request.id] || TRANSFER_REASONS[0];
 
-    await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.TRANSFERRED, "Transferiu", {
-      assigneeId: target.id,
-      assigneeName: target.displayName || target.fullName,
-      assigneeRole: target.role,
-      eventDetails: `Transferido para ${target.displayName || target.fullName}. Motivo: ${reason}`,
-      transferredAt: new Date().toISOString(),
-      transferReason: reason,
-    }));
+    await runRequestAction(`transfer:${request.id}`, "Solicitacao transferida.", async () => {
+      await updateRecord(request.id, buildActionUpdate(request, user, REQUEST_STATUSES.TRANSFERRED, "Transferiu", {
+        assigneeId: target.id,
+        assigneeName: target.displayName || target.fullName,
+        assigneeRole: target.role,
+        eventDetails: `Transferido para ${target.displayName || target.fullName}. Motivo: ${reason}`,
+        transferredAt: new Date().toISOString(),
+        transferReason: reason,
+      }));
+    });
   }
 
   async function handleComment(request) {
@@ -272,29 +320,35 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
       userName: user?.displayName || user?.fullName || "Usuario",
     };
 
-    await updateRecord(request.id, {
-      comments: [comment, ...(request.comments || [])],
-      events: [buildRequestEvent("Comentou", user, "Comentario adicionado na solicitacao."), ...(request.events || [])],
-      status: manager ? REQUEST_STATUSES.ANSWER_WAIT : REQUEST_STATUSES.ANALYSIS,
+    await runRequestAction(`comment:${request.id}`, "Comentario enviado.", async () => {
+      await updateRecord(request.id, {
+        comments: [comment, ...(request.comments || [])],
+        events: [buildRequestEvent("Comentou", user, "Comentario adicionado na solicitacao."), ...(request.events || [])],
+        status: manager ? REQUEST_STATUSES.ANSWER_WAIT : REQUEST_STATUSES.ANALYSIS,
+      });
+      setCommentTextById((currentData) => ({ ...currentData, [request.id]: "" }));
     });
-    setCommentTextById((currentData) => ({ ...currentData, [request.id]: "" }));
   }
 
   async function handleCleanFinalized() {
     const finalizedRequests = visibleRequests.filter((request) => isRequestFinal(resolveRequestStatus(request)));
 
-    for (const request of finalizedRequests) {
-      await updateRecord(request.id, {
-        events: [buildRequestEvent("Limpou da caixa", user, "Solicitacao finalizada removida da caixa principal."), ...(request.events || [])],
-        managerInboxHidden: true,
-      });
-    }
+    await runRequestAction("clean-finalized", "Solicitacoes finalizadas removidas da caixa principal.", async () => {
+      for (const request of finalizedRequests) {
+        await updateRecord(request.id, {
+          events: [buildRequestEvent("Limpou da caixa", user, "Solicitacao finalizada removida da caixa principal."), ...(request.events || [])],
+          managerInboxHidden: true,
+        });
+      }
+    });
   }
 
   async function handleAlsoAffected(request) {
-    await updateRecord(request.id, {
-      affectedCount: Number(request.affectedCount || 0) + 1,
-      events: [buildRequestEvent("Tambem afetado", user, "Usuario marcou que tambem esta com esse problema."), ...(request.events || [])],
+    await runRequestAction(`affected:${request.id}`, "Marcado como tambem afetado.", async () => {
+      await updateRecord(request.id, {
+        affectedCount: Number(request.affectedCount || 0) + 1,
+        events: [buildRequestEvent("Tambem afetado", user, "Usuario marcou que tambem esta com esse problema."), ...(request.events || [])],
+      });
     });
   }
 
@@ -341,7 +395,12 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
 
         {request.isGeneral ? (
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => handleAlsoAffected(request)}>
+            <Button
+              className="h-8 px-3 text-xs"
+              loading={isActionPending(`affected:${request.id}`)}
+              variant="secondary"
+              onClick={() => handleAlsoAffected(request)}
+            >
               Tambem estou com esse problema ({Number(request.affectedCount || 0)})
             </Button>
           </div>
@@ -351,18 +410,18 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
           <div className="mt-4 flex flex-wrap gap-2">
             {!closed ? (
               <>
-                <Button className="h-8 px-3 text-xs" icon="checkSquare" onClick={() => handleAttend(request)}>Atender</Button>
-                <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => handleAnalysis(request)}>Em Analise</Button>
+                <Button className="h-8 px-3 text-xs" icon="checkSquare" loading={isActionPending(`attend:${request.id}`)} onClick={() => handleAttend(request)}>Atender</Button>
+                <Button className="h-8 px-3 text-xs" loading={isActionPending(`analysis:${request.id}`)} variant="secondary" onClick={() => handleAnalysis(request)}>Em Analise</Button>
                 <SelectInput className="h-8 w-40 bg-white text-xs" value={rejectionReasonById[request.id] || REJECTION_REASONS[0]} onChange={(event) => setRejectionReasonById((currentData) => ({ ...currentData, [request.id]: event.target.value }))}>
                   {REJECTION_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
                 </SelectInput>
-                <Button className="h-8 px-3 text-xs" variant="danger" onClick={() => handleReject(request)}>Rejeitar</Button>
-                <Button className="h-8 px-3 text-xs" variant="success" onClick={() => handleComplete(request, REQUEST_STATUSES.COMPLETED, "Concluiu")}>Concluido</Button>
-                <Button className="h-8 px-3 text-xs" variant="warning" onClick={() => handleComplete(request, REQUEST_STATUSES.GIVE_UP, "Desistiu")}>Desistencia</Button>
-                <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => handleComplete(request, REQUEST_STATUSES.UNRESOLVED, "Nao resolveu")}>Nao resolvido</Button>
+                <Button className="h-8 px-3 text-xs" loading={isActionPending(`reject:${request.id}`)} variant="danger" onClick={() => handleReject(request)}>Rejeitar</Button>
+                <Button className="h-8 px-3 text-xs" loading={isActionPending(`${REQUEST_STATUSES.COMPLETED}:${request.id}`)} variant="success" onClick={() => handleComplete(request, REQUEST_STATUSES.COMPLETED, "Concluiu")}>Concluido</Button>
+                <Button className="h-8 px-3 text-xs" loading={isActionPending(`${REQUEST_STATUSES.GIVE_UP}:${request.id}`)} variant="warning" onClick={() => handleComplete(request, REQUEST_STATUSES.GIVE_UP, "Desistiu")}>Desistencia</Button>
+                <Button className="h-8 px-3 text-xs" loading={isActionPending(`${REQUEST_STATUSES.UNRESOLVED}:${request.id}`)} variant="secondary" onClick={() => handleComplete(request, REQUEST_STATUSES.UNRESOLVED, "Nao resolveu")}>Nao resolvido</Button>
               </>
             ) : (
-              <Button className="h-8 px-3 text-xs" variant="warning" onClick={() => handleReactivate(request)}>Reativar</Button>
+              <Button className="h-8 px-3 text-xs" loading={isActionPending(`reactivate:${request.id}`)} variant="warning" onClick={() => handleReactivate(request)}>Reativar</Button>
             )}
           </div>
         ) : null}
@@ -378,7 +437,7 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
             <SelectInput className="h-8 bg-white text-xs" value={transferReasonById[request.id] || TRANSFER_REASONS[0]} onChange={(event) => setTransferReasonById((currentData) => ({ ...currentData, [request.id]: event.target.value }))}>
               {TRANSFER_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
             </SelectInput>
-            <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => handleTransfer(request)}>Transferir</Button>
+            <Button className="h-8 px-3 text-xs" loading={isActionPending(`transfer:${request.id}`)} variant="secondary" onClick={() => handleTransfer(request)}>Transferir</Button>
           </div>
         ) : null}
 
@@ -394,7 +453,7 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
                 value={commentTextById[request.id] || ""}
                 onChange={(event) => setCommentTextById((currentData) => ({ ...currentData, [request.id]: event.target.value }))}
               />
-              <Button className="h-9" onClick={() => handleComment(request)}>Enviar</Button>
+              <Button className="h-9" loading={isActionPending(`comment:${request.id}`)} onClick={() => handleComment(request)}>Enviar</Button>
             </div>
           ) : (
             <span className="mt-2 block text-xs font-bold text-amiste-gray/55">Chat em modo leitura. Reative a solicitacao para responder.</span>
@@ -492,9 +551,21 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
             </button>
           </div>
         </div>
-        {message ? <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-bold text-amiste-gray">{message}</div> : null}
+        {message ? (
+          <div className={cn(
+            "mt-4 rounded-2xl border px-4 py-3 text-sm font-bold",
+            messageTone === "success"
+              ? "border-amiste-green/20 bg-amiste-green/10 text-amiste-green"
+              : messageTone === "error"
+                ? "border-amiste-red/20 bg-amiste-red/10 text-amiste-red"
+                : "border-zinc-200 bg-zinc-50 text-amiste-gray"
+          )}
+          >
+            {message}
+          </div>
+        ) : null}
         <footer className="mt-5 flex justify-end">
-          <Button icon="fileClock" type="submit">Criar Solicitacao</Button>
+          <Button icon="fileClock" loading={isActionPending("create")} type="submit">Criar Solicitacao</Button>
         </footer>
       </form>
 
@@ -513,7 +584,7 @@ export default function SolicitacoesPage({ navigation, onSelectPage, user }) {
         </div>
         <div className="flex w-full flex-wrap justify-end gap-2 md:w-auto">
           {manager ? (
-            <Button className="h-9 px-3 text-xs" variant="secondary" onClick={handleCleanFinalized}>
+            <Button className="h-9 px-3 text-xs" loading={isActionPending("clean-finalized")} variant="secondary" onClick={handleCleanFinalized}>
               Limpar finalizadas
             </Button>
           ) : null}

@@ -7,9 +7,15 @@ export function useCollection(collectionName) {
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
-    const loadedRecords = await listEntity(collectionName);
-    setRecords(loadedRecords);
-    setIsLoading(false);
+    try {
+      const loadedRecords = await listEntity(collectionName);
+      setRecords(loadedRecords);
+      return loadedRecords;
+    } catch {
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
   }, [collectionName]);
 
   useEffect(() => {
@@ -25,21 +31,41 @@ export function useCollection(collectionName) {
     };
   }, [refresh]);
 
+  function refreshInBackground() {
+    refresh().catch(() => {
+      // A operacao principal ja retornou. A proxima sincronizacao global tenta novamente.
+    });
+  }
+
   async function createRecord(payload) {
     const createdRecord = await createEntity(collectionName, payload);
-    await refresh();
+
+    setRecords((currentRecords) => [
+      createdRecord,
+      ...currentRecords.filter((record) => record.id !== createdRecord.id),
+    ]);
+    refreshInBackground();
+
     return createdRecord;
   }
 
   async function updateRecord(id, payload, historyConfig) {
     const updatedRecord = await updateEntity(collectionName, id, payload, historyConfig);
-    await refresh();
+
+    setRecords((currentRecords) =>
+      currentRecords.map((record) => (record.id === id ? updatedRecord : record))
+    );
+    refreshInBackground();
+
     return updatedRecord;
   }
 
   async function deleteRecord(id) {
     const deletedRecord = await deleteEntity(collectionName, id);
-    await refresh();
+
+    setRecords((currentRecords) => currentRecords.filter((record) => record.id !== id));
+    refreshInBackground();
+
     return deletedRecord;
   }
 

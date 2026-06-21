@@ -14,7 +14,6 @@ import {
   buildAuditModuleTabs,
   buildAuditRows,
   buildAuditSelectOptions,
-  exportAuditRows,
   filterAuditRows,
 } from "../../services/auditService.js";
 import { getRolePermissions } from "../../services/permissionService.js";
@@ -25,11 +24,11 @@ export default function HistoricoPage({ user }) {
   const [roleFilter, setRoleFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEntryId, setSelectedEntryId] = useState("");
+  const [showAllEvents, setShowAllEvents] = useState(false);
   const { records } = useCollection("history");
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
   const canReadAccounts = rolePermissions.accounts !== "OC";
   const { records: accountRecords } = useCollection(canReadAccounts ? "accounts" : "history");
-  const canDownload = rolePermissions["action:download"] !== "OC";
   const rows = useMemo(
     () => buildAuditRows(records, canReadAccounts ? accountRecords : []),
     [accountRecords, canReadAccounts, records]
@@ -43,32 +42,25 @@ export default function HistoricoPage({ user }) {
     roleId: roleFilter,
     searchTerm,
   }), [actionFilter, activeModule, roleFilter, rows, searchTerm]);
+  const visibleRows = useMemo(
+    () => activeModule === "all" && !showAllEvents ? filteredRows.slice(0, 15) : filteredRows,
+    [activeModule, filteredRows, showAllEvents]
+  );
   const metrics = useMemo(() => buildAuditMetrics(rows), [rows]);
-  const selectedEntry = filteredRows.find((entry) => entry.id === selectedEntryId) || filteredRows[0] || null;
+  const selectedEntry = visibleRows.find((entry) => entry.id === selectedEntryId) || visibleRows[0] || null;
 
   useEffect(() => {
-    if (!selectedEntryId && filteredRows[0]) {
-      setSelectedEntryId(filteredRows[0].id);
+    if (!selectedEntryId && visibleRows[0]) {
+      setSelectedEntryId(visibleRows[0].id);
     }
-  }, [filteredRows, selectedEntryId]);
-
-  function handleExportLog() {
-    if (!canDownload) {
-      return;
-    }
-
-    exportAuditRows(filteredRows);
-  }
+  }, [selectedEntryId, visibleRows]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        actionIcon="download"
-        actionLabel={canDownload ? "Exportar Log" : ""}
         description="Log de atividades, edicao e auditoria do sistema."
         icon="history"
         title="Historico Geral"
-        onAction={handleExportLog}
       />
 
       {/* --- SECAO: INDICADORES DE AUDITORIA --- */}
@@ -105,7 +97,14 @@ export default function HistoricoPage({ user }) {
 
       {/* --- SECAO: FILTROS DO LOG --- */}
       <div className="space-y-4">
-        <EntityGroupTabs activeGroup={activeModule} groups={moduleTabs} onSelectGroup={setActiveModule} />
+        <EntityGroupTabs
+          activeGroup={activeModule}
+          groups={moduleTabs}
+          onSelectGroup={(moduleId) => {
+            setActiveModule(moduleId);
+            setShowAllEvents(false);
+          }}
+        />
         <div className="flex flex-wrap items-center justify-between gap-4">
           <TextInput
             className="w-96"
@@ -129,17 +128,21 @@ export default function HistoricoPage({ user }) {
                 </option>
               ))}
             </SelectInput>
-            <Button disabled={!canDownload} icon="download" variant="secondary" onClick={handleExportLog}>
-              Exportar
-            </Button>
           </div>
         </div>
+        {activeModule === "all" && filteredRows.length > 15 ? (
+          <div className="flex justify-end">
+            <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => setShowAllEvents((currentValue) => !currentValue)}>
+              {showAllEvents ? "Mostrar ultimos 15" : `Ver mais eventos (${filteredRows.length - 15})`}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {/* --- SECAO: LINHA DO TEMPO E DETALHE --- */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <AuditTimeline
-          rows={filteredRows}
+          rows={visibleRows}
           selectedId={selectedEntry?.id}
           onSelect={(entry) => setSelectedEntryId(entry.id)}
         />

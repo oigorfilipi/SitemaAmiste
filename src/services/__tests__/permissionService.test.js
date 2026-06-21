@@ -35,7 +35,11 @@ describe("permissionService action matrix", () => {
   it("separates granular section and field permissions from the base matrix", () => {
     expect(ALL_PERMISSION_RESOURCES).toContain("section:insumos.cadastro");
     expect(ALL_PERMISSION_RESOURCES).toContain("field:insumos.custo");
+    expect(buildRoleMatrixByScope("base").some((row) => row.pageId === "machines")).toBe(true);
+    expect(buildRoleMatrixByScope("base").some((row) => row.pageId === "action:create")).toBe(false);
+    expect(buildRoleMatrixByScope("base").every((row) => !row.pageId.includes(":"))).toBe(true);
     expect(buildRoleMatrixByScope("granular").some((row) => row.pageId === "section:insumos.cadastro")).toBe(true);
+    expect(buildRoleMatrixByScope("granular").some((row) => row.pageId === "action:create")).toBe(true);
     expect(buildRoleMatrixByScope("base").some((row) => row.pageId === "section:insumos.cadastro")).toBe(false);
   });
 });

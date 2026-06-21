@@ -49,7 +49,7 @@ export default function AuditTimeline({ rows, selectedId, onSelect }) {
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-3">
-                <strong className="truncate text-sm font-black text-amiste-black">{entry.title}</strong>
+                <strong className="truncate text-sm font-black text-amiste-black">{entry.displayTitle || entry.title}</strong>
                 <span className="shrink-0 text-xs font-black text-amiste-gray/55">{entry.timeLabel}</span>
               </span>
               <span className="mt-1 block truncate text-sm font-semibold text-amiste-gray/70">
