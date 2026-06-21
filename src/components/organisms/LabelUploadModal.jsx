@@ -17,6 +17,7 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
   const [description, setDescription] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [file, setFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState("");
   const categoryOptions = useMemo(() => buildLabelCategoryOptions(snapshot), [snapshot]);
 
@@ -26,13 +27,26 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
       setDescription("");
       setErrorMessage("");
       setFile(null);
+      setIsSubmitting(false);
       setName("");
     }
   }, [open]);
 
+  function handleClose() {
+    if (!isSubmitting) {
+      onClose?.();
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
     setErrorMessage("");
+    setIsSubmitting(true);
 
     try {
       const duplicate = existingLabels.some((label) => label.name.trim().toLowerCase() === name.trim().toLowerCase());
@@ -49,6 +63,8 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
       });
     } catch (uploadError) {
       setErrorMessage(uploadError.message || "Nao foi possivel enviar o arquivo.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -57,7 +73,7 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
       description="Envie arquivos externos de etiquetas e vincule cada item a uma categoria operacional."
       open={open}
       title="Enviar Arquivo de Etiqueta"
-      onClose={onClose}
+      onClose={handleClose}
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <FormSection eyebrow="Arquivo" title="Identificacao e vinculo">
@@ -138,10 +154,10 @@ export default function LabelUploadModal({ existingLabels = [], open, snapshot, 
         ) : null}
 
         <footer className="flex min-h-14 justify-end gap-3 border-t border-zinc-100 pt-4">
-          <Button variant="secondary" onClick={onClose}>
+          <Button disabled={isSubmitting} variant="secondary" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button icon="upload" type="submit">
+          <Button icon="upload" loading={isSubmitting} type="submit">
             Enviar Arquivo
           </Button>
         </footer>
