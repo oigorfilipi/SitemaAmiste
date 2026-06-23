@@ -32,6 +32,7 @@ import {
   buildRealtimeInventoryRows,
   deleteInventoryCountItem,
   exportInventoryRows,
+  getDraftInventoryCounts,
   getInventoryCountForDate,
   getLatestDraftInventoryCount,
   getInventoryGroup,
@@ -52,15 +53,38 @@ function spreadsheetRowsToInventoryRows(rows = []) {
     .map((row) => row.map((cell) => String(cell ?? "").trim()))
     .filter((row) => row.some(Boolean));
   const firstRow = normalizedRows[0] || [];
-  const hasHeader = firstRow.join(" ").toLowerCase().includes("nome") && firstRow.join(" ").toLowerCase().includes("quant");
+  const normalizedHeader = firstRow.map((cell) => cell.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
+  const nameColumnIndex = normalizedHeader.findIndex((cell) =>
+    ["nome", "nome do item", "item", "produto", "insumo", "maquina", "acessorio", "descricao"].some((label) => cell.includes(label))
+  );
+  const quantityColumnIndex = normalizedHeader.findIndex((cell) =>
+    ["quant", "qtd", "quantidade", "estoque", "saldo"].some((label) => cell.includes(label))
+  );
+  const hasHeader = nameColumnIndex >= 0 && quantityColumnIndex >= 0;
+  const resolvedNameIndex = hasHeader ? nameColumnIndex : 0;
+  const resolvedQuantityIndex = hasHeader ? quantityColumnIndex : 1;
   const dataRows = hasHeader ? normalizedRows.slice(1) : normalizedRows;
 
   return dataRows
     .map((row) => ({
-      name: row[0] || "",
-      quantity: Number(String(row[1] || "0").replace(",", ".")),
+      name: row[resolvedNameIndex] || "",
+      quantity: Number(String(row[resolvedQuantityIndex] || "0").replace(",", ".")),
     }))
     .filter((row) => row.name);
+}
+
+function formatDraftDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
 function syncMachineAssets(row, quantity) {
@@ -222,6 +246,7 @@ function InventoryHistoryModal({ groupId, open, selectedDate, snapshot, onChange
 export default function EstoquePage({ accessLevel = "OC", user }) {
   const [activeGroup, setActiveGroup] = useState("supplies");
   const [activeSpecialTab, setActiveSpecialTab] = useState("");
+  const [countModalTab, setCountModalTab] = useState("contagem");
   const [countRows, setCountRows] = useState([]);
   const [countNotes, setCountNotes] = useState("");
   const [editingItem, setEditingItem] = useState(null);
@@ -229,8 +254,10 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const [editQuantity, setEditQuantity] = useState("");
   const [editAssets, setEditAssets] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [importFeedback, setImportFeedback] = useState("");
   const [importText, setImportText] = useState("");
   const [importWarnings, setImportWarnings] = useState([]);
+  const [loadedDraftId, setLoadedDraftId] = useState("");
   const [locationError, setLocationError] = useState("");
   const [locationForm, setLocationForm] = useState(buildEmptyInventoryLocationForm);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
@@ -252,6 +279,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const metrics = useMemo(() => buildInventoryMetrics(snapshot, activeGroup), [activeGroup, snapshot]);
   const locationCards = useMemo(() => buildInventoryLocationCards(locationRecords, snapshot), [locationRecords, snapshot]);
   const latestCount = useMemo(() => getLatestInventoryCount(snapshot, activeGroup), [activeGroup, snapshot]);
+  const draftCounts = useMemo(() => getDraftInventoryCounts(snapshot, activeGroup), [activeGroup, snapshot]);
   const activeGroupAccess = getScopedCollectionAccess(user?.role, "inventory", activeGroup);
   const canMutate = accessLevel === "AC" && activeGroupAccess === "AC";
   const rolePermissions = useMemo(() => getRolePermissions(user?.role || "VEN"), [user?.role]);
@@ -266,10 +294,13 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const isLocationsTab = activeSpecialTab === "locations";
 
   function resetCountModal() {
+    setCountModalTab("contagem");
     setCountNotes("");
     setCountRows([]);
+    setImportFeedback("");
     setImportText("");
     setImportWarnings([]);
+    setLoadedDraftId("");
     setModalError("");
     setNewCountOpen(false);
   }
@@ -367,18 +398,32 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     const draftCount = getLatestDraftInventoryCount(snapshot, activeGroup);
     const manualRows = buildManualCountRows(snapshot, activeGroup);
 
-    setCountRows(draftCount
-      ? manualRows.map((row) => {
-        const draftItem = draftCount.items?.find((item) => item.itemId === row.itemId);
-
-        return draftItem ? { ...row, ...draftItem } : row;
-      })
-      : manualRows);
+    setCountRows(manualRows);
     setCountNotes("");
+    setCountModalTab(draftCount ? "rascunhos" : "contagem");
+    setImportFeedback(draftCount ? "Existe rascunho salvo para este grupo. Abra a aba Rascunhos para carregar." : "");
+    setImportText("");
+    setImportWarnings([]);
+    setLoadedDraftId("");
+    setModalError("");
+    setNewCountOpen(true);
+  }
+
+  function loadDraftCount(draftCount) {
+    const manualRows = buildManualCountRows(snapshot, activeGroup);
+
+    setCountRows(manualRows.map((row) => {
+      const draftItem = draftCount.items?.find((item) => item.itemId === row.itemId);
+
+      return draftItem ? { ...row, ...draftItem } : row;
+    }));
+    setCountNotes(draftCount.notes || "");
+    setLoadedDraftId(draftCount.id);
+    setCountModalTab("contagem");
+    setImportFeedback(`Rascunho de ${formatDraftDate(draftCount.countedAt || draftCount.createdAt)} carregado para edicao.`);
     setImportText("");
     setImportWarnings([]);
     setModalError("");
-    setNewCountOpen(true);
   }
 
   function openEditPhysicalItem(item) {
@@ -449,6 +494,12 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   }
 
   function applyImportedRows(importedRows) {
+    if (!importedRows.length) {
+      setModalError("Nenhum item valido foi encontrado no arquivo. Use colunas como Produto/Nome do Item e Quantidade/Qtd.");
+      setImportFeedback("");
+      return;
+    }
+
     const result = mergeImportedCountRows({
       currentRows: countRows,
       groupId: activeGroup,
@@ -458,6 +509,8 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
 
     setCountRows(result.rows);
     setImportWarnings(result.warnings);
+    setModalError("");
+    setImportFeedback(`${result.matchedCount} item(ns) preenchido(s) pelo arquivo.${result.unmatchedCount ? ` ${result.unmatchedCount} item(ns) precisam de vinculo manual.` : ""}`);
   }
 
   async function handleFileImport(event) {
@@ -473,12 +526,17 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
       return;
     }
 
-    if (/\.xlsx$/i.test(file.name)) {
-      applyImportedRows(spreadsheetRowsToInventoryRows(await readXlsxFile(file)));
-      return;
-    }
+    try {
+      if (/\.xlsx$/i.test(file.name)) {
+        applyImportedRows(spreadsheetRowsToInventoryRows(await readXlsxFile(file)));
+        return;
+      }
 
-    applyImportedRows(parseInventoryText(await file.text()));
+      applyImportedRows(parseInventoryText(await file.text()));
+    } catch (error) {
+      setModalError(error.message || "Nao foi possivel importar o arquivo.");
+      setImportFeedback("");
+    }
   }
 
   function handleTextImport() {
@@ -509,6 +567,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
 
     try {
       await saveInventoryAuditCount({
+        existingCountId: loadedDraftId,
         groupId: activeGroup,
         notes: countNotes,
         rows: countRows,
@@ -612,7 +671,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
             </Button>
             {canCreate ? (
               <Button icon="checkSquare" onClick={openNewCount}>
-                Nova Contagem
+                Nova Contagem {group.label}
               </Button>
             ) : null}
           </div>
@@ -660,10 +719,88 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
         description="Importe dados, cole uma lista ou preencha manualmente uma contagem cega."
         open={newCountOpen}
         size="wide"
-        title={`Nova Contagem - ${group.label}`}
+        title={`Nova Contagem ${group.label}`}
         onClose={resetCountModal}
       >
         <div className="space-y-5">
+          <div className="flex flex-wrap gap-2 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-sm">
+            <button
+              className={countModalTab === "contagem"
+                ? "inline-flex h-8 items-center justify-center rounded-xl bg-amiste-red px-3 text-xs font-black text-white shadow-sm transition duration-200"
+                : "inline-flex h-8 items-center justify-center rounded-xl px-3 text-xs font-black text-amiste-gray transition duration-200 hover:bg-amiste-red/10 hover:text-amiste-red"}
+              type="button"
+              onClick={() => setCountModalTab("contagem")}
+            >
+              Contagem
+            </button>
+            <button
+              className={countModalTab === "rascunhos"
+                ? "inline-flex h-8 items-center justify-center rounded-xl bg-amiste-red px-3 text-xs font-black text-white shadow-sm transition duration-200"
+                : "inline-flex h-8 items-center justify-center rounded-xl px-3 text-xs font-black text-amiste-gray transition duration-200 hover:bg-amiste-red/10 hover:text-amiste-red"}
+              type="button"
+              onClick={() => setCountModalTab("rascunhos")}
+            >
+              Rascunhos ({draftCounts.length})
+            </button>
+          </div>
+
+          {countModalTab === "rascunhos" ? (
+            <section className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+              <div>
+                <h3 className="font-display text-base font-black text-amiste-black">Rascunhos de {group.label}</h3>
+                <p className="mt-1 text-sm font-semibold text-amiste-gray/60">
+                  Carregue uma contagem salva anteriormente para continuar de onde parou.
+                </p>
+              </div>
+
+              {draftCounts.length ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {draftCounts.map((draftCount) => (
+                    <article className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm" key={draftCount.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <strong className="block font-display text-sm font-black text-amiste-black">
+                            Rascunho {formatDraftDate(draftCount.countedAt || draftCount.createdAt)}
+                          </strong>
+                          <span className="mt-1 block text-xs font-bold text-amiste-gray/60">
+                            {draftCount.countedBy || "Sem responsavel"} | {draftCount.totalQuantity || 0} unidade(s)
+                          </span>
+                        </div>
+                        <span className="rounded-full bg-amiste-yellow/30 px-2 py-1 text-[10px] font-black uppercase text-yellow-900">
+                          Rascunho
+                        </span>
+                      </div>
+                      {draftCount.notes ? (
+                        <p className="mt-3 line-clamp-2 text-xs font-semibold leading-5 text-amiste-gray/70">
+                          {draftCount.notes}
+                        </p>
+                      ) : null}
+                      <Button className="mt-4 h-8 px-3 text-xs" icon="archive" variant="secondary" onClick={() => loadDraftCount(draftCount)}>
+                        Carregar rascunho
+                      </Button>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-center text-sm font-bold text-amiste-gray/60">
+                  Nenhum rascunho salvo para {group.label}.
+                </div>
+              )}
+            </section>
+          ) : (
+            <>
+              {loadedDraftId ? (
+                <div className="rounded-2xl border border-amiste-yellow/50 bg-amiste-yellow/20 px-4 py-3 text-sm font-bold text-yellow-900">
+                  Editando rascunho carregado. Ao salvar, este mesmo rascunho sera atualizado.
+                </div>
+              ) : null}
+
+              {importFeedback ? (
+                <div className="rounded-2xl border border-amiste-blue/20 bg-amiste-blue/10 px-4 py-3 text-sm font-bold text-amiste-blue">
+                  {importFeedback}
+                </div>
+              ) : null}
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <section className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
               <h3 className="font-display text-base font-black text-amiste-black">Importacao por Excel/CSV</h3>
@@ -751,6 +888,8 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
               Salvar Contagem
             </Button>
           </footer>
+            </>
+          )}
         </div>
       </Modal>
 

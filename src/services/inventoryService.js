@@ -160,6 +160,10 @@ export function getLatestDraftInventoryCount(snapshot, groupId) {
   return getInventoryCounts(snapshot, groupId).find((count) => count.status === "rascunho") || null;
 }
 
+export function getDraftInventoryCounts(snapshot, groupId) {
+  return getInventoryCounts(snapshot, groupId).filter((count) => count.status === "rascunho");
+}
+
 export function getInventoryCountForDate(snapshot, groupId, selectedDate) {
   const targetDate = selectedDate ? new Date(`${selectedDate}T23:59:59.999`) : new Date();
   const targetTime = Number.isNaN(targetDate.getTime()) ? Date.now() : targetDate.getTime();
@@ -353,6 +357,9 @@ function findBestItemMatch(name, items) {
 
 export function mergeImportedCountRows({ currentRows, groupId, importedRows, snapshot }) {
   const items = getGroupRecords(snapshot, groupId);
+  let matchedCount = 0;
+  let suggestedCount = 0;
+  let unmatchedCount = 0;
   const warnings = [];
   const nextRows = currentRows.map((row) => ({ ...row }));
 
@@ -360,6 +367,7 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
     const match = findBestItemMatch(importedRow.name, items);
 
     if (!match.item) {
+      unmatchedCount += 1;
       warnings.push({
         id: buildId("unmatched"),
         message: `"${importedRow.name}" nao foi identificado. Vincule manualmente a um item cadastrado.`,
@@ -372,6 +380,7 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
     const rowIndex = nextRows.findIndex((row) => row.itemId === match.item.id);
 
     if (rowIndex >= 0) {
+      matchedCount += 1;
       nextRows[rowIndex] = {
         ...nextRows[rowIndex],
         quantity: importedRow.quantity,
@@ -380,6 +389,7 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
     }
 
     if (match.confidence !== "exact") {
+      suggestedCount += 1;
       warnings.push({
         id: buildId("suggested"),
         itemId: match.item.id,
@@ -390,7 +400,7 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
     }
   });
 
-  return { rows: nextRows, warnings };
+  return { matchedCount, rows: nextRows, suggestedCount, unmatchedCount, warnings };
 }
 
 function normalizeCountRows(rows = []) {
@@ -446,7 +456,7 @@ async function syncCatalogStockFromCount({ groupId, rows }) {
   ));
 }
 
-export async function saveInventoryAuditCount({ groupId, notes = "", rows, status = "finalizado", user }) {
+export async function saveInventoryAuditCount({ existingCountId = "", groupId, notes = "", rows, status = "finalizado", user }) {
   const normalizedRows = normalizeCountRows(rows);
   const validationError = status === "finalizado" ? validateMachineAssets(normalizedRows, groupId) : "";
 
@@ -455,7 +465,7 @@ export async function saveInventoryAuditCount({ groupId, notes = "", rows, statu
   }
 
   const countedAt = new Date().toISOString();
-  const count = await createEntity("inventoryCounts", {
+  const payload = {
     countedAt,
     countedBy: buildAuditActor(user),
     groupId,
@@ -464,7 +474,15 @@ export async function saveInventoryAuditCount({ groupId, notes = "", rows, statu
     status,
     totalItems: normalizedRows.length,
     totalQuantity: normalizedRows.reduce((total, row) => total + row.quantity, 0),
-  });
+  };
+  const count = existingCountId
+    ? await updateEntity("inventoryCounts", existingCountId, payload, {
+      action: status === "finalizado" ? "Finalizou Rascunho" : "Atualizou Rascunho",
+      details: `Contagem ${status} atualizada com ${normalizedRows.length} item(ns).`,
+      module: "Estoque",
+      title: `Contagem ${getInventoryGroup(groupId).label}`,
+    })
+    : await createEntity("inventoryCounts", payload);
 
   if (status === "finalizado") {
     await syncCatalogStockFromCount({ groupId, rows: normalizedRows });

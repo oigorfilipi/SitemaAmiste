@@ -7,6 +7,7 @@ export function useErpSnapshot() {
     machines: [],
     supplies: [],
     accessories: [],
+    inventoryCounts: [],
     inventoryLocations: [],
     clients: [],
     checklists: [],
