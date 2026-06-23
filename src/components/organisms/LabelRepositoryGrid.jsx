@@ -37,11 +37,11 @@ export default function LabelRepositoryGrid({
   }
 
   return (
-    <section className="grid auto-rows-max grid-cols-1 items-start gap-3 xl:grid-cols-2">
+    <section className="flex flex-wrap items-start gap-3">
       {labels.map((label) => (
         <article
           className={cn(
-            "h-fit cursor-pointer rounded-2xl border bg-white p-3 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amiste-red/50 hover:shadow-amiste-soft",
+            "h-fit w-full cursor-pointer rounded-2xl border bg-white p-3 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-amiste-red/50 hover:shadow-amiste-soft sm:w-fit sm:min-w-[360px] sm:max-w-[540px]",
             selectedId === label.id ? "border-amiste-red ring-2 ring-amiste-red/15" : "border-zinc-200"
           )}
           key={label.id}
@@ -84,7 +84,7 @@ export default function LabelRepositoryGrid({
 
           {label.hasFile && !label.canPrint ? (
             <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-bold leading-4 text-amber-800">
-              Impressao direta indisponivel para {label.format}. Baixe para imprimir no aplicativo adequado.
+              Impressao direta indisponivel. Baixe para imprimir no app adequado.
             </p>
           ) : null}
 
