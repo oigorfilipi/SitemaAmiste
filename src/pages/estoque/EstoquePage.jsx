@@ -48,9 +48,35 @@ function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function normalizeSpreadsheetCell(cell) {
+  return String(cell ?? "").trim();
+}
+
+function normalizeSpreadsheetRow(row) {
+  if (Array.isArray(row)) {
+    return row.map(normalizeSpreadsheetCell);
+  }
+
+  if (row && typeof row === "object") {
+    return Object.values(row).map(normalizeSpreadsheetCell);
+  }
+
+  return [normalizeSpreadsheetCell(row)];
+}
+
+function parseSpreadsheetQuantity(value) {
+  const normalizedValue = String(value || "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(",", ".");
+  const numericValue = Number(normalizedValue);
+
+  return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
 function spreadsheetRowsToInventoryRows(rows = []) {
-  const normalizedRows = rows
-    .map((row) => row.map((cell) => String(cell ?? "").trim()))
+  const sourceRows = Array.isArray(rows) ? rows : Object.values(rows || {});
+  const normalizedRows = sourceRows
+    .map(normalizeSpreadsheetRow)
     .filter((row) => row.some(Boolean));
   const firstRow = normalizedRows[0] || [];
   const normalizedHeader = firstRow.map((cell) => cell.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
@@ -68,7 +94,7 @@ function spreadsheetRowsToInventoryRows(rows = []) {
   return dataRows
     .map((row) => ({
       name: row[resolvedNameIndex] || "",
-      quantity: Number(String(row[resolvedQuantityIndex] || "0").replace(",", ".")),
+      quantity: parseSpreadsheetQuantity(row[resolvedQuantityIndex]),
     }))
     .filter((row) => row.name);
 }
