@@ -42,61 +42,11 @@ import {
   saveInventoryAuditCount,
   updateInventoryCountItem,
 } from "../../services/inventoryService.js";
+import { spreadsheetRowsToInventoryRows } from "../../services/inventorySpreadsheetService.js";
 import { getRolePermissions, getScopedCollectionAccess } from "../../services/permissionService.js";
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function normalizeSpreadsheetCell(cell) {
-  return String(cell ?? "").trim();
-}
-
-function normalizeSpreadsheetRow(row) {
-  if (Array.isArray(row)) {
-    return row.map(normalizeSpreadsheetCell);
-  }
-
-  if (row && typeof row === "object") {
-    return Object.values(row).map(normalizeSpreadsheetCell);
-  }
-
-  return [normalizeSpreadsheetCell(row)];
-}
-
-function parseSpreadsheetQuantity(value) {
-  const normalizedValue = String(value || "")
-    .replace(/[^\d,.-]/g, "")
-    .replace(",", ".");
-  const numericValue = Number(normalizedValue);
-
-  return Number.isFinite(numericValue) ? numericValue : 0;
-}
-
-function spreadsheetRowsToInventoryRows(rows = []) {
-  const sourceRows = Array.isArray(rows) ? rows : Object.values(rows || {});
-  const normalizedRows = sourceRows
-    .map(normalizeSpreadsheetRow)
-    .filter((row) => row.some(Boolean));
-  const firstRow = normalizedRows[0] || [];
-  const normalizedHeader = firstRow.map((cell) => cell.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
-  const nameColumnIndex = normalizedHeader.findIndex((cell) =>
-    ["nome", "nome do item", "item", "produto", "insumo", "maquina", "acessorio", "descricao"].some((label) => cell.includes(label))
-  );
-  const quantityColumnIndex = normalizedHeader.findIndex((cell) =>
-    ["quant", "qtd", "quantidade", "estoque", "saldo"].some((label) => cell.includes(label))
-  );
-  const hasHeader = nameColumnIndex >= 0 && quantityColumnIndex >= 0;
-  const resolvedNameIndex = hasHeader ? nameColumnIndex : 0;
-  const resolvedQuantityIndex = hasHeader ? quantityColumnIndex : 1;
-  const dataRows = hasHeader ? normalizedRows.slice(1) : normalizedRows;
-
-  return dataRows
-    .map((row) => ({
-      name: row[resolvedNameIndex] || "",
-      quantity: parseSpreadsheetQuantity(row[resolvedQuantityIndex]),
-    }))
-    .filter((row) => row.name);
 }
 
 function formatDraftDate(value) {
