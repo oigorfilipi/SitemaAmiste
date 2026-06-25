@@ -1,4 +1,10 @@
-import { createEntity, deleteEntity, updateEntity } from "./erpService.js";
+import {
+  createEntity,
+  deleteEntity,
+  listEntity,
+  replaceEntityCollection,
+  updateEntity,
+} from "./erpService.js";
 import { exportRecordsToCsv } from "./exportService.js";
 
 export const INVENTORY_GROUPS = [
@@ -144,6 +150,25 @@ function resolveTurnoverStatus(physicalQuantity, realTimeQuantity) {
 
 function getGroupRecords(snapshot, groupId) {
   return snapshot[getInventoryGroup(groupId).id] || [];
+}
+
+function buildImportedCatalogRecord(groupId, importedRow) {
+  const now = new Date().toISOString();
+
+  return {
+    category: "Importado pela contagem",
+    cost: 0,
+    createdAt: now,
+    description: "Cadastro criado automaticamente durante a importacao da contagem de estoque.",
+    id: buildId(groupId),
+    minStock: 1,
+    name: String(importedRow.name || "").trim(),
+    price: 0,
+    status: "acabou",
+    stock: 0,
+    unit: "un.",
+    updatedAt: now,
+  };
 }
 
 function getInventoryCounts(snapshot, groupId) {
@@ -403,6 +428,32 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
   return { matchedCount, rows: nextRows, suggestedCount, unmatchedCount, warnings };
 }
 
+export async function createImportedInventoryItems({ groupId, importedRows }) {
+  if (!["supplies", "accessories"].includes(groupId)) {
+    throw new Error("Cadastros automaticos pela contagem estao disponiveis apenas para insumos e acessorios.");
+  }
+
+  const currentRecords = await listEntity(groupId);
+  const existingNames = new Set(currentRecords.map((record) => normalizeText(record.name)));
+  const recordsToCreate = importedRows
+    .filter((row) => row.name?.trim() && !existingNames.has(normalizeText(row.name)))
+    .filter((row, index, rows) =>
+      rows.findIndex((candidate) => normalizeText(candidate.name) === normalizeText(row.name)) === index
+    )
+    .map((row) => buildImportedCatalogRecord(groupId, row));
+
+  if (!recordsToCreate.length) {
+    return { createdRecords: [], records: currentRecords };
+  }
+
+  const records = await replaceEntityCollection(groupId, [...currentRecords, ...recordsToCreate]);
+
+  return {
+    createdRecords: recordsToCreate,
+    records,
+  };
+}
+
 function normalizeCountRows(rows = []) {
   return rows
     .map((row) => ({
@@ -437,28 +488,51 @@ function validateMachineAssets(rows, groupId) {
 }
 
 async function syncCatalogStockFromCount({ groupId, rows }) {
-  await Promise.all(rows.map((row) =>
-    updateEntity(
-      groupId,
-      row.itemId,
-      {
-        inventoryAssets: row.assets,
-        stock: row.quantity,
-        status: resolveInventoryStatus({ minStock: row.minStock, status: row.currentStatus }, row.quantity),
-      },
-      {
-        action: "Sincronizou Contagem",
-        details: `Nova contagem fisica consolidada em ${row.quantity}.`,
-        module: "Estoque",
-        title: row.itemName,
-      }
-    )
-  ));
+  const countedRows = new Map(rows.map((row) => [row.itemId, row]));
+  const currentRecords = await listEntity(groupId);
+  const nextRecords = currentRecords.map((record) => {
+    const countedRow = countedRows.get(record.id);
+
+    if (!countedRow) {
+      return record;
+    }
+
+    return {
+      ...record,
+      inventoryAssets: countedRow.assets,
+      stock: countedRow.quantity,
+      status: resolveInventoryStatus(
+        { minStock: countedRow.minStock, status: countedRow.currentStatus },
+        countedRow.quantity
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  await replaceEntityCollection(groupId, nextRecords);
 }
 
-export async function saveInventoryAuditCount({ existingCountId = "", groupId, notes = "", rows, status = "finalizado", user }) {
+export async function saveInventoryAuditCount({
+  existingCountId = "",
+  groupId,
+  notes = "",
+  pendingItems = [],
+  rows,
+  status = "finalizado",
+  user,
+}) {
   const normalizedRows = normalizeCountRows(rows);
+  const unresolvedItems = pendingItems.filter((item) => !item.itemId);
+  const storedPendingItems = status === "rascunho" ? pendingItems : [];
   const validationError = status === "finalizado" ? validateMachineAssets(normalizedRows, groupId) : "";
+
+  if (!normalizedRows.length && !unresolvedItems.length) {
+    throw new Error("A contagem esta vazia. Importe um arquivo ou informe ao menos um item.");
+  }
+
+  if (status === "finalizado" && unresolvedItems.length) {
+    throw new Error(`Existem ${unresolvedItems.length} item(ns) sem vinculo. Vincule ou cadastre os itens antes de finalizar.`);
+  }
 
   if (validationError) {
     throw new Error(validationError);
@@ -471,8 +545,9 @@ export async function saveInventoryAuditCount({ existingCountId = "", groupId, n
     groupId,
     items: normalizedRows,
     notes,
+    pendingItems: storedPendingItems,
     status,
-    totalItems: normalizedRows.length,
+    totalItems: normalizedRows.length + unresolvedItems.length,
     totalQuantity: normalizedRows.reduce((total, row) => total + row.quantity, 0),
   };
   const count = existingCountId

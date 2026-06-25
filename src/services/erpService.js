@@ -506,6 +506,10 @@ export async function listEntity(collectionName) {
   return listRecords(collectionName);
 }
 
+export async function replaceEntityCollection(collectionName, records) {
+  return setCollection(collectionName, records);
+}
+
 export async function createEntity(collectionName, payload) {
   if (collectionName === "sales") {
     return createSale(payload);

@@ -30,6 +30,7 @@ import {
   buildManualCountRows,
   buildPhysicalInventoryRows,
   buildRealtimeInventoryRows,
+  createImportedInventoryItems,
   deleteInventoryCountItem,
   exportInventoryRows,
   getDraftInventoryCounts,
@@ -75,6 +76,17 @@ function syncMachineAssets(row, quantity) {
 
 function CountRowsEditor({ groupId, rows, onChangeAsset, onChangeQuantity }) {
   const isMachines = groupId === "machines";
+
+  if (!rows.length) {
+    return (
+      <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/70 px-5 py-8 text-center">
+        <strong className="block font-display text-sm font-black text-amiste-black">Nenhum item cadastrado neste grupo</strong>
+        <span className="mt-1 block text-sm font-semibold text-amiste-gray/60">
+          Importe um arquivo para cadastrar ou vincular itens antes de salvar a contagem.
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="max-h-[46vh] space-y-3 overflow-y-auto pr-1">
@@ -219,7 +231,7 @@ function InventoryHistoryModal({ groupId, open, selectedDate, snapshot, onChange
   );
 }
 
-export default function EstoquePage({ accessLevel = "OC", user }) {
+export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) {
   const [activeGroup, setActiveGroup] = useState("supplies");
   const [activeSpecialTab, setActiveSpecialTab] = useState("");
   const [countModalTab, setCountModalTab] = useState("contagem");
@@ -233,6 +245,9 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const [importFeedback, setImportFeedback] = useState("");
   const [importText, setImportText] = useState("");
   const [importWarnings, setImportWarnings] = useState([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isRegisteringImported, setIsRegisteringImported] = useState(false);
+  const [submittingStatus, setSubmittingStatus] = useState("");
   const [loadedDraftId, setLoadedDraftId] = useState("");
   const [locationError, setLocationError] = useState("");
   const [locationForm, setLocationForm] = useState(buildEmptyInventoryLocationForm);
@@ -268,6 +283,8 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
   const canUpdateLocation = accessLevel === "AC" && ["AC", "UP"].includes(rolePermissions["action:update"]);
   const canDeleteLocation = accessLevel === "AC" && rolePermissions["action:delete"] === "AC";
   const isLocationsTab = activeSpecialTab === "locations";
+  const unmatchedImportCount = importWarnings.filter((warning) => warning.name && !warning.itemId).length;
+  const canAutoRegisterImports = ["supplies", "accessories"].includes(activeGroup);
 
   function resetCountModal() {
     setCountModalTab("contagem");
@@ -276,8 +293,11 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     setImportFeedback("");
     setImportText("");
     setImportWarnings([]);
+    setIsImporting(false);
+    setIsRegisteringImported(false);
     setLoadedDraftId("");
     setModalError("");
+    setSubmittingStatus("");
     setNewCountOpen(false);
   }
 
@@ -398,7 +418,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     setCountModalTab("contagem");
     setImportFeedback(`Rascunho de ${formatDraftDate(draftCount.countedAt || draftCount.createdAt)} carregado para edicao.`);
     setImportText("");
-    setImportWarnings([]);
+    setImportWarnings(Array.isArray(draftCount.pendingItems) ? draftCount.pendingItems : []);
     setModalError("");
   }
 
@@ -486,7 +506,12 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     setCountRows(result.rows);
     setImportWarnings(result.warnings);
     setModalError("");
-    setImportFeedback(`${result.matchedCount} item(ns) preenchido(s) pelo arquivo.${result.unmatchedCount ? ` ${result.unmatchedCount} item(ns) precisam de vinculo manual.` : ""}`);
+    setImportFeedback(
+      `${result.matchedCount} item(ns) preenchido(s) pelo arquivo.` +
+      (result.unmatchedCount
+        ? ` ${result.unmatchedCount} item(ns) ainda nao existem no cadastro e precisam ser vinculados ou cadastrados.`
+        : " Todos os itens foram reconhecidos.")
+    );
   }
 
   async function handleFileImport(event) {
@@ -503,6 +528,9 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     }
 
     try {
+      setIsImporting(true);
+      setModalError("");
+
       if (/\.xlsx$/i.test(file.name)) {
         applyImportedRows(spreadsheetRowsToInventoryRows(await readXlsxFile(file)));
         return;
@@ -512,6 +540,9 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
     } catch (error) {
       setModalError(error.message || "Nao foi possivel importar o arquivo.");
       setImportFeedback("");
+    } finally {
+      setIsImporting(false);
+      event.target.value = "";
     }
   }
 
@@ -531,6 +562,62 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
       row.itemId === itemId ? { ...row, quantity: warning.quantity, sourceName: warning.name } : row
     ));
     setImportWarnings((currentWarnings) => currentWarnings.filter((item) => item.id !== warningId));
+    setImportFeedback(`"${warning.name}" foi vinculado a "${targetRow.itemName}".`);
+    setModalError("");
+  }
+
+  async function registerImportedItems() {
+    const unmatchedItems = importWarnings
+      .filter((warning) => warning.name && !warning.itemId)
+      .map((warning) => ({ name: warning.name, quantity: warning.quantity }));
+
+    if (!unmatchedItems.length || isRegisteringImported) {
+      return;
+    }
+
+    if (!["supplies", "accessories"].includes(activeGroup)) {
+      setModalError("Maquinas precisam ser cadastradas manualmente com dados tecnicos, serie e patrimonio.");
+      return;
+    }
+
+    setIsRegisteringImported(true);
+    setModalError("");
+
+    try {
+      const result = await createImportedInventoryItems({
+        groupId: activeGroup,
+        importedRows: unmatchedItems,
+      });
+      const nextSnapshot = { ...snapshot, [activeGroup]: result.records };
+      const currentValues = new Map(countRows.map((row) => [row.itemId, row]));
+      const importedValues = new Map(unmatchedItems.map((row) => [
+        row.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
+        row,
+      ]));
+      const nextRows = buildManualCountRows(nextSnapshot, activeGroup).map((row) => {
+        const currentRow = currentValues.get(row.itemId);
+        const importedRow = importedValues.get(
+          row.itemName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+        );
+
+        if (currentRow) {
+          return currentRow;
+        }
+
+        return importedRow
+          ? { ...row, quantity: importedRow.quantity, sourceName: importedRow.name }
+          : row;
+      });
+
+      setCountRows(nextRows);
+      setImportWarnings((currentWarnings) => currentWarnings.filter((warning) => warning.itemId));
+      setImportFeedback(`${result.createdRecords.length} novo(s) ${group.label.toLowerCase()} cadastrado(s) e preenchido(s) na contagem.`);
+      await refresh();
+    } catch (error) {
+      setModalError(error.message || "Nao foi possivel cadastrar os itens importados.");
+    } finally {
+      setIsRegisteringImported(false);
+    }
   }
 
   async function submitCount(status) {
@@ -539,13 +626,19 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
       return;
     }
 
+    if (submittingStatus) {
+      return;
+    }
+
     setModalError("");
+    setSubmittingStatus(status);
 
     try {
       await saveInventoryAuditCount({
         existingCountId: loadedDraftId,
         groupId: activeGroup,
         notes: countNotes,
+        pendingItems: importWarnings,
         rows: countRows,
         status,
         user,
@@ -554,6 +647,8 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
       await refresh();
     } catch (error) {
       setModalError(error.message || "Nao foi possivel salvar a contagem.");
+    } finally {
+      setSubmittingStatus("");
     }
   }
 
@@ -740,6 +835,7 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
                           </strong>
                           <span className="mt-1 block text-xs font-bold text-amiste-gray/60">
                             {draftCount.countedBy || "Sem responsavel"} | {draftCount.totalQuantity || 0} unidade(s)
+                            {draftCount.pendingItems?.length ? ` | ${draftCount.pendingItems.length} pendente(s)` : ""}
                           </span>
                         </div>
                         <span className="rounded-full bg-amiste-yellow/30 px-2 py-1 text-[10px] font-black uppercase text-yellow-900">
@@ -784,10 +880,13 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
               <input
                 accept=".csv,.xlsx"
                 className="mt-4 block h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-amiste-gray file:mr-4 file:rounded-xl file:border-0 file:bg-amiste-black file:px-3 file:py-1.5 file:text-xs file:font-black file:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!canUpload}
+                disabled={!canUpload || isImporting}
                 type="file"
                 onChange={handleFileImport}
               />
+              {isImporting ? (
+                <p className="mt-2 text-xs font-bold text-amiste-blue">Lendo e conferindo o arquivo...</p>
+              ) : null}
               {!canUpload ? (
                 <p className="mt-2 text-xs font-bold text-amiste-red">
                   Upload de arquivos bloqueado para este perfil.
@@ -810,14 +909,49 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
 
           {importWarnings.length ? (
             <section className="rounded-2xl border border-amiste-yellow/60 bg-amiste-yellow/20 p-4">
-              <h3 className="font-display text-base font-black text-amiste-black">Vinculos para revisao</h3>
-              <div className="mt-3 space-y-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-base font-black text-amiste-black">Vinculos para revisao</h3>
+                  <p className="mt-1 text-sm font-semibold text-amiste-gray/65">
+                    {unmatchedImportCount
+                      ? `${unmatchedImportCount} item(ns) nao existem no cadastro de ${group.label.toLowerCase()}.`
+                      : "Os itens abaixo foram associados por semelhanca. Revise os vinculos."}
+                  </p>
+                </div>
+                {unmatchedImportCount && canAutoRegisterImports ? (
+                  <Button
+                    icon="packagePlus"
+                    loading={isRegisteringImported}
+                    variant="warning"
+                    onClick={registerImportedItems}
+                  >
+                    Cadastrar {unmatchedImportCount} como novos
+                  </Button>
+                ) : null}
+              </div>
+
+              {unmatchedImportCount && !canAutoRegisterImports ? (
+                <div className="mt-3 rounded-xl border border-amiste-red/20 bg-white px-4 py-3 text-sm font-bold text-amiste-red">
+                  Maquinas exigem cadastro individual com dados tecnicos, serie e patrimonio.
+                  <Button className="ml-3 h-8 px-3 text-xs" variant="secondary" onClick={() => onSelectPage?.("machines")}>
+                    Abrir Maquinas
+                  </Button>
+                </div>
+              ) : null}
+
+              <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
                 {importWarnings.map((warning) => (
                   <div className="grid grid-cols-1 items-center gap-3 rounded-2xl bg-white p-3 md:grid-cols-[minmax(0,1fr)_260px]" key={warning.id}>
                     <span className="text-sm font-bold text-amiste-gray">{warning.message}</span>
                     {warning.name ? (
-                      <SelectInput defaultValue="" onChange={(event) => handleManualLink(warning.id, event.target.value)}>
-                        <option value="">Vincular manualmente</option>
+                      <SelectInput
+                        defaultValue=""
+                        disabled={!countRows.length}
+                        onChange={(event) => handleManualLink(warning.id, event.target.value)}
+                      >
+                        <option value="">
+                          {countRows.length ? "Vincular manualmente" : `Nenhum ${group.label.toLowerCase()} cadastrado`}
+                        </option>
                         {countRows.map((row) => (
                           <option key={row.itemId} value={row.itemId}>
                             {row.itemName}
@@ -857,10 +991,19 @@ export default function EstoquePage({ accessLevel = "OC", user }) {
             <Button variant="secondary" onClick={resetCountModal}>
               Cancelar
             </Button>
-            <Button icon="archive" variant="secondary" onClick={() => submitCount("rascunho")}>
+            <Button
+              icon="archive"
+              loading={submittingStatus === "rascunho"}
+              variant="secondary"
+              onClick={() => submitCount("rascunho")}
+            >
               Salvar Rascunho
             </Button>
-            <Button icon="checkSquare" onClick={() => submitCount("finalizado")}>
+            <Button
+              icon="checkSquare"
+              loading={submittingStatus === "finalizado"}
+              onClick={() => submitCount("finalizado")}
+            >
               Salvar Contagem
             </Button>
           </footer>
