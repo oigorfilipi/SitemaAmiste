@@ -23,5 +23,7 @@ export function useDashboard(role = "VEN") {
     alerts: [],
     latestChecklists: [],
     latestOperations: [],
+  }, {
+    cacheKey: `dashboard:${role}`,
   });
 }

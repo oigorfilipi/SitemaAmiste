@@ -1,23 +1,48 @@
 import { useEffect, useState } from "react";
+import {
+  readResourceCache,
+  runCachedRequest,
+  writeResourceCache,
+} from "../services/dataCacheService.js";
 
-export function useAsyncResource(loader, initialValue) {
-  const [data, setData] = useState(initialValue);
-  const [isLoading, setIsLoading] = useState(true);
+export function useAsyncResource(loader, initialValue, options = {}) {
+  const { cacheKey } = options;
+  const [data, setData] = useState(() => (cacheKey ? readResourceCache(cacheKey) : null) || initialValue);
+  const [isLoading, setIsLoading] = useState(() => !(cacheKey && readResourceCache(cacheKey)));
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
+    const cachedData = cacheKey ? readResourceCache(cacheKey) : null;
+
+    if (cachedData) {
+      setData(cachedData);
+      setIsLoading(false);
+    } else {
+      setData(initialValue);
+      setIsLoading(true);
+    }
 
     /* --- SECAO: CARREGAMENTO ASSINCRONO ---
      * O guard evita setState depois que o componente desmontar, algo comum quando rotas mudam rapido.
      */
     async function loadResource() {
       try {
-        setIsLoading(true);
-        const loadedData = await loader();
+        if (cachedData) {
+          setIsRefreshing(true);
+        } else {
+          setIsLoading(true);
+        }
+
+        const loadedData = await runCachedRequest(
+          cacheKey ? `resource:${cacheKey}` : "",
+          loader
+        );
+        const nextData = cacheKey ? writeResourceCache(cacheKey, loadedData) : loadedData;
 
         if (isMounted) {
-          setData(loadedData);
+          setData(nextData);
           setError(null);
         }
       } catch (resourceError) {
@@ -27,6 +52,7 @@ export function useAsyncResource(loader, initialValue) {
       } finally {
         if (isMounted) {
           setIsLoading(false);
+          setIsRefreshing(false);
         }
       }
     }
@@ -36,7 +62,7 @@ export function useAsyncResource(loader, initialValue) {
     return () => {
       isMounted = false;
     };
-  }, [loader]);
+  }, [cacheKey, loader]);
 
-  return { data, isLoading, error };
+  return { data, isLoading, isRefreshing, error };
 }

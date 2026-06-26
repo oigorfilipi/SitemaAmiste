@@ -9,5 +9,7 @@ export function useNavigation() {
     primary: [],
     header: [],
     quickAccess: [],
+  }, {
+    cacheKey: "navigation",
   });
 }
