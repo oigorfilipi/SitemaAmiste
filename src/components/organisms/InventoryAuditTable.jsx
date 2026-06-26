@@ -47,6 +47,15 @@ export default function InventoryAuditTable({
   const [expandedId, setExpandedId] = useState("");
   const isPhysical = mode === "physical";
   const isMachines = groupId === "machines";
+  const tableSurfaceClass = isPhysical
+    ? "border-zinc-200 bg-white"
+    : "border-zinc-300 bg-zinc-100/80";
+  const headerSurfaceClass = isPhysical
+    ? "border-zinc-100 bg-zinc-50/70"
+    : "border-zinc-200 bg-zinc-200/75";
+  const rowSurfaceClass = isPhysical
+    ? "border-zinc-100 hover:bg-amiste-red/5"
+    : "border-zinc-200 hover:bg-white/75";
 
   if (!records.length) {
     return (
@@ -59,11 +68,11 @@ export default function InventoryAuditTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <section className={`overflow-hidden rounded-2xl border shadow-sm ${tableSurfaceClass}`}>
       <div className="overflow-x-auto">
         <div className="min-w-[980px]">
           {isPhysical ? (
-            <div className="grid grid-cols-[1.45fr_130px_180px_180px_170px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+            <div className={`grid grid-cols-[1.45fr_130px_180px_180px_170px] gap-4 border-b px-4 py-3 text-xs font-black uppercase text-amiste-gray/60 ${headerSurfaceClass}`}>
               <span>Produto</span>
               <span>Quantidade</span>
               <span>Ultima Auditoria</span>
@@ -71,7 +80,7 @@ export default function InventoryAuditTable({
               <span className="text-right">Acao</span>
             </div>
           ) : (
-            <div className="grid grid-cols-[1.45fr_140px_160px_160px_120px] gap-4 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 text-xs font-black uppercase text-amiste-gray/60">
+            <div className={`grid grid-cols-[1.45fr_140px_160px_160px_120px] gap-4 border-b px-4 py-3 text-xs font-black uppercase text-amiste-gray/60 ${headerSurfaceClass}`}>
               <span>Produto</span>
               <span>Quantidade Atual</span>
               <span>Status de Giro</span>
@@ -80,12 +89,12 @@ export default function InventoryAuditTable({
             </div>
           )}
 
-          <div className="max-h-[840px] overflow-y-auto">
+          <div className="max-h-[560px] overflow-y-auto">
             {records.map((item) => {
               const expanded = expandedId === item.id;
 
               return (
-                <div className="border-b border-zinc-100 transition hover:bg-amiste-red/5 last:border-b-0" key={item.id}>
+                <div className={`border-b transition last:border-b-0 ${rowSurfaceClass}`} key={item.id}>
                 {isPhysical ? (
                   <div className="grid h-14 grid-cols-[1.45fr_130px_180px_180px_170px] items-center gap-4 px-4 py-2">
                     <div className="min-w-0">
