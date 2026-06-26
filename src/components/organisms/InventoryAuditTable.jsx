@@ -4,11 +4,13 @@ import StatusPill from "../atoms/StatusPill.jsx";
 import TableEmptyState from "../molecules/TableEmptyState.jsx";
 
 function formatStockGap(item) {
-  if (!item.missingToMin) {
+  const missingToMin = Number(item.missingToMin);
+
+  if (!Number.isFinite(missingToMin) || missingToMin <= 0) {
     return "OK";
   }
 
-  return `Faltam ${item.missingToMin}`;
+  return `Faltam ${missingToMin}`;
 }
 
 function MachineAssets({ assets = [] }) {
@@ -89,7 +91,7 @@ export default function InventoryAuditTable({
             </div>
           )}
 
-          <div className="max-h-[560px] overflow-y-auto">
+          <div className="max-h-[560px] overflow-y-auto 2xl:max-h-[840px]">
             {records.map((item) => {
               const expanded = expandedId === item.id;
 

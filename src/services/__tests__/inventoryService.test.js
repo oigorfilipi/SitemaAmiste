@@ -145,6 +145,21 @@ describe("inventoryService", () => {
     ]);
   });
 
+  it("nao marca item como baixo estoque quando a quantidade esta exatamente no minimo", () => {
+    const snapshot = {
+      inventoryCounts: [],
+      supplies: [
+        { id: "supply_1", minStock: 10, name: "Cafe", stock: 10 },
+      ],
+    };
+
+    expect(buildRealtimeInventoryRows(snapshot, "supplies")[0]).toMatchObject({
+      isLowStock: false,
+      missingToMin: 0,
+      stockStatusLabel: "Satisfatorio",
+    });
+  });
+
   it("impede finalizar uma contagem vazia", async () => {
     await expect(saveInventoryAuditCount({
       groupId: "supplies",

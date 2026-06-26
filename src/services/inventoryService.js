@@ -108,7 +108,7 @@ export function resolveInventoryStatus(item, countedStock) {
     return "acabou";
   }
 
-  if (nextStock <= minStock) {
+  if (nextStock < minStock) {
     return "pedir";
   }
 
@@ -123,7 +123,7 @@ export function resolveStockStatus(item, quantity) {
     return { label: "Acabou", status: "cancelado", tone: "red" };
   }
 
-  if (currentQuantity <= minStock) {
+  if (currentQuantity < minStock) {
     return { label: "Pedir", status: "rascunho", tone: "yellow" };
   }
 
@@ -260,7 +260,7 @@ function buildInventoryBaseRows(snapshot, groupId) {
       countedBy: latestCount?.countedBy || "Sem contagem",
       countId: latestCount?.id || "",
       groupId,
-      isLowStock: stock <= minStock,
+      isLowStock: stock < minStock,
       isOutOfStock: stock <= 0,
       inventoryOrder: latestCountOrder.has(item.id)
         ? latestCountOrder.get(item.id)

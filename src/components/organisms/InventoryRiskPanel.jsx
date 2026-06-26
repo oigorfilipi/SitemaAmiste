@@ -1,6 +1,16 @@
 import AppIcon from "../atoms/AppIcon.jsx";
 import Button from "../atoms/Button.jsx";
 
+function formatRiskLabel(item) {
+  const missingToMin = Number(item.missingToMin);
+
+  if (item.isOutOfStock) {
+    return "Zerado";
+  }
+
+  return Number.isFinite(missingToMin) && missingToMin > 0 ? `Faltam ${missingToMin}` : "OK";
+}
+
 export default function InventoryRiskPanel({ canMutate, records, onAdjust }) {
   const riskRows = records.filter((item) => item.isLowStock).slice(0, 5);
 
@@ -28,7 +38,7 @@ export default function InventoryRiskPanel({ canMutate, records, onAdjust }) {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="rounded-xl bg-amiste-yellow/35 px-2.5 py-1 text-xs font-black text-yellow-900">
-                  {item.isOutOfStock ? "Zerado" : `Faltam ${item.missingToMin}`}
+                  {formatRiskLabel(item)}
                 </span>
                 {canMutate ? (
                   <Button className="h-8 w-[86px] px-3 text-xs" icon="pencil" variant="secondary" onClick={() => onAdjust(item)}>
