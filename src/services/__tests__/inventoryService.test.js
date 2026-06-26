@@ -11,7 +11,10 @@ const erpMocks = vi.hoisted(() => ({
 vi.mock("../erpService.js", () => erpMocks);
 
 import {
+  buildPhysicalInventoryRows,
+  buildRealtimeInventoryRows,
   createImportedInventoryItems,
+  mergeImportedCountRows,
   saveInventoryAuditCount,
 } from "../inventoryService.js";
 
@@ -47,6 +50,99 @@ describe("inventoryService", () => {
     });
     expect(erpMocks.replaceEntityCollection).toHaveBeenCalledTimes(1);
     expect(erpMocks.replaceEntityCollection.mock.calls[0][1]).toHaveLength(2);
+    expect(erpMocks.replaceEntityCollection.mock.calls[0][1].map((record) => record.name)).toEqual([
+      "Cafe",
+      "Chocolate",
+    ]);
+  });
+
+  it("reordena cadastros existentes e novos conforme um arquivo misto", async () => {
+    erpMocks.listEntity.mockResolvedValue([
+      { id: "supply_1", name: "Cafe", stock: 2 },
+      { id: "supply_2", name: "Acucar", stock: 4 },
+    ]);
+
+    const result = await createImportedInventoryItems({
+      groupId: "supplies",
+      importedRows: [
+        { name: "Chocolate", quantity: 5 },
+        { name: "Acucar", quantity: 4 },
+        { name: "Cafe", quantity: 2 },
+      ],
+    });
+
+    expect(result.records.map((record) => record.name)).toEqual([
+      "Chocolate",
+      "Acucar",
+      "Cafe",
+    ]);
+    expect(result.records.map((record) => record.inventoryOrder)).toEqual([0, 1, 2]);
+  });
+
+  it("preserva a ordem do arquivo ao preencher itens ja cadastrados", () => {
+    const snapshot = {
+      inventoryCounts: [],
+      supplies: [
+        { id: "supply_1", name: "Cafe" },
+        { id: "supply_2", name: "Chocolate" },
+        { id: "supply_3", name: "Acucar" },
+      ],
+    };
+    const currentRows = [
+      { itemId: "supply_1", itemName: "Cafe", quantity: "" },
+      { itemId: "supply_2", itemName: "Chocolate", quantity: "" },
+      { itemId: "supply_3", itemName: "Acucar", quantity: "" },
+    ];
+
+    const result = mergeImportedCountRows({
+      currentRows,
+      groupId: "supplies",
+      importedRows: [
+        { name: "Acucar", quantity: 3 },
+        { name: "Cafe", quantity: 8 },
+        { name: "Chocolate", quantity: 5 },
+      ],
+      snapshot,
+    });
+
+    expect(result.rows.map((row) => row.itemName)).toEqual([
+      "Acucar",
+      "Cafe",
+      "Chocolate",
+    ]);
+  });
+
+  it("usa a ordem da ultima contagem nas duas listas de estoque", () => {
+    const snapshot = {
+      inventoryCounts: [
+        {
+          countedAt: "2026-06-25T12:00:00.000Z",
+          groupId: "supplies",
+          items: [
+            { itemId: "supply_3", itemName: "Acucar", quantity: 3 },
+            { itemId: "supply_1", itemName: "Cafe", quantity: 8 },
+            { itemId: "supply_2", itemName: "Chocolate", quantity: 5 },
+          ],
+          status: "finalizado",
+        },
+      ],
+      supplies: [
+        { id: "supply_2", minStock: 1, name: "Chocolate", stock: 5 },
+        { id: "supply_1", minStock: 1, name: "Cafe", stock: 8 },
+        { id: "supply_3", minStock: 1, name: "Acucar", stock: 3 },
+      ],
+    };
+
+    expect(buildPhysicalInventoryRows(snapshot, "supplies").map((row) => row.name)).toEqual([
+      "Acucar",
+      "Cafe",
+      "Chocolate",
+    ]);
+    expect(buildRealtimeInventoryRows(snapshot, "supplies").map((row) => row.name)).toEqual([
+      "Acucar",
+      "Cafe",
+      "Chocolate",
+    ]);
   });
 
   it("impede finalizar uma contagem vazia", async () => {

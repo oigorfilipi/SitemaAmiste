@@ -243,6 +243,7 @@ export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) 
   const [editAssets, setEditAssets] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [importFeedback, setImportFeedback] = useState("");
+  const [importedSourceRows, setImportedSourceRows] = useState([]);
   const [importText, setImportText] = useState("");
   const [importWarnings, setImportWarnings] = useState([]);
   const [isImporting, setIsImporting] = useState(false);
@@ -291,6 +292,7 @@ export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) 
     setCountNotes("");
     setCountRows([]);
     setImportFeedback("");
+    setImportedSourceRows([]);
     setImportText("");
     setImportWarnings([]);
     setIsImporting(false);
@@ -398,6 +400,7 @@ export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) 
     setCountNotes("");
     setCountModalTab(draftCount ? "rascunhos" : "contagem");
     setImportFeedback(draftCount ? "Existe rascunho salvo para este grupo. Abra a aba Rascunhos para carregar." : "");
+    setImportedSourceRows([]);
     setImportText("");
     setImportWarnings([]);
     setLoadedDraftId("");
@@ -408,15 +411,29 @@ export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) 
   function loadDraftCount(draftCount) {
     const manualRows = buildManualCountRows(snapshot, activeGroup);
 
-    setCountRows(manualRows.map((row) => {
-      const draftItem = draftCount.items?.find((item) => item.itemId === row.itemId);
+    setCountRows(manualRows
+      .map((row) => {
+        const draftItem = draftCount.items?.find((item) => item.itemId === row.itemId);
 
-      return draftItem ? { ...row, ...draftItem } : row;
-    }));
+        return draftItem ? { ...row, ...draftItem } : row;
+      })
+      .sort((first, second) => Number(first.inventoryOrder || 0) - Number(second.inventoryOrder || 0)));
     setCountNotes(draftCount.notes || "");
     setLoadedDraftId(draftCount.id);
     setCountModalTab("contagem");
     setImportFeedback(`Rascunho de ${formatDraftDate(draftCount.countedAt || draftCount.createdAt)} carregado para edicao.`);
+    setImportedSourceRows([
+      ...(draftCount.items || []).map((item) => ({
+        inventoryOrder: item.inventoryOrder,
+        name: item.sourceName || item.itemName,
+        quantity: item.quantity,
+      })),
+      ...(draftCount.pendingItems || []).map((item) => ({
+        inventoryOrder: item.inventoryOrder,
+        name: item.name,
+        quantity: item.quantity,
+      })),
+    ].sort((first, second) => Number(first.inventoryOrder || 0) - Number(second.inventoryOrder || 0)));
     setImportText("");
     setImportWarnings(Array.isArray(draftCount.pendingItems) ? draftCount.pendingItems : []);
     setModalError("");
@@ -504,6 +521,7 @@ export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) 
     });
 
     setCountRows(result.rows);
+    setImportedSourceRows(importedRows.map((row, inventoryOrder) => ({ ...row, inventoryOrder })));
     setImportWarnings(result.warnings);
     setModalError("");
     setImportFeedback(
@@ -558,9 +576,18 @@ export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) 
       return;
     }
 
-    setCountRows((currentRows) => currentRows.map((row) =>
-      row.itemId === itemId ? { ...row, quantity: warning.quantity, sourceName: warning.name } : row
-    ));
+    setCountRows((currentRows) => currentRows
+      .map((row) =>
+        row.itemId === itemId
+          ? {
+            ...row,
+            inventoryOrder: Number(warning.inventoryOrder || 0),
+            quantity: warning.quantity,
+            sourceName: warning.name,
+          }
+          : row
+      )
+      .sort((first, second) => Number(first.inventoryOrder || 0) - Number(second.inventoryOrder || 0)));
     setImportWarnings((currentWarnings) => currentWarnings.filter((item) => item.id !== warningId));
     setImportFeedback(`"${warning.name}" foi vinculado a "${targetRow.itemName}".`);
     setModalError("");
@@ -586,11 +613,11 @@ export default function EstoquePage({ accessLevel = "OC", onSelectPage, user }) 
     try {
       const result = await createImportedInventoryItems({
         groupId: activeGroup,
-        importedRows: unmatchedItems,
+        importedRows: importedSourceRows.length ? importedSourceRows : unmatchedItems,
       });
       const nextSnapshot = { ...snapshot, [activeGroup]: result.records };
       const currentValues = new Map(countRows.map((row) => [row.itemId, row]));
-      const importedValues = new Map(unmatchedItems.map((row) => [
+      const importedValues = new Map((importedSourceRows.length ? importedSourceRows : unmatchedItems).map((row) => [
         row.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
         row,
       ]));

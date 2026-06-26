@@ -149,10 +149,28 @@ function resolveTurnoverStatus(physicalQuantity, realTimeQuantity) {
 }
 
 function getGroupRecords(snapshot, groupId) {
-  return snapshot[getInventoryGroup(groupId).id] || [];
+  return (snapshot[getInventoryGroup(groupId).id] || [])
+    .map((record, index) => ({ record, index }))
+    .sort((first, second) => {
+      const firstOrder = Number(first.record.inventoryOrder);
+      const secondOrder = Number(second.record.inventoryOrder);
+      const firstHasOrder = Number.isFinite(firstOrder);
+      const secondHasOrder = Number.isFinite(secondOrder);
+
+      if (firstHasOrder && secondHasOrder && firstOrder !== secondOrder) {
+        return firstOrder - secondOrder;
+      }
+
+      if (firstHasOrder !== secondHasOrder) {
+        return firstHasOrder ? -1 : 1;
+      }
+
+      return first.index - second.index;
+    })
+    .map(({ record }) => record);
 }
 
-function buildImportedCatalogRecord(groupId, importedRow) {
+function buildImportedCatalogRecord(groupId, importedRow, inventoryOrder) {
   const now = new Date().toISOString();
 
   return {
@@ -161,6 +179,7 @@ function buildImportedCatalogRecord(groupId, importedRow) {
     createdAt: now,
     description: "Cadastro criado automaticamente durante a importacao da contagem de estoque.",
     id: buildId(groupId),
+    inventoryOrder,
     minStock: 1,
     name: String(importedRow.name || "").trim(),
     price: 0,
@@ -223,8 +242,11 @@ function resolvePhysicalItem(count, item) {
 function buildInventoryBaseRows(snapshot, groupId) {
   const group = getInventoryGroup(groupId);
   const latestCount = getLatestInventoryCount(snapshot, groupId);
+  const latestCountOrder = new Map(
+    (latestCount?.items || []).map((countItem, index) => [countItem.itemId, index])
+  );
 
-  return getGroupRecords(snapshot, groupId).map((item) => {
+  return getGroupRecords(snapshot, groupId).map((item, collectionIndex) => {
     const physicalItem = resolvePhysicalItem(latestCount, item);
     const physicalQuantity = asNumber(physicalItem.quantity);
     const stock = asNumber(item.stock);
@@ -240,6 +262,13 @@ function buildInventoryBaseRows(snapshot, groupId) {
       groupId,
       isLowStock: stock <= minStock,
       isOutOfStock: stock <= 0,
+      inventoryOrder: latestCountOrder.has(item.id)
+        ? latestCountOrder.get(item.id)
+        : latestCount
+          ? latestCountOrder.size + collectionIndex
+          : Number.isFinite(Number(item.inventoryOrder))
+            ? Number(item.inventoryOrder)
+            : collectionIndex,
       lastAudit: latestCount?.countedAt || "",
       lastAuditLabel: latestCount ? formatDateTime(latestCount.countedAt) : "Sem contagem",
       minStock,
@@ -260,21 +289,13 @@ export function buildInventoryRows(snapshot, groupId) {
 }
 
 export function buildPhysicalInventoryRows(snapshot, groupId) {
-  return buildInventoryBaseRows(snapshot, groupId).sort((first, second) => String(first.name).localeCompare(String(second.name)));
+  return buildInventoryBaseRows(snapshot, groupId)
+    .sort((first, second) => first.inventoryOrder - second.inventoryOrder);
 }
 
 export function buildRealtimeInventoryRows(snapshot, groupId) {
-  return buildInventoryBaseRows(snapshot, groupId).sort((first, second) => {
-    if (first.isOutOfStock !== second.isOutOfStock) {
-      return first.isOutOfStock ? -1 : 1;
-    }
-
-    if (first.isLowStock !== second.isLowStock) {
-      return first.isLowStock ? -1 : 1;
-    }
-
-    return String(first.name).localeCompare(String(second.name));
-  });
+  return buildInventoryBaseRows(snapshot, groupId)
+    .sort((first, second) => first.inventoryOrder - second.inventoryOrder);
 }
 
 export function buildInventoryMetrics(snapshot, groupId) {
@@ -321,9 +342,10 @@ export function buildInventoryMetrics(snapshot, groupId) {
 }
 
 export function buildManualCountRows(snapshot, groupId) {
-  return getGroupRecords(snapshot, groupId).map((item) => ({
+  return getGroupRecords(snapshot, groupId).map((item, index) => ({
     assets: [],
     currentStatus: item.status,
+    inventoryOrder: Number.isFinite(Number(item.inventoryOrder)) ? Number(item.inventoryOrder) : index,
     itemId: item.id,
     itemName: item.name,
     minStock: item.minStock,
@@ -386,15 +408,18 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
   let suggestedCount = 0;
   let unmatchedCount = 0;
   const warnings = [];
-  const nextRows = currentRows.map((row) => ({ ...row }));
+  const currentRowsById = new Map(currentRows.map((row) => [row.itemId, row]));
+  const importedRowIds = new Set();
+  const orderedRows = [];
 
-  importedRows.forEach((importedRow) => {
+  importedRows.forEach((importedRow, importIndex) => {
     const match = findBestItemMatch(importedRow.name, items);
 
     if (!match.item) {
       unmatchedCount += 1;
       warnings.push({
         id: buildId("unmatched"),
+        inventoryOrder: importIndex,
         message: `"${importedRow.name}" nao foi identificado. Vincule manualmente a um item cadastrado.`,
         name: importedRow.name,
         quantity: importedRow.quantity,
@@ -402,21 +427,22 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
       return;
     }
 
-    const rowIndex = nextRows.findIndex((row) => row.itemId === match.item.id);
-
-    if (rowIndex >= 0) {
+    if (currentRowsById.has(match.item.id) && !importedRowIds.has(match.item.id)) {
       matchedCount += 1;
-      nextRows[rowIndex] = {
-        ...nextRows[rowIndex],
+      importedRowIds.add(match.item.id);
+      orderedRows.push({
+        ...currentRowsById.get(match.item.id),
+        inventoryOrder: importIndex,
         quantity: importedRow.quantity,
         sourceName: importedRow.name,
-      };
+      });
     }
 
     if (match.confidence !== "exact") {
       suggestedCount += 1;
       warnings.push({
         id: buildId("suggested"),
+        inventoryOrder: importIndex,
         itemId: match.item.id,
         message: `"${importedRow.name}" foi associado a "${match.item.name}". Revise antes de salvar.`,
         name: importedRow.name,
@@ -425,7 +451,20 @@ export function mergeImportedCountRows({ currentRows, groupId, importedRows, sna
     }
   });
 
-  return { matchedCount, rows: nextRows, suggestedCount, unmatchedCount, warnings };
+  const remainingRows = currentRows
+    .filter((row) => !importedRowIds.has(row.itemId))
+    .map((row, index) => ({
+      ...row,
+      inventoryOrder: importedRows.length + index,
+    }));
+
+  return {
+    matchedCount,
+    rows: [...orderedRows, ...remainingRows],
+    suggestedCount,
+    unmatchedCount,
+    warnings,
+  };
 }
 
 export async function createImportedInventoryItems({ groupId, importedRows }) {
@@ -434,19 +473,43 @@ export async function createImportedInventoryItems({ groupId, importedRows }) {
   }
 
   const currentRecords = await listEntity(groupId);
-  const existingNames = new Set(currentRecords.map((record) => normalizeText(record.name)));
-  const recordsToCreate = importedRows
-    .filter((row) => row.name?.trim() && !existingNames.has(normalizeText(row.name)))
-    .filter((row, index, rows) =>
-      rows.findIndex((candidate) => normalizeText(candidate.name) === normalizeText(row.name)) === index
-    )
-    .map((row) => buildImportedCatalogRecord(groupId, row));
+  const currentRecordsByName = new Map(
+    currentRecords.map((record) => [normalizeText(record.name), record])
+  );
+  const uniqueImportedRows = importedRows.filter((row, index, rows) =>
+    row.name?.trim() &&
+    rows.findIndex((candidate) => normalizeText(candidate.name) === normalizeText(row.name)) === index
+  );
+  const importedNames = new Set(uniqueImportedRows.map((row) => normalizeText(row.name)));
+  const recordsToCreate = [];
+  const orderedImportedRecords = uniqueImportedRows.map((row, inventoryOrder) => {
+    const existingRecord = currentRecordsByName.get(normalizeText(row.name));
+
+    if (existingRecord) {
+      return { ...existingRecord, inventoryOrder };
+    }
+
+    const createdRecord = buildImportedCatalogRecord(groupId, row, inventoryOrder);
+    recordsToCreate.push(createdRecord);
+    return createdRecord;
+  });
+  const remainingRecords = currentRecords
+    .filter((record) => !importedNames.has(normalizeText(record.name)))
+    .map((record, index) => ({
+      ...record,
+      inventoryOrder: orderedImportedRecords.length + index,
+    }));
 
   if (!recordsToCreate.length) {
-    return { createdRecords: [], records: currentRecords };
+    const records = [...orderedImportedRecords, ...remainingRecords];
+    await replaceEntityCollection(groupId, records);
+    return { createdRecords: [], records };
   }
 
-  const records = await replaceEntityCollection(groupId, [...currentRecords, ...recordsToCreate]);
+  const records = await replaceEntityCollection(groupId, [
+    ...orderedImportedRecords,
+    ...remainingRecords,
+  ]);
 
   return {
     createdRecords: recordsToCreate,
@@ -459,6 +522,7 @@ function normalizeCountRows(rows = []) {
     .map((row) => ({
       assets: Array.isArray(row.assets) ? row.assets : [],
       currentStatus: row.currentStatus,
+      inventoryOrder: Number.isFinite(Number(row.inventoryOrder)) ? Number(row.inventoryOrder) : 0,
       itemId: row.itemId,
       itemName: row.itemName,
       minStock: row.minStock,
@@ -490,15 +554,20 @@ function validateMachineAssets(rows, groupId) {
 async function syncCatalogStockFromCount({ groupId, rows }) {
   const countedRows = new Map(rows.map((row) => [row.itemId, row]));
   const currentRecords = await listEntity(groupId);
+  const currentRecordOrder = new Map(currentRecords.map((record, index) => [record.id, index]));
   const nextRecords = currentRecords.map((record) => {
     const countedRow = countedRows.get(record.id);
 
     if (!countedRow) {
-      return record;
+      return {
+        ...record,
+        inventoryOrder: rows.length + currentRecordOrder.get(record.id),
+      };
     }
 
     return {
       ...record,
+      inventoryOrder: countedRow.inventoryOrder,
       inventoryAssets: countedRow.assets,
       stock: countedRow.quantity,
       status: resolveInventoryStatus(
@@ -507,7 +576,7 @@ async function syncCatalogStockFromCount({ groupId, rows }) {
       ),
       updatedAt: new Date().toISOString(),
     };
-  });
+  }).sort((first, second) => first.inventoryOrder - second.inventoryOrder);
 
   await replaceEntityCollection(groupId, nextRecords);
 }
