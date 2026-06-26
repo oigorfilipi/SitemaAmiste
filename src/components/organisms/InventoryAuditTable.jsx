@@ -91,7 +91,7 @@ export default function InventoryAuditTable({
             </div>
           )}
 
-          <div className="max-h-[560px] overflow-y-auto 2xl:max-h-[840px]">
+          <div className="max-h-[560px] overflow-y-auto min-[2200px]:max-h-[840px]">
             {records.map((item) => {
               const expanded = expandedId === item.id;
 
