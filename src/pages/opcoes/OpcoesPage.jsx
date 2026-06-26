@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import ConfirmDialog from "../../components/molecules/ConfirmDialog.jsx";
@@ -9,18 +10,23 @@ import OptionGroupList from "../../components/organisms/OptionGroupList.jsx";
 import OptionValuePanel from "../../components/organisms/OptionValuePanel.jsx";
 import { useCollection } from "../../hooks/useCollection.js";
 import {
+  buildOptionAreaTabs,
   buildOptionGroups,
   buildOptionFeedbackMessage,
   buildOptionMetrics,
   buildOptionPayload,
   exportOptions,
+  filterOptionGroupsByArea,
   filterOptionGroups,
+  getOptionGroupArea,
   validateOptionPayload,
 } from "../../services/optionCenterService.js";
 import { getRolePermissions } from "../../services/permissionService.js";
+import { cn } from "../../utils/cn.js";
 import { moduleConfigs } from "../config/moduleConfigs.js";
 
 export default function OpcoesPage({ accessLevel, user }) {
+  const [activeArea, setActiveArea] = useState("");
   const [activeGroup, setActiveGroup] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -37,21 +43,50 @@ export default function OpcoesPage({ accessLevel, user }) {
   const canDelete = canMutate && rolePermissions["action:delete"] === "AC";
   const canDownload = rolePermissions["action:download"] !== "OC";
   const groups = useMemo(() => buildOptionGroups(records), [records]);
-  const filteredGroups = useMemo(() => filterOptionGroups(groups, searchTerm), [groups, searchTerm]);
-  const selectedGroup = groups.find((group) => group.id === activeGroup) || filteredGroups[0] || null;
+  const areaTabs = useMemo(() => buildOptionAreaTabs(groups), [groups]);
+  const selectedArea = areaTabs.find((area) => area.id === activeArea) || areaTabs[0] || null;
+  const areaGroups = useMemo(() =>
+    selectedArea ? filterOptionGroupsByArea(groups, selectedArea.id) : [],
+  [groups, selectedArea]);
+  const filteredGroups = useMemo(() => filterOptionGroups(areaGroups, searchTerm), [areaGroups, searchTerm]);
+  const selectedGroup = filteredGroups.find((group) => group.id === activeGroup) || filteredGroups[0] || null;
   const metrics = useMemo(() => buildOptionMetrics(records), [records]);
   const formFields = useMemo(() => config.fields.map((field) =>
     field.name === "group" ? { ...field, defaultValue: activeGroup || selectedGroup?.id || "" } : field
   ), [activeGroup, config.fields, selectedGroup?.id]);
 
   useEffect(() => {
-    if (!activeGroup && filteredGroups[0]) {
-      setActiveGroup(filteredGroups[0].id);
+    if (!areaTabs.length) {
+      return;
     }
-  }, [activeGroup, filteredGroups]);
 
-  function openCreateModal(groupId = activeGroup) {
+    if (!activeArea || !areaTabs.some((area) => area.id === activeArea)) {
+      setActiveArea(areaTabs[0].id);
+    }
+  }, [activeArea, areaTabs]);
+
+  useEffect(() => {
+    if (selectedGroup && activeGroup !== selectedGroup.id) {
+      setActiveGroup(selectedGroup.id);
+      return;
+    }
+
+    if (!selectedGroup && activeGroup) {
+      setActiveGroup("");
+    }
+  }, [activeGroup, selectedGroup]);
+
+  function handleSelectArea(areaId) {
+    setActiveArea(areaId);
+    setActiveGroup("");
+  }
+
+  function openCreateModal(groupId = activeGroup || selectedGroup?.id) {
     if (!canCreate) {
+      return;
+    }
+
+    if (!groupId) {
       return;
     }
 
@@ -97,6 +132,7 @@ export default function OpcoesPage({ accessLevel, user }) {
     }
 
     setActiveGroup(nextPayload.group);
+    setActiveArea(getOptionGroupArea(nextPayload.group).id);
     setFeedbackMessage(buildOptionFeedbackMessage(nextPayload.group, isEditing));
     setModalOpen(false);
     setEditingRecord(null);
@@ -131,7 +167,10 @@ export default function OpcoesPage({ accessLevel, user }) {
       return;
     }
 
-    exportOptions(selectedGroup?.options || records, selectedGroup ? `opcoes-${selectedGroup.label}` : "opcoes-do-sistema");
+    const exportedRecords = selectedGroup?.options || areaGroups.flatMap((group) => group.options);
+    const filenameSuffix = selectedGroup?.label || selectedArea?.label || "opcoes-do-sistema";
+
+    exportOptions(exportedRecords, `opcoes-${filenameSuffix}`);
   }
 
   return (
@@ -183,9 +222,9 @@ export default function OpcoesPage({ accessLevel, user }) {
       {/* --- SECAO: BUSCA E EXPORTACAO --- */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <TextInput
-          className="w-96"
+          className="w-full sm:w-96"
           icon="search"
-          placeholder="Buscar grupo, nome ou valor"
+          placeholder={selectedArea ? `Buscar em ${selectedArea.label}` : "Buscar grupo, nome ou valor"}
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
@@ -194,10 +233,52 @@ export default function OpcoesPage({ accessLevel, user }) {
         </Button>
       </div>
 
+      {/* --- SECAO: ABAS POR AREA --- */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex flex-col gap-1">
+          <h2 className="font-display text-base font-black text-amiste-black">Areas das opcoes</h2>
+          <p className="text-xs font-semibold text-amiste-gray/60">
+            Escolha uma area para ver apenas os grupos usados naquele fluxo do sistema.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {areaTabs.map((area) => (
+            <button
+              className={cn(
+                "flex min-h-24 items-start gap-3 rounded-2xl border p-3 text-left transition duration-200",
+                selectedArea?.id === area.id
+                  ? "border-amiste-red bg-amiste-red/10 text-amiste-red shadow-sm"
+                  : "border-zinc-200 bg-zinc-50 text-amiste-black hover:-translate-y-px hover:border-amiste-red/30 hover:bg-white"
+              )}
+              key={area.id}
+              type="button"
+              onClick={() => handleSelectArea(area.id)}
+            >
+              <span className={cn(
+                "grid size-9 shrink-0 place-items-center rounded-xl",
+                selectedArea?.id === area.id ? "bg-amiste-red text-white" : "bg-white text-amiste-gray"
+              )}>
+                <AppIcon name={area.icon} size={18} />
+              </span>
+              <span className="min-w-0">
+                <strong className="block text-sm font-black">{area.label}</strong>
+                <span className="mt-1 block text-xs font-bold text-amiste-gray/65">
+                  {area.count} grupo(s) | {area.optionCount} opcao(oes)
+                </span>
+                <span className="mt-1 line-clamp-2 block text-xs font-semibold text-amiste-gray/55">
+                  {area.description}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       {/* --- SECAO: CENTRAL DE GRUPOS --- */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
         <OptionGroupList
           activeGroup={selectedGroup?.id}
+          areaLabel={selectedArea?.label}
           groups={filteredGroups}
           onSelectGroup={setActiveGroup}
         />

@@ -1,13 +1,13 @@
 import AppIcon from "../atoms/AppIcon.jsx";
 import { cn } from "../../utils/cn.js";
 
-export default function OptionGroupList({ activeGroup, groups, onSelectGroup }) {
+export default function OptionGroupList({ activeGroup, areaLabel, groups, onSelectGroup }) {
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase text-amiste-gray/55">Listas do sistema</p>
-          <h2 className="mt-1 font-display text-xl font-black text-amiste-black">Grupos</h2>
+          <p className="text-xs font-black uppercase text-amiste-gray/55">Listas da area</p>
+          <h2 className="mt-1 font-display text-xl font-black text-amiste-black">{areaLabel || "Grupos"}</h2>
         </div>
         <span className="grid size-10 place-items-center rounded-xl bg-amiste-blue/10 text-amiste-blue">
           <AppIcon name="layoutGrid" size={20} />
@@ -15,7 +15,7 @@ export default function OptionGroupList({ activeGroup, groups, onSelectGroup }) 
       </div>
 
       <div className="mt-4 max-h-[560px] space-y-2 overflow-y-auto pr-1">
-        {groups.map((group) => (
+        {groups.length ? groups.map((group) => (
           <button
             className={cn(
               "flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition duration-200",
@@ -40,7 +40,11 @@ export default function OptionGroupList({ activeGroup, groups, onSelectGroup }) 
               {group.empty ? "Vazio" : group.count}
             </span>
           </button>
-        ))}
+        )) : (
+          <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-5 text-sm font-bold text-amiste-gray/60">
+            Nenhum grupo encontrado nesta area.
+          </div>
+        )}
       </div>
     </section>
   );

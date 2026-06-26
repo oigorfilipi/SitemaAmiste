@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildOptionGroups } from "../optionCenterService.js";
+import {
+  buildOptionAreaTabs,
+  buildOptionGroups,
+  filterOptionGroupsByArea,
+} from "../optionCenterService.js";
 
 describe("optionCenterService", () => {
   it("hides legacy machine category option groups from the option center", () => {
@@ -14,5 +18,21 @@ describe("optionCenterService", () => {
     expect(groups.map((group) => group.id)).not.toContain("Ferramentas e Itens");
     expect(groups.map((group) => group.id)).not.toContain("Grupos de Opcoes");
     expect(groups.map((group) => group.id)).toContain("Categorias de Insumos");
+  });
+
+  it("separa grupos de opcoes por areas do sistema", () => {
+    const groups = buildOptionGroups([
+      { id: "machine_brand", group: "Marcas de Maquinas", name: "Rheavendors", value: "Rheavendors" },
+      { id: "checklist_tool", group: "Ferramentas Necessarias", name: "Chave", value: "Chave" },
+      { id: "client_status", group: "Status Cliente", name: "Ativo", value: "Ativo" },
+      { id: "legacy_group", group: "Grupo Legado", name: "Legado", value: "Legado" },
+    ]);
+    const tabs = buildOptionAreaTabs(groups);
+
+    expect(filterOptionGroupsByArea(groups, "machines").map((group) => group.id)).toContain("Marcas de Maquinas");
+    expect(filterOptionGroupsByArea(groups, "checklist").map((group) => group.id)).toContain("Ferramentas Necessarias");
+    expect(filterOptionGroupsByArea(groups, "clients").map((group) => group.id)).toContain("Status Cliente");
+    expect(filterOptionGroupsByArea(groups, "other").map((group) => group.id)).toContain("Grupo Legado");
+    expect(tabs.find((tab) => tab.id === "machines")).toMatchObject({ count: expect.any(Number) });
   });
 });

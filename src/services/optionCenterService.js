@@ -12,6 +12,99 @@ const DEFAULT_GROUP_GUIDANCE = {
   usage: "Aparece apenas nos formularios que usam este grupo como fonte de opcoes.",
 };
 const HIDDEN_OPTION_GROUPS = new Set(["Categorias de Maquinas", "Ferramentas e Itens", "Grupos de Opcoes"]);
+const DEFAULT_AREA_ID = "other";
+
+export const OPTION_AREA_TABS = [
+  {
+    id: "machines",
+    description: "Marcas, dados tecnicos e parametros ligados ao cadastro e configuracao de maquinas.",
+    icon: "coffee",
+    label: "Maquinas",
+  },
+  {
+    id: "checklist",
+    description: "Listas usadas no Checklist, preparacao, testes e rotina tecnica.",
+    icon: "checkSquare",
+    label: "Checklist",
+  },
+  {
+    id: "inventory",
+    description: "Opcoes para insumos, acessorios, catalogos e estoque.",
+    icon: "boxes",
+    label: "Estoque",
+  },
+  {
+    id: "clients",
+    description: "Status, contratos e classificacoes usadas no cadastro de clientes.",
+    icon: "users",
+    label: "Clientes",
+  },
+  {
+    id: "commercial",
+    description: "Parametros comerciais usados em propostas, fichas e atendimento.",
+    icon: "briefcase",
+    label: "Comercial",
+  },
+  {
+    id: "finance",
+    description: "Status e opcoes usadas em pagamentos, cobrancas e financeiro.",
+    icon: "money",
+    label: "Financeiro",
+  },
+  {
+    id: "wiki",
+    description: "Categorias, dificuldades e status da Wiki tecnica.",
+    icon: "wrench",
+    label: "Wiki",
+  },
+  {
+    id: "system",
+    description: "Funcoes, cargos e parametros administrativos do ERP.",
+    icon: "shield",
+    label: "Sistema",
+  },
+  {
+    id: DEFAULT_AREA_ID,
+    description: "Grupos antigos ou sem area definida.",
+    icon: "layoutGrid",
+    label: "Outros",
+  },
+];
+
+const OPTION_GROUP_AREAS = {
+  "Bebidas da Maquina": "checklist",
+  "Categorias de Acessorios": "inventory",
+  "Categorias de Insumos": "inventory",
+  "Categorias Wiki": "wiki",
+  "Coisas Necessarias": "checklist",
+  Cores: "inventory",
+  "Dificuldade Wiki": "wiki",
+  "Ferramentas Necessarias": "checklist",
+  Funcoes: "system",
+  "Marcas de Acessorios": "inventory",
+  "Marcas de Insumos": "inventory",
+  "Marcas de Maquinas": "machines",
+  "Meio de Atendimento": "commercial",
+  "Modalidades Comerciais": "commercial",
+  "Prioridades de Conserto": "machines",
+  "Rede Hidrica": "machines",
+  "Status Catalogo": "inventory",
+  "Status Checklist": "checklist",
+  "Status Cliente": "clients",
+  "Status Ficha": "commercial",
+  "Status Pagamento": "finance",
+  "Status Proposta": "commercial",
+  "Status Wiki": "wiki",
+  Tamanhos: "inventory",
+  "Tags de Insumos": "inventory",
+  Tecnicos: "checklist",
+  "Tipos de Cobranca": "finance",
+  "Tipos de Contrato": "clients",
+  "Tipos de Ficha": "commercial",
+  "Tipos de Servico": "checklist",
+  "Unidades de Produto": "inventory",
+  Voltagens: "machines",
+};
 
 const OPTION_GROUP_GUIDANCE = {
   "Bebidas da Maquina": {
@@ -164,6 +257,11 @@ export function getOptionGroupGuidance(group) {
   return OPTION_GROUP_GUIDANCE[group] || DEFAULT_GROUP_GUIDANCE;
 }
 
+export function getOptionGroupArea(group) {
+  return OPTION_AREA_TABS.find((area) => area.id === OPTION_GROUP_AREAS[group]) ||
+    OPTION_AREA_TABS.find((area) => area.id === DEFAULT_AREA_ID);
+}
+
 export function buildOptionFeedbackMessage(group, editing = false) {
   const guidance = getOptionGroupGuidance(group);
   const action = editing ? "atualizada" : "cadastrada";
@@ -186,6 +284,8 @@ export function buildOptionGroups(options) {
         .sort((first, second) => String(first.name).localeCompare(String(second.name)));
 
       return {
+        areaId: getOptionGroupArea(group).id,
+        areaLabel: getOptionGroupArea(group).label,
         id: group,
         label: group,
         count: groupOptions.length,
@@ -202,6 +302,22 @@ export function buildOptionGroups(options) {
 
       return first.label.localeCompare(second.label);
     });
+}
+
+export function buildOptionAreaTabs(groups) {
+  return OPTION_AREA_TABS
+    .map((area) => ({
+      ...area,
+      count: groups.filter((group) => group.areaId === area.id).length,
+      optionCount: groups
+        .filter((group) => group.areaId === area.id)
+        .reduce((total, group) => total + group.count, 0),
+    }))
+    .filter((area) => area.count > 0 || area.id !== DEFAULT_AREA_ID);
+}
+
+export function filterOptionGroupsByArea(groups, areaId) {
+  return groups.filter((group) => group.areaId === areaId);
 }
 
 export function buildOptionMetrics(options) {
