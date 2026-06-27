@@ -97,13 +97,10 @@ export function validateMachinePayload(payload, snapshot, editingRecord) {
   if (payload.hasModelVariants) {
     const variants = Array.isArray(payload.modelVariants) ? payload.modelVariants : [];
     const variantNames = variants.map((variant) => normalizeText(variant.name)).filter(Boolean);
+    const variantCount = asNumber(payload.modelVariantCount);
 
-    if (!variants.length) {
-      return "Cadastre ao menos uma versao da maquina ou desmarque multiplos modelos.";
-    }
-
-    if (variantNames.length !== variants.length) {
-      return "Informe o nome de todas as versoes da maquina.";
+    if (variantCount <= 0) {
+      return "Informe a quantidade de modelos/versoes da maquina ou desmarque multiplos modelos.";
     }
 
     if (new Set(variantNames).size !== variantNames.length) {

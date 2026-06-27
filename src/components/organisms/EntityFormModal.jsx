@@ -116,6 +116,7 @@ function ImageUploadControl({ disabled = false, field, formData, onChange }) {
   const [uploadError, setUploadError] = useState("");
   const previewUrl = formData[field.name] || formData[field.fallbackUrlField] || "";
   const compactAvatar = field.previewVariant === "avatar";
+  const compactCatalog = field.previewVariant === "catalog";
 
   async function handleFileChange(event) {
     if (disabled) {
@@ -142,14 +143,18 @@ function ImageUploadControl({ disabled = false, field, formData, onChange }) {
       {previewUrl ? (
         <div className={compactAvatar
           ? "mx-auto grid size-28 place-items-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-100"
-          : "grid h-40 place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100"}
+          : compactCatalog
+            ? "grid h-28 w-full max-w-sm place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50"
+            : "grid h-40 place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100"}
         >
           <img alt="Preview" className={compactAvatar ? "h-full w-full object-cover" : "h-full w-full object-contain"} src={previewUrl} />
         </div>
       ) : (
         <div className={compactAvatar
           ? "mx-auto grid size-28 place-items-center rounded-full border border-dashed border-zinc-300 bg-zinc-50 px-4 text-center text-xs font-bold text-amiste-gray/55"
-          : "grid h-28 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55"}
+          : compactCatalog
+            ? "grid h-24 w-full max-w-sm place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55"
+            : "grid h-28 place-items-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm font-bold text-amiste-gray/55"}
         >
           Nenhuma imagem selecionada
         </div>
@@ -264,13 +269,177 @@ function FileUploadControl({ disabled = false, field, formData, onChange }) {
   );
 }
 
+const MACHINE_VARIANT_DEFAULTS = {
+  acquisitionCost: "",
+  amperage: "",
+  brand: "",
+  category: "",
+  defaultProposalText: "",
+  description: "",
+  doublePortafilterCount: "",
+  extraSteamer: false,
+  filterType: "",
+  groupCount: "",
+  hasIntegratedGrinder: false,
+  hasPortafilter: false,
+  hasSupplyReservoirs: false,
+  hydraulic: "",
+  imageUrl: "",
+  litreCapacity: "",
+  maxDrinkCount: "",
+  minStock: "",
+  name: "",
+  paymentSystem: "",
+  paymentSystemName: "",
+  photoDataUrl: "",
+  power: "",
+  priceRent: "",
+  priceSale: "",
+  reservoirCapacity: "",
+  reservoirCount: "",
+  sewer: "",
+  singlePortafilterCount: "",
+  solubleOnly: false,
+  springsPerTray: "",
+  status: "",
+  steam: "",
+  stock: "",
+  trayCount: "",
+  usesBeans: false,
+  videoUrl: "",
+  voltage: "",
+  weight: "",
+};
+
+const MACHINE_VARIANT_OPTIONS = {
+  category: [
+    { label: "Multibebidas", value: "Multibebidas" },
+    { label: "Profissional", value: "Profissional" },
+    { label: "Snacks", value: "Snacks" },
+    { label: "Coado", value: "Coado" },
+    { label: "Expresso", value: "Expresso" },
+  ],
+  groupCount: [
+    { label: "1 Grupo", value: "1 Grupo" },
+    { label: "2 Grupos", value: "2 Grupos" },
+    { label: "3 Grupos", value: "3 Grupos" },
+  ],
+  status: [
+    { label: "Ativo", value: "ativo" },
+    { label: "Pedir", value: "pedir" },
+    { label: "Manutencao", value: "manutencao" },
+    { label: "Cancelado", value: "cancelado" },
+  ],
+  filterType: [
+    { label: "Papel", value: "Papel" },
+    { label: "Plastico", value: "Plastico" },
+    { label: "Pano", value: "Pano" },
+  ],
+  voltage: [
+    { label: "110v", value: "110v" },
+    { label: "220v", value: "220v" },
+    { label: "Bivolt", value: "Bivolt" },
+  ],
+  yesNo: [
+    { label: "Sim", value: "Sim" },
+    { label: "Nao", value: "Nao" },
+  ],
+};
+
+function buildVariant(defaults = {}) {
+  return {
+    ...MACHINE_VARIANT_DEFAULTS,
+    ...defaults,
+  };
+}
+
+function getVariantCount(formData, field, variants) {
+  const rawCount = field.countField ? formData[field.countField] : variants.length;
+  const numericCount = Number(rawCount);
+
+  if (!Number.isFinite(numericCount) || numericCount < 0) {
+    return 0;
+  }
+
+  return Math.min(50, Math.floor(numericCount));
+}
+
+function VariantTextField({ label, placeholder, type = "text", value, onChange }) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">{label}</span>
+      <TextInput placeholder={placeholder} type={type} value={value || ""} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function VariantSelectField({ label, options, value, onChange }) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">{label}</span>
+      <SelectInput value={value || ""} onChange={(event) => onChange(event.target.value)}>
+        <option value="">Nao informado</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </SelectInput>
+    </label>
+  );
+}
+
+function VariantCheckboxField({ label, value, onChange }) {
+  return (
+    <button
+      className="flex h-9 w-full items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 text-[13px] font-bold text-amiste-gray transition hover:border-amiste-red"
+      type="button"
+      onClick={() => onChange(!value)}
+    >
+      <span>{label}</span>
+      <span className={value ? "text-amiste-green" : "text-amiste-red"}>{value ? "Sim" : "Nao"}</span>
+    </button>
+  );
+}
+
+function VariantTextareaField({ label, placeholder, value, onChange }) {
+  return (
+    <label className="md:col-span-2">
+      <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">{label}</span>
+      <TextArea placeholder={placeholder} value={value || ""} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
 function VariantListControl({ canUpload = true, field, formData, onChange }) {
   const [uploadError, setUploadError] = useState("");
   const variants = Array.isArray(formData[field.name]) ? formData[field.name] : [];
+  const requestedCount = getVariantCount(formData, field, variants);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (!field.countField || requestedCount === variants.length) {
+      return;
+    }
+
+    if (requestedCount > variants.length) {
+      onChange(field.name, [
+        ...variants.map((variant) => buildVariant(variant)),
+        ...Array.from({ length: requestedCount - variants.length }).map(() => buildVariant()),
+      ]);
+      return;
+    }
+
+    onChange(field.name, variants.slice(0, requestedCount).map((variant) => buildVariant(variant)));
+  }, [field.countField, field.name, onChange, requestedCount, variants]);
+
+  useEffect(() => {
+    if (activeIndex >= variants.length) {
+      setActiveIndex(Math.max(0, variants.length - 1));
+    }
+  }, [activeIndex, variants.length]);
 
   function updateVariant(index, key, value) {
     const nextVariants = variants.map((variant, variantIndex) =>
-      variantIndex === index ? { ...variant, [key]: value } : variant
+      variantIndex === index ? buildVariant({ ...variant, [key]: value }) : buildVariant(variant)
     );
 
     onChange(field.name, nextVariants);
@@ -291,16 +460,8 @@ function VariantListControl({ canUpload = true, field, formData, onChange }) {
 
   function addVariant() {
     onChange(field.name, [
-      ...variants,
-      {
-        amperage: "",
-        litreCapacity: "",
-        name: "",
-        photoDataUrl: "",
-        power: "",
-        voltage: "",
-        weight: "",
-      },
+      ...variants.map((variant) => buildVariant(variant)),
+      buildVariant(),
     ]);
   }
 
@@ -310,41 +471,163 @@ function VariantListControl({ canUpload = true, field, formData, onChange }) {
 
   return (
     <div className="space-y-3">
-      {variants.map((variant, index) => (
-        <section className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3" key={`variant-${index + 1}`}>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <strong className="text-sm font-black text-amiste-black">Versao {index + 1}</strong>
-            <Button className="h-8 px-3 text-xs" icon="trash" variant="secondary" onClick={() => removeVariant(index)}>
-              Remover
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <TextInput placeholder="Ex: Lio 2C Plus" value={variant.name || ""} onChange={(event) => updateVariant(index, "name", event.target.value)} />
-            <TextInput placeholder="Ex: 18kg" value={variant.weight || ""} onChange={(event) => updateVariant(index, "weight", event.target.value)} />
-            <TextInput placeholder="Ex: 220v" value={variant.voltage || ""} onChange={(event) => updateVariant(index, "voltage", event.target.value)} />
-            <TextInput placeholder="Ex: 20A" value={variant.amperage || ""} onChange={(event) => updateVariant(index, "amperage", event.target.value)} />
-            <TextInput placeholder="Ex: 1500W" value={variant.power || ""} onChange={(event) => updateVariant(index, "power", event.target.value)} />
-            <TextInput placeholder="Ex: 2L" value={variant.litreCapacity || ""} onChange={(event) => updateVariant(index, "litreCapacity", event.target.value)} />
-            <label className="md:col-span-2">
-              <span className="mb-2 block text-xs font-black uppercase text-amiste-gray/60">Foto propria</span>
-              <input
-                accept="image/*"
-                className="block h-9 w-full rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-xl file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white disabled:opacity-50"
-                disabled={!canUpload}
-                type="file"
-                onChange={(event) => updateVariantImage(index, event.target.files?.[0])}
-              />
-            </label>
-            {variant.photoDataUrl ? (
-              <img alt={variant.name || `Versao ${index + 1}`} className="h-28 rounded-2xl border border-zinc-200 bg-white object-contain md:col-span-2" src={variant.photoDataUrl} />
-            ) : null}
-          </div>
-        </section>
-      ))}
+      {requestedCount === 0 && !variants.length ? (
+        <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm font-semibold leading-6 text-amiste-gray/65">
+          Informe a quantidade de modelos/versoes para abrir as paginas de preenchimento.
+        </div>
+      ) : null}
 
-      <Button className="w-full" icon="plus" variant="secondary" onClick={addVariant}>
-        Adicionar versao
-      </Button>
+      {variants.length ? (
+        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50">
+          {/* --- SECAO: NAVEGACAO DAS VERSOES --- */}
+          <header className="flex flex-col gap-3 border-b border-zinc-200 bg-white p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wide text-amiste-red">Versoes da maquina</span>
+                <h4 className="font-display text-base font-black text-amiste-black">
+                  Pagina {activeIndex + 1} de {variants.length}
+                </h4>
+              </div>
+              {!field.countField ? (
+                <Button className="h-8 px-3 text-xs" icon="plus" variant="secondary" onClick={addVariant}>
+                  Adicionar
+                </Button>
+              ) : null}
+            </div>
+            <nav className="flex flex-wrap gap-2">
+              {variants.map((variant, index) => (
+                <button
+                  className={`h-8 min-w-8 rounded-xl border px-3 text-xs font-black transition ${
+                    activeIndex === index
+                      ? "border-amiste-red bg-amiste-red text-white"
+                      : "border-zinc-200 bg-zinc-50 text-amiste-gray hover:border-amiste-red/40 hover:text-amiste-red"
+                  }`}
+                  key={`variant-page-${index + 1}`}
+                  type="button"
+                  onClick={() => setActiveIndex(index)}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </nav>
+          </header>
+
+          {/* --- SECAO: DADOS DA VERSAO ATIVA --- */}
+          {variants.map((rawVariant, index) => {
+            if (index !== activeIndex) {
+              return null;
+            }
+
+            const variant = buildVariant(rawVariant);
+            const category = variant.category;
+            const previewUrl = variant.photoDataUrl || variant.imageUrl || "";
+
+            return (
+              <div className="space-y-4 p-4" key={`variant-form-${index + 1}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <strong className="font-display text-sm font-black text-amiste-black">
+                    {variant.name || `Versao ${index + 1}`}
+                  </strong>
+                  {!field.countField ? (
+                    <Button className="h-8 px-3 text-xs" icon="trash" variant="secondary" onClick={() => removeVariant(index)}>
+                      Remover
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <VariantTextField label="Nome do modelo" placeholder="Ex: Lio 2C Plus" value={variant.name} onChange={(value) => updateVariant(index, "name", value)} />
+                  <VariantTextField label="Marca" placeholder="Ex: Rheavendors" value={variant.brand} onChange={(value) => updateVariant(index, "brand", value)} />
+                  <VariantSelectField label="Categoria" options={MACHINE_VARIANT_OPTIONS.category} value={variant.category} onChange={(value) => updateVariant(index, "category", value)} />
+                  <VariantSelectField label="Status" options={MACHINE_VARIANT_OPTIONS.status} value={variant.status} onChange={(value) => updateVariant(index, "status", value)} />
+                  <VariantSelectField label="Voltagem" options={MACHINE_VARIANT_OPTIONS.voltage} value={variant.voltage} onChange={(value) => updateVariant(index, "voltage", value)} />
+                  <VariantTextField label="Amperagem" placeholder="Ex: 20" type="number" value={variant.amperage} onChange={(value) => updateVariant(index, "amperage", value)} />
+                  <VariantTextField label="Potencia" placeholder="Ex: 1500W" value={variant.power} onChange={(value) => updateVariant(index, "power", value)} />
+                  <VariantTextField label="Litragem" placeholder="Ex: 2L" value={variant.litreCapacity} onChange={(value) => updateVariant(index, "litreCapacity", value)} />
+                  <VariantTextField label="Peso" placeholder="Ex: 18kg" value={variant.weight} onChange={(value) => updateVariant(index, "weight", value)} />
+                  <VariantTextField label="Maximo de bebidas" placeholder="Ex: 26" type="number" value={variant.maxDrinkCount} onChange={(value) => updateVariant(index, "maxDrinkCount", value)} />
+                  <VariantSelectField label="Rede hidrica" options={MACHINE_VARIANT_OPTIONS.yesNo} value={variant.hydraulic} onChange={(value) => updateVariant(index, "hydraulic", value)} />
+                  <VariantSelectField label="Esgoto" options={MACHINE_VARIANT_OPTIONS.yesNo} value={variant.sewer} onChange={(value) => updateVariant(index, "sewer", value)} />
+                  <VariantSelectField label="Vapor" options={MACHINE_VARIANT_OPTIONS.yesNo} value={variant.steam} onChange={(value) => updateVariant(index, "steam", value)} />
+                  <VariantSelectField label="Sistema de pagamento" options={MACHINE_VARIANT_OPTIONS.yesNo} value={variant.paymentSystem} onChange={(value) => updateVariant(index, "paymentSystem", value)} />
+                  {variant.paymentSystem === "Sim" ? (
+                    <VariantTextField label="Qual sistema?" placeholder="Ex: Nayax" value={variant.paymentSystemName} onChange={(value) => updateVariant(index, "paymentSystemName", value)} />
+                  ) : null}
+                </div>
+
+                {category === "Multibebidas" ? (
+                  <div className="grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-3 md:grid-cols-2">
+                    <VariantCheckboxField label="Possui reservatorios?" value={variant.hasSupplyReservoirs} onChange={(value) => updateVariant(index, "hasSupplyReservoirs", value)} />
+                    {variant.hasSupplyReservoirs ? (
+                      <>
+                        <VariantTextField label="Quantidade de reservatorios" placeholder="Ex: 5" type="number" value={variant.reservoirCount} onChange={(value) => updateVariant(index, "reservoirCount", value)} />
+                        <VariantTextField label="Capacidade de cada reservatorio" placeholder="Ex: 1kg" value={variant.reservoirCapacity} onChange={(value) => updateVariant(index, "reservoirCapacity", value)} />
+                      </>
+                    ) : null}
+                    <VariantCheckboxField label="Moinho integrado" value={variant.hasIntegratedGrinder} onChange={(value) => updateVariant(index, "hasIntegratedGrinder", value)} />
+                    <VariantCheckboxField label="Utiliza grao" value={variant.usesBeans} onChange={(value) => updateVariant(index, "usesBeans", value)} />
+                    <VariantCheckboxField label="100% soluvel" value={variant.solubleOnly} onChange={(value) => updateVariant(index, "solubleOnly", value)} />
+                  </div>
+                ) : null}
+
+                {category === "Profissional" ? (
+                  <div className="grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-3 md:grid-cols-2">
+                    <VariantSelectField label="Quantidade de grupos" options={MACHINE_VARIANT_OPTIONS.groupCount} value={variant.groupCount} onChange={(value) => updateVariant(index, "groupCount", value)} />
+                    <VariantCheckboxField label="Possui porta-filtro" value={variant.hasPortafilter} onChange={(value) => updateVariant(index, "hasPortafilter", value)} />
+                    {variant.hasPortafilter ? (
+                      <>
+                        <VariantTextField label="Porta-filtros simples" placeholder="Ex: 1" type="number" value={variant.singlePortafilterCount} onChange={(value) => updateVariant(index, "singlePortafilterCount", value)} />
+                        <VariantTextField label="Porta-filtros duplos" placeholder="Ex: 2" type="number" value={variant.doublePortafilterCount} onChange={(value) => updateVariant(index, "doublePortafilterCount", value)} />
+                      </>
+                    ) : null}
+                    <VariantCheckboxField label="Vaporizador extra" value={variant.extraSteamer} onChange={(value) => updateVariant(index, "extraSteamer", value)} />
+                  </div>
+                ) : null}
+
+                {category === "Snacks" ? (
+                  <div className="grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-3 md:grid-cols-2">
+                    <VariantTextField label="Quantidade de bandejas" placeholder="Ex: 6" type="number" value={variant.trayCount} onChange={(value) => updateVariant(index, "trayCount", value)} />
+                    <VariantTextField label="Molas por bandeja" placeholder="Ex: 10" type="number" value={variant.springsPerTray} onChange={(value) => updateVariant(index, "springsPerTray", value)} />
+                  </div>
+                ) : null}
+
+                {category === "Coado" ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-white p-3">
+                    <VariantSelectField label="Tipo de filtro suportado" options={MACHINE_VARIANT_OPTIONS.filterType} value={variant.filterType} onChange={(value) => updateVariant(index, "filterType", value)} />
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <VariantTextField label="Estoque atual" placeholder="0" type="number" value={variant.stock} onChange={(value) => updateVariant(index, "stock", value)} />
+                  <VariantTextField label="Estoque minimo" placeholder="0" type="number" value={variant.minStock} onChange={(value) => updateVariant(index, "minStock", value)} />
+                  <VariantTextField label="Valor aluguel" placeholder="R$ 0,00" type="number" value={variant.priceRent} onChange={(value) => updateVariant(index, "priceRent", value)} />
+                  <VariantTextField label="Valor venda" placeholder="R$ 0,00" type="number" value={variant.priceSale} onChange={(value) => updateVariant(index, "priceSale", value)} />
+                  <VariantTextField label="Custo aquisicao" placeholder="R$ 0,00" type="number" value={variant.acquisitionCost} onChange={(value) => updateVariant(index, "acquisitionCost", value)} />
+                  <VariantTextField label="Link de video" placeholder="https://..." value={variant.videoUrl} onChange={(value) => updateVariant(index, "videoUrl", value)} />
+                  <VariantTextField label="URL da foto" placeholder="https://..." value={variant.imageUrl} onChange={(value) => updateVariant(index, "imageUrl", value)} />
+                  <label>
+                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">Upload de foto</span>
+                    <input
+                      accept="image/*"
+                      className="block h-9 w-full rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-amiste-gray file:mr-4 file:rounded-xl file:border-0 file:bg-amiste-black file:px-3 file:py-1 file:text-xs file:font-black file:text-white disabled:opacity-50"
+                      disabled={!canUpload}
+                      type="file"
+                      onChange={(event) => updateVariantImage(index, event.target.files?.[0])}
+                    />
+                  </label>
+                  {previewUrl ? (
+                    <div className="grid h-28 place-items-center overflow-hidden rounded-2xl border border-zinc-200 bg-white md:col-span-2">
+                      <img alt={variant.name || `Versao ${index + 1}`} className="h-full w-full object-contain" src={previewUrl} />
+                    </div>
+                  ) : null}
+                  <VariantTextareaField label="Texto padrao de proposta" placeholder="Texto comercial especifico desta versao." value={variant.defaultProposalText} onChange={(value) => updateVariant(index, "defaultProposalText", value)} />
+                  <VariantTextareaField label="Descricao tecnica" placeholder="Descricao tecnica especifica desta versao." value={variant.description} onChange={(value) => updateVariant(index, "description", value)} />
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
       {uploadError ? (
         <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-3 py-2 text-xs font-bold text-amiste-red">
           {uploadError}

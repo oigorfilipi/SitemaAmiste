@@ -130,8 +130,10 @@ export default function EntityCardsGrid({
   canDelete = actions,
   canEdit = actions,
 }) {
+  const compactSideImage = card.imageLayout === "side";
+
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div className={compactSideImage ? "grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3" : "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"}>
       {records.map((record) => {
         const statusValue = card.statusKey ? record[card.statusKey] : null;
         const titleValue = resolveValue(record, card.title, snapshot);
@@ -144,12 +146,76 @@ export default function EntityCardsGrid({
           >
             {card.previewType ? (
               <DocumentCardPreview card={card} record={record} snapshot={snapshot} />
+            ) : compactSideImage ? (
+              <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-0">
+                <div className="grid min-h-full place-items-center overflow-hidden bg-zinc-50 p-2">
+                  {imageSource ? (
+                    <img
+                      alt={String(titleValue)}
+                      className="max-h-24 w-full rounded-xl object-contain"
+                      src={imageSource}
+                    />
+                  ) : (
+                    <div className="grid size-20 place-items-center rounded-2xl border border-amiste-red/15 bg-white text-amiste-red shadow-sm">
+                      <AppIcon name={card.icon || "layoutGrid"} size={24} />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 p-3">
+                  {/* --- SECAO: CONTEUDO COMPACTO DO CARD --- */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-display text-sm font-black text-amiste-black">
+                        {titleValue}
+                      </h3>
+                      {card.subtitle ? (
+                        <p className="mt-0.5 truncate text-[11px] font-semibold text-amiste-gray/60">
+                          {resolveValue(record, card.subtitle, snapshot)}
+                        </p>
+                      ) : null}
+                    </div>
+                    {statusValue ? <StatusPill status={statusValue} /> : null}
+                  </div>
+
+                  <dl className="mt-3 grid grid-cols-2 gap-2">
+                    {card.meta.map((metaItem) => (
+                      <div className="min-w-0 rounded-xl border border-zinc-100 bg-zinc-50/80 px-2 py-1.5" key={metaItem.key}>
+                        <dt className="text-[9px] font-black uppercase text-amiste-gray/50">{metaItem.label}</dt>
+                        <dd className="mt-0.5 truncate text-[12px] font-black text-amiste-black">
+                          {metaItem.type === "currency"
+                            ? formatCurrency(resolveValue(record, metaItem, snapshot))
+                            : resolveValue(record, metaItem, snapshot)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  {canEdit || canDelete || extraActions.length ? (
+                    <div className="mt-3 flex min-h-8 flex-wrap items-center justify-end gap-1.5">
+                      {extraActions.map((action) => (
+                        <Button
+                          aria-label={`${action.label} ${titleValue}`}
+                          className="h-8 px-2.5 text-[11px]"
+                          icon={action.icon}
+                          key={action.id}
+                          variant="secondary"
+                          onClick={() => onExtraAction(action, record)}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                      {canEdit ? <IconButton icon="pencil" label={`Editar ${titleValue}`} onClick={() => onEdit(record)} /> : null}
+                      {canDelete ? <IconButton icon="trash" label={`Excluir ${titleValue}`} onClick={() => onDelete(record)} /> : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             ) : card.showImage === false ? null : (
               <div className="relative aspect-[16/9] overflow-hidden bg-zinc-100">
                 {imageSource ? (
                   <img
                     alt={String(titleValue)}
-                    className="h-full w-full object-cover transition duration-500 hover:scale-[1.03]"
+                    className="h-full w-full object-contain transition duration-500 hover:scale-[1.03]"
                     src={imageSource}
                   />
                 ) : (
@@ -162,6 +228,7 @@ export default function EntityCardsGrid({
               </div>
             )}
 
+            {!compactSideImage ? (
             <div className="p-4">
             {/* --- SECAO: CONTEUDO DO CARD --- */}
             <div className="flex items-start justify-between gap-3">
@@ -211,6 +278,7 @@ export default function EntityCardsGrid({
               </div>
             ) : null}
             </div>
+            ) : null}
           </article>
         );
       })}
