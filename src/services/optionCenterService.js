@@ -1,4 +1,7 @@
-import { OPTION_GROUPS } from "./optionService.js";
+import {
+  CONFIGURABLE_OPTION_GROUPS,
+  isFixedOptionGroup,
+} from "./optionService.js";
 import { exportRecordsToCsv } from "./exportService.js";
 
 const OPTION_EXPORT_COLUMNS = [
@@ -8,13 +11,6 @@ const OPTION_EXPORT_COLUMNS = [
 ];
 const TECHNICAL_VALUE_GROUPS = new Set([
   "Funcoes",
-  "Status Catalogo",
-  "Status Checklist",
-  "Status Cliente",
-  "Status Ficha",
-  "Status Pagamento",
-  "Status Proposta",
-  "Status Wiki",
 ]);
 
 const DEFAULT_GROUP_GUIDANCE = {
@@ -301,9 +297,9 @@ export function buildOptionFeedbackMessage(group, editing = false) {
 
 function uniqueGroups(options) {
   return Array.from(new Set([
-    ...OPTION_GROUPS,
+    ...CONFIGURABLE_OPTION_GROUPS,
     ...options.map((option) => option.group).filter(Boolean),
-  ])).filter((group) => !HIDDEN_OPTION_GROUPS.has(group));
+  ])).filter((group) => !HIDDEN_OPTION_GROUPS.has(group) && !isFixedOptionGroup(group));
 }
 
 export function buildOptionGroups(options) {

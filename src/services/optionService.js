@@ -33,10 +33,34 @@ export const OPTION_GROUPS = [
   "Funcoes",
 ];
 
-export const OPTION_GROUP_CHOICES = OPTION_GROUPS.map((group) => ({
+export const FIXED_OPTION_GROUPS = [
+  "Dificuldade Wiki",
+  "Meio de Atendimento",
+  "Modalidades Comerciais",
+  "Prioridades de Conserto",
+  "Rede Hidrica",
+  "Status Catalogo",
+  "Status Checklist",
+  "Status Cliente",
+  "Status Ficha",
+  "Status Pagamento",
+  "Status Proposta",
+  "Status Wiki",
+  "Tipos de Contrato",
+  "Tipos de Ficha",
+  "Voltagens",
+];
+
+export const CONFIGURABLE_OPTION_GROUPS = OPTION_GROUPS.filter((group) => !FIXED_OPTION_GROUPS.includes(group));
+
+export const OPTION_GROUP_CHOICES = CONFIGURABLE_OPTION_GROUPS.map((group) => ({
   label: group,
   value: group,
 }));
+
+export function isFixedOptionGroup(groupName) {
+  return FIXED_OPTION_GROUPS.includes(groupName);
+}
 
 function normalizeOption(option) {
   const value = option.value || option.name;

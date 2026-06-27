@@ -59,7 +59,6 @@ const ORDER_FIELDS = [
     name: "priority",
     label: "Prioridade",
     type: "select",
-    optionGroup: "Prioridades de Conserto",
     required: true,
     defaultValue: "media",
     options: [
