@@ -19,6 +19,8 @@ import {
   filterOptionGroupsByArea,
   filterOptionGroups,
   getOptionGroupArea,
+  resolveOptionInternalValue,
+  shouldShowOptionInternalValue,
   validateOptionPayload,
 } from "../../services/optionCenterService.js";
 import { getRolePermissions } from "../../services/permissionService.js";
@@ -51,9 +53,26 @@ export default function OpcoesPage({ accessLevel, user }) {
   const filteredGroups = useMemo(() => filterOptionGroups(areaGroups, searchTerm), [areaGroups, searchTerm]);
   const selectedGroup = filteredGroups.find((group) => group.id === activeGroup) || filteredGroups[0] || null;
   const metrics = useMemo(() => buildOptionMetrics(records), [records]);
-  const formFields = useMemo(() => config.fields.map((field) =>
-    field.name === "group" ? { ...field, defaultValue: activeGroup || selectedGroup?.id || "" } : field
-  ), [activeGroup, config.fields, selectedGroup?.id]);
+  const formFields = useMemo(() => config.fields.map((field) => {
+    if (field.name === "group") {
+      return { ...field, defaultValue: activeGroup || selectedGroup?.id || "" };
+    }
+
+    if (field.name === "value") {
+      return {
+        ...field,
+        autoFill: (data, _snapshot, currentRecord) => resolveOptionInternalValue(data, currentRecord),
+        autoFillDependencies: ["group", "name"],
+        clearWhenHidden: false,
+        helpText: "Campo tecnico usado apenas em status e cargos. Nos demais grupos, o sistema preenche automaticamente.",
+        label: "Codigo tecnico",
+        placeholder: "Ex: aguardando_aprovacao",
+        visibleWhen: (data) => shouldShowOptionInternalValue(data.group),
+      };
+    }
+
+    return field;
+  }), [activeGroup, config.fields, selectedGroup?.id]);
 
   useEffect(() => {
     if (!areaTabs.length) {
@@ -122,7 +141,7 @@ export default function OpcoesPage({ accessLevel, user }) {
       throw new Error(validationMessage);
     }
 
-    const nextPayload = buildOptionPayload(payload);
+    const nextPayload = buildOptionPayload(payload, editingRecord);
     const isEditing = Boolean(editingRecord);
 
     if (editingRecord) {

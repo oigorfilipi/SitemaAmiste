@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildOptionAreaTabs,
   buildOptionGroups,
+  buildOptionPayload,
   filterOptionGroupsByArea,
+  shouldShowOptionInternalValue,
+  validateOptionPayload,
 } from "../optionCenterService.js";
 
 describe("optionCenterService", () => {
@@ -34,5 +37,50 @@ describe("optionCenterService", () => {
     expect(filterOptionGroupsByArea(groups, "clients").map((group) => group.id)).toContain("Status Cliente");
     expect(filterOptionGroupsByArea(groups, "other").map((group) => group.id)).toContain("Grupo Legado");
     expect(tabs.find((tab) => tab.id === "machines")).toMatchObject({ count: expect.any(Number) });
+  });
+
+  it("preenche automaticamente o valor de grupos simples a partir do nome", () => {
+    const payload = buildOptionPayload({
+      group: "Marcas de Maquinas",
+      name: "Rheavendors",
+      value: "",
+    });
+
+    expect(shouldShowOptionInternalValue("Marcas de Maquinas")).toBe(false);
+    expect(payload).toMatchObject({
+      name: "Rheavendors",
+      value: "Rheavendors",
+    });
+    expect(validateOptionPayload(payload, [], null)).toBe("");
+  });
+
+  it("mantem codigo tecnico visivel para status e cargos", () => {
+    expect(shouldShowOptionInternalValue("Status Proposta")).toBe(true);
+    expect(shouldShowOptionInternalValue("Funcoes")).toBe(true);
+    expect(buildOptionPayload({
+      group: "Status Proposta",
+      name: "Aguardando aprovacao",
+      value: "aguardando_aprovacao",
+    })).toMatchObject({
+      value: "aguardando_aprovacao",
+    });
+  });
+
+  it("preserva o valor salvo ao editar uma opcao simples existente", () => {
+    const editingRecord = {
+      group: "Marcas de Maquinas",
+      id: "option_1",
+      name: "Marca Antiga",
+      value: "marca_antiga",
+    };
+
+    expect(buildOptionPayload({
+      group: "Marcas de Maquinas",
+      name: "Marca Nova",
+      value: "marca_antiga",
+    }, editingRecord)).toMatchObject({
+      name: "Marca Nova",
+      value: "marca_antiga",
+    });
   });
 });

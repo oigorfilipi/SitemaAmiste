@@ -667,7 +667,7 @@ export const moduleConfigs = {
     fields: [
       { name: "group", label: "Grupo", type: "select", options: OPTION_GROUP_CHOICES, required: true, section: sections.identity },
       { name: "name", label: "Nome visivel", required: true, section: sections.identity },
-      { name: "value", label: "Valor interno", required: true, section: sections.identity, helpText: "Use valores padronizados para evitar duplicidade nos cadastros." },
+      { name: "value", label: "Codigo tecnico", required: true, section: sections.identity, helpText: "Campo tecnico usado apenas quando a opcao precisa de um codigo salvo diferente do nome visivel." },
       { name: "description", label: "Descricao de uso", type: "textarea", full: true, section: sections.operation },
       { name: "requiredQuantity", label: "Quantidade padrao", type: "number", min: 0, section: sections.operation, visibleWhen: (data) => ["Ferramentas Necessarias", "Coisas Necessarias"].includes(data.group) },
       { name: "defaultMl", label: "ML padrao", type: "number", min: 0, section: sections.operation, visibleWhen: (data) => data.group === "Bebidas da Maquina" },

@@ -6,6 +6,16 @@ const OPTION_EXPORT_COLUMNS = [
   { key: "name", label: "Nome" },
   { key: "value", label: "Valor" },
 ];
+const TECHNICAL_VALUE_GROUPS = new Set([
+  "Funcoes",
+  "Status Catalogo",
+  "Status Checklist",
+  "Status Cliente",
+  "Status Ficha",
+  "Status Pagamento",
+  "Status Proposta",
+  "Status Wiki",
+]);
 
 const DEFAULT_GROUP_GUIDANCE = {
   description: "Lista reutilizavel para campos de selecao e organizacao interna do ERP.",
@@ -262,6 +272,26 @@ export function getOptionGroupArea(group) {
     OPTION_AREA_TABS.find((area) => area.id === DEFAULT_AREA_ID);
 }
 
+export function shouldShowOptionInternalValue(group) {
+  return TECHNICAL_VALUE_GROUPS.has(group);
+}
+
+export function resolveOptionInternalValue(payload = {}, editingRecord = null) {
+  const group = String(payload.group || editingRecord?.group || "").trim();
+  const currentValue = String(payload.value || "").trim();
+  const visibleName = String(payload.name || "").trim();
+
+  if (shouldShowOptionInternalValue(group)) {
+    return currentValue || visibleName;
+  }
+
+  if (editingRecord?.id && editingRecord.value) {
+    return String(editingRecord.value).trim();
+  }
+
+  return currentValue || visibleName;
+}
+
 export function buildOptionFeedbackMessage(group, editing = false) {
   const guidance = getOptionGroupGuidance(group);
   const action = editing ? "atualizada" : "cadastrada";
@@ -379,11 +409,14 @@ export function filterOptionGroups(groups, searchTerm) {
 }
 
 export function validateOptionPayload(payload, options, editingRecord) {
-  const group = String(payload.group || "").trim();
-  const value = String(payload.value || "").trim();
+  const normalizedPayload = buildOptionPayload(payload, editingRecord);
+  const group = String(normalizedPayload.group || "").trim();
+  const value = String(normalizedPayload.value || "").trim();
 
-  if (!group || !value) {
-    return "Grupo e valor sao obrigatorios.";
+  if (!group || !String(normalizedPayload.name || "").trim() || !value) {
+    return shouldShowOptionInternalValue(group)
+      ? "Grupo, nome e codigo tecnico sao obrigatorios."
+      : "Grupo e nome sao obrigatorios.";
   }
 
   const duplicated = options.some((option) =>
@@ -399,11 +432,11 @@ export function validateOptionPayload(payload, options, editingRecord) {
   return "";
 }
 
-export function buildOptionPayload(payload) {
+export function buildOptionPayload(payload, editingRecord = null) {
   return {
     ...payload,
     name: String(payload.name || payload.value || "").trim(),
-    value: String(payload.value || payload.name || "").trim(),
+    value: resolveOptionInternalValue(payload, editingRecord),
   };
 }
 

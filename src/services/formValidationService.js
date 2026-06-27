@@ -223,13 +223,15 @@ export function validateAccessoryPayload(payload, snapshot, editingRecord) {
 }
 
 export function validateOptionPayload(payload, snapshot, editingRecord) {
-  if (!payload.group || !payload.name?.trim() || !payload.value?.trim()) {
-    return "Informe grupo, nome e valor da opcao.";
+  const optionValue = String(payload.value || payload.name || "").trim();
+
+  if (!payload.group || !payload.name?.trim() || !optionValue) {
+    return "Informe grupo e nome da opcao.";
   }
 
   const duplicate = hasDuplicate(snapshot, "options", editingRecord, (option) =>
     normalizeText(option.group) === normalizeText(payload.group) &&
-    normalizeText(option.value) === normalizeText(payload.value)
+    normalizeText(option.value) === normalizeText(optionValue)
   );
 
   if (duplicate) {
