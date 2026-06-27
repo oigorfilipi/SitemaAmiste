@@ -11,6 +11,7 @@ export default function OptionValuePanel({
   onCreate,
   onDelete,
   onEdit,
+  onEditValue,
 }) {
   if (!group) {
     return (
@@ -49,7 +50,7 @@ export default function OptionValuePanel({
       {group.options.length ? (
         <div className="divide-y divide-zinc-100">
           {group.options.map((option) => (
-            <div className="grid grid-cols-[1fr_1fr_110px] items-center gap-4 px-5 py-3.5 transition hover:bg-zinc-50/80" key={option.id}>
+            <div className="grid grid-cols-1 items-center gap-3 px-5 py-3.5 transition hover:bg-zinc-50/80 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px]" key={option.id}>
               <div className="min-w-0">
                 <span className="text-xs font-black uppercase text-amiste-gray/55">Nome</span>
                 <strong className="mt-1 block truncate text-sm font-black text-amiste-black">{option.name}</strong>
@@ -62,7 +63,10 @@ export default function OptionValuePanel({
                 {canMutate ? (
                   <>
                     {canEdit ? (
-                      <IconButton icon="pencil" label={`Editar ${option.name}`} onClick={() => onEdit(option)} />
+                      <>
+                        <IconButton icon="database" label={`Editar valor interno de ${option.name}`} onClick={() => onEditValue(option)} />
+                        <IconButton icon="pencil" label={`Editar ${option.name}`} onClick={() => onEdit(option)} />
+                      </>
                     ) : null}
                     {canDelete ? (
                       <IconButton icon="trash" label={`Excluir ${option.name}`} onClick={() => onDelete(option)} />

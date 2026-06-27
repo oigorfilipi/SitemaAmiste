@@ -3,6 +3,7 @@ import AppIcon from "../../components/atoms/AppIcon.jsx";
 import Button from "../../components/atoms/Button.jsx";
 import TextInput from "../../components/atoms/TextInput.jsx";
 import ConfirmDialog from "../../components/molecules/ConfirmDialog.jsx";
+import Modal from "../../components/molecules/Modal.jsx";
 import PageHeader from "../../components/molecules/PageHeader.jsx";
 import EntityFormModal from "../../components/organisms/EntityFormModal.jsx";
 import MetricsGrid from "../../components/organisms/MetricsGrid.jsx";
@@ -36,6 +37,10 @@ export default function OpcoesPage({ accessLevel, user }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [pendingDeleteOption, setPendingDeleteOption] = useState(null);
+  const [valueEditOption, setValueEditOption] = useState(null);
+  const [valueEditDraft, setValueEditDraft] = useState("");
+  const [valueEditError, setValueEditError] = useState("");
+  const [valueEditLoading, setValueEditLoading] = useState(false);
   const config = moduleConfigs.options;
   const { records, createRecord, deleteRecord, updateRecord } = useCollection("options");
   const canMutate = accessLevel === "AC";
@@ -126,6 +131,74 @@ export default function OpcoesPage({ accessLevel, user }) {
     setErrorMessage("");
     setFeedbackMessage("");
     setModalOpen(true);
+  }
+
+  function normalizeOptionText(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function openEditValueModal(option) {
+    if (!canUpdate) {
+      return;
+    }
+
+    setValueEditOption(option);
+    setValueEditDraft(option.value || "");
+    setValueEditError("");
+    setFeedbackMessage("");
+    setErrorMessage("");
+  }
+
+  function closeEditValueModal(force = false) {
+    if (valueEditLoading && !force) {
+      return;
+    }
+
+    setValueEditOption(null);
+    setValueEditDraft("");
+    setValueEditError("");
+  }
+
+  async function handleSubmitValueEdit(event) {
+    event.preventDefault();
+
+    if (!valueEditOption || !canUpdate) {
+      return;
+    }
+
+    const nextValue = String(valueEditDraft || "").trim();
+
+    if (!nextValue) {
+      setValueEditError("Informe o valor interno desta opcao.");
+      return;
+    }
+
+    const duplicated = records.some((option) =>
+      option.id !== valueEditOption.id &&
+      normalizeOptionText(option.group) === normalizeOptionText(valueEditOption.group) &&
+      normalizeOptionText(option.value) === normalizeOptionText(nextValue)
+    );
+
+    if (duplicated) {
+      setValueEditError(`Ja existe outra opcao em ${valueEditOption.group} usando este valor interno.`);
+      return;
+    }
+
+    setValueEditLoading(true);
+    setValueEditError("");
+
+    try {
+      await updateRecord(valueEditOption.id, {
+        ...valueEditOption,
+        value: nextValue,
+      });
+      setFeedbackMessage(`Valor interno de "${valueEditOption.name}" atualizado com sucesso.`);
+      closeEditValueModal(true);
+    } catch (error) {
+      setValueEditError(error.message || "Nao foi possivel atualizar o valor interno.");
+    } finally {
+      setValueEditLoading(false);
+    }
   }
 
   async function handleSubmit(payload) {
@@ -310,6 +383,7 @@ export default function OpcoesPage({ accessLevel, user }) {
           onCreate={openCreateModal}
           onDelete={handleDelete}
           onEdit={openEditModal}
+          onEditValue={openEditValueModal}
         />
       </div>
 
@@ -332,6 +406,51 @@ export default function OpcoesPage({ accessLevel, user }) {
         onCancel={() => setPendingDeleteOption(null)}
         onConfirm={confirmDeleteOption}
       />
+      <Modal
+        description="Use este ajuste apenas para corrigir codigos/valores internos duplicados ou gravados errado."
+        open={Boolean(valueEditOption)}
+        title="Editar valor interno"
+        onClose={closeEditValueModal}
+      >
+        <form className="space-y-4" onSubmit={handleSubmitValueEdit}>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+            <span className="text-xs font-black uppercase text-amiste-gray/55">Opcao selecionada</span>
+            <strong className="mt-1 block font-display text-lg font-black text-amiste-black">
+              {valueEditOption?.name || "-"}
+            </strong>
+            <p className="mt-1 text-sm font-semibold text-amiste-gray/65">
+              Grupo: {valueEditOption?.group || "-"}
+            </p>
+          </div>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-amiste-gray/60">
+              Valor interno
+            </span>
+            <TextInput
+              autoFocus
+              placeholder="Ex: cafe_gourmet_01"
+              value={valueEditDraft}
+              onChange={(event) => setValueEditDraft(event.target.value)}
+            />
+          </label>
+
+          {valueEditError ? (
+            <div className="rounded-2xl border border-amiste-red/20 bg-amiste-red/10 px-4 py-3 text-sm font-bold text-amiste-red">
+              {valueEditError}
+            </div>
+          ) : null}
+
+          <footer className="flex justify-end gap-3 border-t border-zinc-100 pt-4">
+            <Button disabled={valueEditLoading} variant="secondary" onClick={closeEditValueModal}>
+              Cancelar
+            </Button>
+            <Button icon="database" loading={valueEditLoading} type="submit">
+              Salvar valor
+            </Button>
+          </footer>
+        </form>
+      </Modal>
     </div>
   );
 }
